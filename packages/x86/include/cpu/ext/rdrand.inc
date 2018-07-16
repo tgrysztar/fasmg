@@ -1,0 +1,17 @@
+
+if ~ defined RDRAND
+
+	restore RDRAND	 ; this ensures that symbol cannot be forward-referenced
+	define RDRAND 1
+
+	macro rdrand? dest*
+		x86.parse_operand @dest,dest
+		if @dest.type = 'reg'
+			x86.select_operand_prefix @dest,@dest.size
+			x86.store_instruction <0Fh,0C7h>,@dest,6
+		else
+			err 'invalid operand'
+		end if
+	end macro
+
+end if
