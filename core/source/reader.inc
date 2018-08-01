@@ -119,7 +119,7 @@ tokenize_source:
 ;  [tokenization_buffer_length] = length of tokenized source
 	mov	ecx,[source_text_length]
 	shl	ecx,1
-	add	ecx,14
+	add	ecx,18
 	call	malloc_growable
 	jc	out_of_memory
 	mov	[tokenization_buffer],eax
@@ -135,7 +135,7 @@ tokenize_source:
 	mov	eax,[buffer_end_offset]
 	add	eax,esi
 	sub	eax,edi
-	cmp	eax,14
+	cmp	eax,18
 	jae	tokenization_buffer_reserve_ok
 	mov	ecx,esi
 	sub	ecx,[source_text]
@@ -143,7 +143,7 @@ tokenize_source:
 	mul	[tokenization_buffer_length]
 	div	ecx
 	mov	ecx,eax
-	add	ecx,14
+	add	ecx,18
 	mov	eax,[tokenization_buffer]
 	call	realloc
 	jc	out_of_memory
@@ -230,7 +230,9 @@ tokenize_source:
 	add	edi,ebx
 	mov	[edi],ecx
 	mov	[edi+4],edx
-	add	edi,8
+	xor	ecx,ecx
+	mov	[edi+8],ecx
+	add	edi,12
 	cmp	ah,20h
 	jne	character_token
     control_character:

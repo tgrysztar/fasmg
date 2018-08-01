@@ -2963,19 +2963,6 @@ define_macro:
 	je	unconditional_macro
     standard_macro:
 	and	[macro_flags],0
-	mov	edx,[ebx+SymbolTree_Leaf.definition]
-	test	edx,edx
-	jz	macro_symbol_ok
-	test	[edx+ValueDefinition.flags],VAL_INTERNAL
-	jnz	check_for_symbol_degradation
-	mov	eax,[current_pass]
-	cmp	eax,[edx+ValueDefinition.pass]
-	jne	macro_symbol_ok
-    check_for_symbol_degradation:
-	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
-	jz	macro_symbol_ok
-	mov	edx,_unconditional_instruction_conflict
-	call	register_error
 	jmp	macro_symbol_ok
     unconditional_interceptor:
 	mov	ebx,[interceptor_symbol]

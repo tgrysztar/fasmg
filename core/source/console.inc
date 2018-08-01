@@ -181,7 +181,7 @@ show_line_content:
 	mov	ecx,[esi-4]
 	call	display_error_string
 	add	esi,[esi-4]
-	add	esi,8
+	add	esi,12
 	jmp	show_token
     show_string_token:
 	mov	ebx,esi

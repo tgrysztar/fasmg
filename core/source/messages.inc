@@ -28,7 +28,6 @@ _invalid_symbol db "invalid use of symbol",0
 _conflicting_definition db "definition in conflict with already defined symbol",0
 _cannot_apply_to_constant db "cannot apply this operation to constant",0
 _symbolic_self_reference db "detected a circular reference of symbolic values",0
-_unconditional_instruction_conflict db "unconditional instruction must remain unconditional",0
 _unexpected_instruction db "unexpected instruction",0
 _missing_end_directive db "missing end directive",0
 _missing_closing_chevron db "missing closing chevron",0

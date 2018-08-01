@@ -4018,6 +4018,8 @@ reverse_term_value_bytes:
 	mov	[edi+ExpressionTerm.attributes],EXPR_STRING + EXPRF_VALUE_IN_WORKSPACE
 	mov	esi,[value_position]
 	mov	[edi+ExpressionTerm.value],esi
+	lea	eax,[esi+4+ebx]
+	mov	[value_position],eax
 	add	esi,[value_workspace.memory_start]
 	mov	[esi],ebx
 	xor	ecx,ecx

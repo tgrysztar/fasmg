@@ -637,7 +637,7 @@ assembly_pass:
 	cmp	[interceptor],0
 	jne	unrecognized_instruction
 	test	[assembly_mode],AMODE_SKIP or AMODE_DEFINITION
-	jnz	ignored_instruction
+	jnz	unrecognized_instruction
     execute_instruction:
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC
@@ -645,8 +645,24 @@ assembly_pass:
 	cmp	al,VALTYPE_RESERVED
 	je	macro_self_reference
 	cmp	al,VALTYPE_NATIVE_COMMAND
-	jne	ignored_instruction
+	jne	unrecognized_instruction
 	jmp	[edx+ValueDefinition.value]
+    macro_self_reference:
+	mov	edx,_symbolic_self_reference
+	call	register_error
+    unrecognized_instruction:
+	test	[assembly_mode],AMODE_SKIP
+	jnz	assembly_line
+	test	[assembly_mode],AMODE_DEFINITION
+	jnz	add_line_to_macro
+    illegal_instruction:
+	cmp	[interceptor],0
+	jne	execute_interceptor
+	cmp	[label_interceptor],0
+	jne	execute_label_interceptor
+	mov	edx,_illegal_instruction
+	call	register_error
+	jmp	assembly_line
     labeled_instruction:
 	cmp	[interceptor],0
 	jne	unrecognized_instruction
@@ -691,28 +707,6 @@ assembly_pass:
 	cmp	al,VALTYPE_NATIVE_COMMAND
 	jne	unrecognized_instruction
 	jmp	[edx+ValueDefinition.value]
-    macro_self_reference:
-	mov	edx,_symbolic_self_reference
-	call	register_error
-    ignored_instruction:
-	test	[assembly_mode],AMODE_SKIP
-	jnz	assembly_line
-	test	[assembly_mode],AMODE_DEFINITION
-	jz	illegal_instruction
-	jmp	add_line_to_macro
-    unrecognized_instruction:
-	test	[assembly_mode],AMODE_SKIP
-	jnz	assembly_line
-	test	[assembly_mode],AMODE_DEFINITION
-	jnz	add_line_to_macro
-    illegal_instruction:
-	cmp	[interceptor],0
-	jne	execute_interceptor
-	cmp	[label_interceptor],0
-	jne	execute_label_interceptor
-	mov	edx,_illegal_instruction
-	call	register_error
-	jmp	assembly_line
     empty_line:
 	mov	al,[assembly_mode]
 	test	al,AMODE_SKIP
@@ -1107,7 +1101,7 @@ get_line:
 	cmp	al,1Ah
 	jne	skip_comment
 	lodsd
-	lea	esi,[esi+eax+8]
+	lea	esi,[esi+eax+12]
 	jmp	skip_comment
     skip_quoted_string:
 	lodsd
@@ -1121,9 +1115,14 @@ get_line:
 	add	esi,eax
 	jmp	preprocess_line_from_file
     convert_name_symbol:
-	mov	eax,[esi]
-	lea	eax,[esi+4+eax+8]
+	mov	ecx,[esi]
+	lea	eax,[esi+4+ecx+12]
 	push	eax ebx
+	mov	eax,[eax-4]
+	test	eax,eax
+	jz	name_symbol_not_cached
+	mov	esi,eax
+      name_symbol_not_cached:
 	call	preprocess_symbol
     name_symbol_converted:
 	pop	ebx esi
@@ -1132,9 +1131,14 @@ get_line:
 	cmp	byte [esi],1Ah
 	jne	preprocess_line_from_file
 	lodsb
-	mov	eax,[esi]
-	lea	eax,[esi+4+eax+8]
+	mov	ecx,[esi]
+	lea	eax,[esi+4+ecx+12]
 	push	eax ebx
+	mov	eax,[eax-4]
+	test	eax,eax
+	jz	parameter_to_convert_not_cached
+	mov	esi,eax
+      parameter_to_convert_not_cached:
 	call	preprocess_symbol
 	jc	name_symbol_converted
 	call	convert_parameter_to_string

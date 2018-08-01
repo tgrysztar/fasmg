@@ -970,11 +970,6 @@ This slighly modified variant of the above sample puts these facts to use:
 
 A similar rule applies to the "else" command and the instructions in the
 "else?" namespace.
-  When an instruction is unconditional, it is not allowed to override it
-with a regular instruction - all new definitions of such instruction must be
-unconditional, too. Some of the built-in instructions are unconditional,
-like "end", and redefining them is only possible through an unconditional
-macroinstruction.
   When an identifier consisting of a lone "?" character is used as an
 instruction symbol in the definition of macroinstruction, it defines a special
 instruction that is then called every time a line to be assembled does not

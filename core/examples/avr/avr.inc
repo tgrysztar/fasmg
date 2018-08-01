@@ -797,8 +797,12 @@ macro WDR?
 	dw 1001'0101'1010'1000b
 end macro
 
-macro _BREAK?
-	dw 1001'0101'1001'1000b
+macro BREAK?
+	if defined %
+		break	; loop control directive
+	else
+		dw 1001'0101'1001'1000b
+	end if
 end macro
 
 PC? equ ($ shr 1)
@@ -825,9 +829,7 @@ struc ? definition&
 end struc
 
 macro ? line&
-	match =BREAK?, line
-		_BREAK
-	else match .=ORG? addr, line
+	match .=ORG? addr, line
 		if ~ DSEG?
 			org (addr) shl 1
 		else

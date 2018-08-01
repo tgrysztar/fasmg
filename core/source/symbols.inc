@@ -307,7 +307,9 @@ scan_namespace:
 	test	[ebx+SymbolTree_Foliage.flags],FOLIAGE_WITH_TOKEN
 	jz	use_token_for_foliage
 	lea	eax,[esi-4]
-	mov	[edx],eax
+	xchg	[edx],eax
+	lea	edx,[esi-4]
+	mov	[eax+4+ecx+8],edx
 	jmp	scan_symbol_branch
     use_token_for_foliage:
 	mov	esi,[edx]
