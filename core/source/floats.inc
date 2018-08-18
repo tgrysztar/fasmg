@@ -64,7 +64,19 @@ number_to_float:
 	add	esi,ecx
 	mov	eax,[esi-4]
 	sub	ecx,4
-	jae	unsigned_tail_ready
+	jz	unsigned_tail_ready
+	jc	unsigned_short_tail
+	xor	dl,dl
+	lea	ebx,[esi-4]
+    unsigned_tail_contraction:
+	dec	ebx
+	or	dl,[ebx]
+	loop	unsigned_tail_contraction
+	setnz	dl
+	and	dl,1
+	or	al,dl
+	jmp	unsigned_tail_ready
+    unsigned_short_tail:
 	neg	cl
 	shl	cl,3
 	shr	eax,cl
@@ -119,7 +131,7 @@ get_float_unnormalization:
 ;   ecx = number of leading zeroes in mantissa
 ; preserves: ebx, edx, esi, edi
 	xor	ecx,ecx
-      find_highest_set_bit:
+    find_highest_set_bit:
 	inc	ecx
 	bsr	eax,[esi+FloatData.mantissa+(ecx-1)*4]
 	jnz	highest_set_bit_found
@@ -127,7 +139,7 @@ get_float_unnormalization:
 	jne	find_highest_set_bit
 	stc
 	retn
-      highest_set_bit_found:
+    highest_set_bit_found:
 	assert	MANTISSA_SEGMENTS shl 5 <= 1 shl 32
 	inc	eax
 	shl	ecx,5
@@ -139,9 +151,9 @@ normalize_float:
 ; in:
 ;  esi - source FloatData
 ;  edi - destination FloatData
-;  [mantissa_tail] = additional bits of source mantissa
+;  [mantissa_tail] = additional bits of source mantissa, lowest bit indicating that there are set bits far down
 ; out:
-;  [mantissa_tail] = additional bits of destination mantissa
+;  [mantissa_tail] = additional bits of destination mantissa, lowest bit indicating that there are set bits far down
 ; preserves: esi, edi
 ; note: float attributes are ignored
 	xor	edx,edx
@@ -195,6 +207,7 @@ normalize_float:
 	jne	shift_mantissa_segment_up
     shift_mantissa_tail_up:
 	mov	ebx,[mantissa_tail]
+	and	ebx,not 1
 	shld	eax,ebx,cl
 	stosd
 	mov	eax,ebx
@@ -206,7 +219,8 @@ normalize_float:
 	xor	eax,eax
 	rep	stosd
     mantissa_normalized:
-	mov	[mantissa_tail],eax
+	and	[mantissa_tail],1
+	or	[mantissa_tail],eax
 	sub	edi,FloatData.mantissa + MANTISSA_SEGMENTS*4
 	mov	eax,[esi+FloatData.attributes]
 	mov	[edi+FloatData.attributes],eax
@@ -217,9 +231,9 @@ unnormalize_float:
 ;  esi - source FloatData
 ;  edi - destination FloatData
 ;  ecx = target exponent
-;  [mantissa_tail] = additional bits of source mantissa
+;  [mantissa_tail] = additional bits of source mantissa, lowest bit indicating that there are set bits far down
 ; out:
-;  [mantissa_tail] = additional bits of destination mantissa
+;  [mantissa_tail] = additional bits of destination mantissa, lowest bit indicating that there are set bits far down
 ; preserves: esi, edi
 ; note:
 ;  when target exponent is smaller than the actual one, the overflowing bits are ignored
@@ -236,17 +250,26 @@ unnormalize_float:
 	std
 	mov	edx,MANTISSA_SEGMENTS
 	sub	edx,ebx
-	jc	unnormalization_underflow
-	jz	borderline_unnormalization
-	mov	eax,[mantissa_tail]
-	test	ebx,ebx
-	jz	shift_mantissa_tail_down
-	mov	eax,[esi+FloatData.mantissa+edx*4]
-    shift_mantissa_tail_down:
 	push	ebx
+	mov	ebx,edx
+	mov	edx,MANTISSA_SEGMENTS
+	mov	eax,[mantissa_tail]
+    collect_far_mantissa:
+	cmp	edx,ebx
+	je	far_mantissa_collected
+	or	[mantissa_tail],eax
+	mov	eax,[esi+FloatData.mantissa+(edx-1)*4]
+	dec	edx
+	jz	unnormalization_underflow
+	jmp	collect_far_mantissa
+    far_mantissa_collected:
 	mov	ebx,[esi+FloatData.mantissa+(edx-1)*4]
 	shrd	eax,ebx,cl
-	mov	[mantissa_tail],eax
+	xchg	eax,[mantissa_tail]
+	test	eax,eax
+	setnz	al
+	and	eax,1
+	or	[mantissa_tail],eax
 	dec	edx
 	jz	shift_first_mantissa_segment_down
     shift_mantissa_segment_down:
@@ -269,14 +292,19 @@ unnormalize_float:
 	mov	eax,[esi+FloatData.attributes]
 	mov	[edi+FloatData.attributes],eax
 	retn
-    borderline_unnormalization:
-	mov	eax,[esi+FloatData.mantissa]
-	shr	eax,cl
-	mov	[mantissa_tail],eax
-	mov	ecx,MANTISSA_SEGMENTS
-	jmp	zero_higher_mantissa_segments
     unnormalization_underflow:
-	and	[mantissa_tail],0
+	cmp	edx,ebx
+	je	only_mantissa_tail
+	or	[mantissa_tail],eax
+	xor	eax,eax
+    only_mantissa_tail:
+	shr	eax,cl
+	xchg	eax,[mantissa_tail]
+	test	eax,eax
+	setnz	al
+	and	eax,1
+	or	[mantissa_tail],eax
+	pop	ebx
 	mov	ecx,MANTISSA_SEGMENTS
 	jmp	zero_higher_mantissa_segments
     contrary_unnormalization:
@@ -298,7 +326,7 @@ unnormalize_float:
 round_float:
 ; in:
 ;  edi - FloatData
-;  [mantissa_tail] = additional bits of mantissa
+;  [mantissa_tail] = additional bits of mantissa, lowest bit indicating that there are set bits far down
 ; preserves: ebx, esi, edi
 	test	[mantissa_tail],1 shl 31
 	jz	rounding_done
@@ -404,12 +432,12 @@ add_floats:
 	mov	al,[first_sign]
 	xchg	al,[second_sign]
 	mov	[first_sign],al
+	clc
 	jmp	mantissa_subtraction_ready
     keep_mantissa_sources:
 	neg	[mantissa_tail]
     mantissa_subtraction_ready:
 	mov	ecx,MANTISSA_SEGMENTS
-	clc
     subtract_mantissa_segments:
 	mov	eax,[esi+FloatData.mantissa+(ecx-1)*4]
 	sbb	eax,[ebx+FloatData.mantissa+(ecx-1)*4]
@@ -511,9 +539,11 @@ multiply_floats:
 	xor	eax,eax
 	mov	ecx,3
 	rep	stosd
+	mov	[mantissa_tail],eax
 	mov	ecx,MANTISSA_SEGMENTS-1
 	mov	edi,ecx
     multiply_low_segments:
+	or	[mantissa_tail],eax
 	mov	eax,[ebx+FloatData.mantissa+ecx*4]
 	mul	[esi+FloatData.mantissa+edi*4]
 	add	[accumulator],eax
@@ -531,7 +561,11 @@ multiply_floats:
 	xchg	eax,[accumulator]
 	cmp	edi,0
 	jge	multiply_low_segments
-	mov	[mantissa_tail],eax
+	xchg	eax,[mantissa_tail]
+	test	eax,eax
+	setnz	al
+	and	eax,1
+	or	[mantissa_tail],eax
 	dec	ecx
 	inc	edi
     multiply_high_segments:
@@ -791,8 +825,7 @@ fit_float:
 	inc	ebx
 	call	read_mantissa_bits
 	or	[edi],ax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	add	[edi],ax
 	mov	dx,1Fh shl 10
 	mov	ax,dx
@@ -812,8 +845,7 @@ fit_float:
 	jc	float_out_of_range
 	call	read_mantissa_bits
 	mov	[edi],ax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	add	[edi],ax
 	jz	float_out_of_range
 	jmp	half_precision_ok
@@ -833,8 +865,7 @@ fit_float:
 	inc	ebx
 	call	read_mantissa_bits
 	or	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	add	[edi],eax
 	mov	edx,0FFh shl 23
 	mov	eax,edx
@@ -854,8 +885,7 @@ fit_float:
 	jc	float_out_of_range
 	call	read_mantissa_bits
 	mov	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	add	[edi],eax
 	jz	float_out_of_range
 	jmp	single_precision_ok
@@ -878,8 +908,7 @@ fit_float:
 	mov	ecx,32
 	call	read_mantissa_bits
 	mov	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	xor	edx,edx
 	add	[edi],eax
 	adc	[edi+4],edx
@@ -909,8 +938,7 @@ fit_float:
 	mov	[edi+4],eax
 	call	read_mantissa_bits
 	mov	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	xor	edx,edx
 	add	[edi],eax
 	jc	double_precision_denormal_carry
@@ -937,8 +965,7 @@ fit_float:
 	mov	ecx,32
 	call	read_mantissa_bits
 	mov	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	xor	edx,edx
 	add	[edi],eax
 	adc	[edi+4],edx
@@ -968,8 +995,7 @@ fit_float:
 	mov	[edi+4],eax
 	call	read_mantissa_bits
 	mov	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	xor	edx,edx
 	add	[edi],eax
 	jc	extended_precision_denormal_carry
@@ -1005,8 +1031,7 @@ fit_float:
 	mov	ecx,32
 	call	read_mantissa_bits
 	mov	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	xor	edx,edx
 	add	[edi],eax
 	adc	[edi+4],edx
@@ -1054,8 +1079,7 @@ fit_float:
 	add	ecx,32
 	call	read_mantissa_bits
 	mov	[edi],eax
-	mov	ecx,1
-	call	read_mantissa_bits
+	call	get_mantissa_rounding_increment
 	xor	edx,edx
 	add	[edi],eax
 	jc	quadruple_precision_denormal_carry
@@ -1078,10 +1102,10 @@ fit_float:
 	shr	edx,5
 	and	al,11111b
 	inc	al
+	mov	ch,cl
 	cmp	edx,MANTISSA_SEGMENTS
 	ja	out_of_mantissa_bits
-	je	read_from_last_mantissa_segment
-	mov	ch,cl
+	je	read_from_mantissa_border
 	mov	cl,32
 	sub	cl,al
 	cmp	al,ch
@@ -1103,13 +1127,52 @@ fit_float:
 	and	eax,edx
       mantissa_bits_ok:
 	retn
-      read_from_last_mantissa_segment:
+      read_from_mantissa_border:
 	cmp	al,32
 	jae	out_of_mantissa_bits
 	mov	cl,al
 	mov	eax,[esi+FloatData.mantissa+(edx-1)*4]
 	shl	eax,cl
-	retn
+	jmp	cut_out_mantissa_bits
       out_of_mantissa_bits:
+	xor	eax,eax
+	retn
+    get_mantissa_rounding_increment:
+	mov	al,bl
+	shr	ebx,5
+	and	al,11111b
+	mov	cl,31
+	sub	cl,al
+	cmp	ebx,MANTISSA_SEGMENTS
+	jae	no_rounding_increment
+	mov	edx,1
+	shl	edx,cl
+	mov	eax,[esi+FloatData.mantissa+ebx*4]
+	test	eax,edx
+	jz	no_rounding_increment
+	dec	edx
+	and	eax,edx
+	jnz	rounding_increment_needed
+	mov	edx,ebx
+      check_whole_mantissa:
+	inc	edx
+	cmp	edx,MANTISSA_SEGMENTS
+	jae	rounding_tied
+	cmp	dword [esi+FloatData.mantissa+edx*4],0
+	je	check_whole_mantissa
+      rounding_increment_needed:
+	mov	eax,1
+	retn
+      rounding_tied:
+	inc	cl
+	cmp	cl,32
+	jb	test_mantissa_parity
+	dec	ebx
+      test_mantissa_parity:
+	mov	eax,[esi+FloatData.mantissa+ebx*4]
+	shr	eax,cl
+	test	eax,1
+	jnz	rounding_increment_needed
+      no_rounding_increment:
 	xor	eax,eax
 	retn
