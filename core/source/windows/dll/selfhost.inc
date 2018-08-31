@@ -1,5 +1,5 @@
 
-include '../../examples/x86/include/80386.inc'
+include '../../../examples/x86/include/80386.inc'
 
 iterate instr, push,pop
 	macro instr? op
@@ -92,12 +92,7 @@ macro format? clause
 				break
 			end match
 		end while
-		if PE.Settings.Characteristics and IMAGE_FILE_DLL
-			format binary as 'dll'
-		else
-			format binary as 'exe'
-		end if
-		include '../../examples/x86/include/format/pe.inc'
+		include '../../../examples/x86/include/format/pe.inc'
 		use32
 	else
 		err 'invalid argument'
@@ -123,10 +118,27 @@ macro invoke? proc*,args&
 	match any, args
 		iterate arg, args
 			indx 1+%%-%
-			pushd arg
+			match size [mem], ?arg
+				pushd arg
+			else if arg relativeto ebp & arg - ebp
+				lea eax,[arg]
+				push eax
+			else
+				pushd arg
+			end if
 		end iterate
 	end match
 	call [proc]
+end macro
+
+macro mov? dest*,src*
+	match size [mem], ?src
+		mov dest,src
+	else if src relativeto ebp & src - ebp
+		lea dest,[src]
+	else
+		mov dest,src
+	end if
 end macro
 
 macro library? definitions&
@@ -188,4 +200,71 @@ macro import? name,definitions&
 	end if
 end macro
 
-include 'kernel32.inc'
+macro export dllname,exports&
+	iterate <label,string>, exports
+
+		local module,addresses,names,ordinal,count
+		count = %%
+		dd 0,0,0,RVA module,1
+		dd count,count,RVA addresses,RVA names,RVA ordinal
+		addresses:
+		repeat count
+			indx %
+			dd RVA label
+		end repeat
+		names:
+		repeat count
+			dd RVA names.name#%
+		end repeat
+		ordinal:
+		repeat count
+			dw %-1
+		end repeat
+		module db dllname,0
+		repeat count
+			indx %
+			names.name#% db string,0
+		end repeat
+
+		local x,y,z,str1,str2,v1,v2
+		x = count shr 1
+		while x > 0
+			y = x
+			while y < count
+				z = y
+				while z-x >= 0
+					load v1:dword from names+z*4
+					str1 = ($-(RVA $))+v1
+					load v2:dword from names+(z-x)*4
+					str2 = ($-(RVA $))+v2
+					while v1 > 0
+						load v1:byte from str1+%-1
+						load v2:byte from str2+%-1
+						if v1 <> v2
+							break
+						end if
+					end while
+					if v1 < v2
+						load v1:dword from names+z*4
+						load v2:dword from names+(z-x)*4
+						store v1:dword at names+(z-x)*4
+						store v2:dword at names+z*4
+						load v1:word from ordinal+z*2
+						load v2:word from ordinal+(z-x)*2
+						store v1:word at ordinal+(z-x)*2
+						store v2:word at ordinal+z*2
+					else
+						break
+					end if
+					z = z-x
+				end while
+				y = y+1
+			end while
+			x = x shr 1
+		end while
+
+		break
+	end iterate
+end macro
+
+include '../kernel32.inc'

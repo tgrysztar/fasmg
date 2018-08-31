@@ -15,6 +15,31 @@ struct SYSTEMTIME
   wMilliseconds dw ?
 ends
 
+; Page access flags
+
+PAGE_NOACCESS	       = 001h
+PAGE_READONLY	       = 002h
+PAGE_READWRITE	       = 004h
+PAGE_WRITECOPY	       = 008h
+PAGE_EXECUTE	       = 010h
+PAGE_EXECUTE_READ      = 020h
+PAGE_EXECUTE_READWRITE = 040h
+PAGE_EXECUTE_WRITECOPY = 080h
+PAGE_GUARD	       = 100h
+PAGE_NOCACHE	       = 200h
+
+; Memory allocation flags
+
+MEM_COMMIT	       = 001000h
+MEM_RESERVE	       = 002000h
+MEM_DECOMMIT	       = 004000h
+MEM_RELEASE	       = 008000h
+MEM_FREE	       = 010000h
+MEM_PRIVATE	       = 020000h
+MEM_MAPPED	       = 040000h
+MEM_RESET	       = 080000h
+MEM_TOP_DOWN	       = 100000h
+
 ; Heap allocation flags
 
 HEAP_NO_SERIALIZE	 = 1
