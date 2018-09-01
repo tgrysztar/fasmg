@@ -1295,6 +1295,10 @@ macro jmp? dest*
 					db ?
 				end if
 			else if ~ @dest.jump_type
+				if ~ $ relativeto 0 & @dest.imm relativeto 0
+					@dest.imm = @dest.imm + $ - $ scale 0
+					err 'invalid address'
+				end if
 				if @dest.unresolved | ( @dest.imm relativeto $ & ( (@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h ) )
 					db 0EBh
 					db (@dest.imm-($+1)) and 0FFh
@@ -1324,6 +1328,10 @@ macro jmp? dest*
 					db ?
 				end if
 			else if ~ @dest.jump_type
+				if ~ $ relativeto 0 & @dest.imm relativeto 0
+					@dest.imm = @dest.imm + $ - $ scale 0
+					err 'invalid address'
+				end if
 				if @dest.unresolved | ( @dest.imm relativeto $ & @dest.imm-($+2) < 80h & @dest.imm-($+2) >= -80h )
 					db 0EBh
 					db @dest.imm-($+1)
@@ -1348,6 +1356,10 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 		x86.parse_jump_operand @dest,dest
 		if @dest.type = 'imm' & @dest.jump_type <> 'far'
 			x86.store_operand_prefix @dest.size
+			if ~ $ relativeto 0 & @dest.imm relativeto 0
+				@dest.imm = @dest.imm + $ - $ scale 0
+				err 'invalid address'
+			end if
 			if @dest.jump_type <> 'near' & ( @dest.unresolved | ( @dest.imm relativeto $ & @dest.imm-($+2) < 80h & @dest.imm-($+2) >= -80h ) )
 				db opcode
 				db @dest.imm-($+1)

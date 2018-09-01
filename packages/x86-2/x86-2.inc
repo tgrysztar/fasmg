@@ -2141,6 +2141,10 @@ macro jmp? args&
 						dd x86.@1.imm-($+4)
 					end if
 				else if ~ x86.@1.jump_type
+					if ~ $ relativeto 0 & x86.@1.imm relativeto 0
+						x86.@1.imm = x86.@1.imm + $ - $ scale 0
+						err 'invalid address'
+					end if
 					if ( x86.@1.imm relativeto $ & x86.@1.imm-($+2) < 80h & x86.@1.imm-($+2) >= -80h ) | x86.@1.unresolved
 						db 0EBh
 						db x86.@1.imm-($+1)
@@ -2167,6 +2171,10 @@ macro jmp? args&
 						db ?
 					end if
 				else if ~ x86.@1.jump_type
+					if ~ $ relativeto 0 & x86.@1.imm relativeto 0
+						x86.@1.imm = x86.@1.imm + $ - $ scale 0
+						err 'invalid address'
+					end if
 					if x86.@1.unresolved | ( x86.@1.imm relativeto $ & ( (x86.@1.imm-($+2)) and 0FFFFh < 80h | (x86.@1.imm-($+2)) and 0FFFFh >= 0FF80h ) )
 						db 0EBh
 						db (x86.@1.imm-($+1)) and 0FFh
@@ -2196,6 +2204,10 @@ macro jmp? args&
 						db ?
 					end if
 				else if ~ x86.@1.jump_type
+					if ~ $ relativeto 0 & x86.@1.imm relativeto 0
+						x86.@1.imm = x86.@1.imm + $ - $ scale 0
+						err 'invalid address'
+					end if
 					if x86.@1.unresolved | ( x86.@1.imm relativeto $ & x86.@1.imm-($+2) < 80h & x86.@1.imm-($+2) >= -80h )
 						db 0EBh
 						db x86.@1.imm-($+1)
@@ -2227,6 +2239,10 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 					x86.store_operand_prefix x86.@1.size
 				else if x86.mode = 64 & x86.@1.size <> 8
 					err 'invalid operand size'
+				end if
+				if ~ $ relativeto 0 & x86.@1.imm relativeto 0
+					x86.@1.imm = x86.@1.imm + $ - $ scale 0
+					err 'invalid address'
 				end if
 				if x86.@1.jump_type <> 'near' & ( x86.@1.unresolved | ( x86.@1.imm relativeto $ & x86.@1.imm-($+2) < 80h & x86.@1.imm-($+2) >= -80h ) )
 					db opcode

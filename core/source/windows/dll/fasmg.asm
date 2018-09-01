@@ -1,7 +1,8 @@
 
 match ,{
 
-	err ; fasm 1 assembly not supported
+	include 'win32a.inc'
+	include 'localptr.inc'
 
 } match -,{
 else
