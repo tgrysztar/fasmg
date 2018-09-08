@@ -561,8 +561,9 @@ assembly_pass:
 	mov	edi,ebx
 	mov	ecx,sizeof.SourceEntry shr 2
 	assert	sizeof.SourceEntry and 11b = 0
-	xor	eax,eax
 	rep	stosd
+	mov	[line_start],eax
+	mov	[line_end],eax
 	test	esi,esi
 	jz	read_main_source_file
 	cmp	byte [esi],0
@@ -803,6 +804,11 @@ assembly_pass:
 	mov	edx,_source_file_not_found
 	call	register_error
     no_source_to_assemble:
+	mov	esi,zero_value
+	mov	ecx,4+4
+	call	create_output_area
+	mov	[current_area],edx
+	inc	[edx+ValueDefinition.reference_count]
 	stc
 	retn
 
@@ -2000,6 +2006,8 @@ embed_symbolic_value:
 clear_line_embeddings:
 ; preserves: ebx, ecx, edx, esi, edi
 	xor	eax,eax
+	mov	[line_start],eax
+	mov	[line_end],eax
 	cmp	eax,[number_of_line_embeddings]
 	je	embedded_values_ok
 	push	ecx

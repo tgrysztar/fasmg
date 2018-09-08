@@ -3,8 +3,9 @@ macro pushd arg
 {
 	if arg eqtype +ebp & arg relativeto ebp
 		if arg - ebp
-			lea eax,[arg]
 			push eax
+			lea eax,[arg]
+			xchg eax,[esp]
 		else
 			push ebp
 		end if

@@ -211,5 +211,12 @@ get_environment_variable:
 ; out:
 ;  eax = length of value
 ; preserves: ebx, esi, edi
+	push	ecx
 	invoke	GetEnvironmentVariable,esi,edi,ecx
+	pop	ecx
+	cmp	eax,ecx
+	jae	environment_variable_ready
+	mov	byte [edi+eax],0
+   environment_variable_ready:
+	inc	eax
 	retn

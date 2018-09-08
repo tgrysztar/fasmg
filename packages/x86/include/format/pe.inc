@@ -880,135 +880,139 @@ macro PE.fixups
 	end namespace
 end macro
 
-macro dword? value
-    local v
-    v = value
-    if ~ v relativeto 0 & v relativeto PE.RELOCATION
-	store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-	store IMAGE_REL_BASED_HIGHLOW:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
-	dd v - PE.RELOCATION
-	PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
-    else
-	dd v
-    end if
-end macro
+if defined PE.Fixups
 
-macro qword? value
-    local v
-    v = value
-    if ~ v relativeto 0 & v relativeto PE.RELOCATION
-	store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-	store IMAGE_REL_BASED_DIR64:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
-	dq v - PE.RELOCATION
-	PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
-    else
-	dq v
-    end if
-end macro
+	macro dword? value
+	    local v
+	    v = value
+	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
+		store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
+		store IMAGE_REL_BASED_HIGHLOW:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		dd v - PE.RELOCATION
+		PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
+	    else
+		dd v
+	    end if
+	end macro
 
-macro dd? definitions&
-    iterate value,definitions
-	match ?, value
-	    dd ?
-	else match n =dup? ?, value
-	    dd n dup ?
-	else match n =dup? (?), value
-	    dd n dup ?
-	else match n =dup? v, value
-	    repeat n
-		dword v
-	    end repeat
-	else
-	    dword value
-	end match
-    end iterate
-end macro
+	macro qword? value
+	    local v
+	    v = value
+	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
+		store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
+		store IMAGE_REL_BASED_DIR64:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		dq v - PE.RELOCATION
+		PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
+	    else
+		dq v
+	    end if
+	end macro
 
-struc dd? definitions&
-    label . : dword
-    iterate value,definitions
-	match ?, value
-	    dd ?
-	else match n =dup? ?, value
-	    dd n dup ?
-	else match n =dup? (?), value
-	    dd n dup ?
-	else match n =dup? v, value
-	    repeat n
-		dword v
-	    end repeat
-	else
-	    dword value
-	end match
-    end iterate
-end struc
-
-macro dq? definitions&
-    iterate value,definitions
-	match ?, value
-	    dq ?
-	else match n =dup? ?, value
-	    dq n dup ?
-	else match n =dup? (?), value
-	    dq n dup ?
-	else match n =dup? v, value
-	    repeat n
-		qword v
-	    end repeat
-	else
-	    qword value
-	end match
-    end iterate
-end macro
-
-struc dq? definitions&
-    label . : qword
-    iterate value,definitions
-	match ?, value
-	    dq ?
-	else match n =dup? ?, value
-	    dq n dup ?
-	else match n =dup? (?), value
-	    dq n dup ?
-	else match n =dup? v, value
-	    repeat n
-		qword v
-	    end repeat
-	else
-	    qword value
-	end match
-    end iterate
-end struc
-
-macro store? disposition
-	match data =at? area:address, disposition
-		store data at area:address
-	else match data =at? address, disposition
-		local value,length
-		match val:len, data
-			value = val
-			length = len
+	macro dd? definitions&
+	    iterate value,definitions
+		match ?, value
+		    dd ?
+		else match n =dup? ?, value
+		    dd n dup ?
+		else match n =dup? (?), value
+		    dd n dup ?
+		else match n =dup? v, value
+		    repeat n
+			dword v
+		    end repeat
 		else
-			value = data
-			length = sizeof(address)
+		    dword value
 		end match
-		if elementsof value
-			virtual at address
-				if length = 4
-					dword value
-				else if length = 8
-					qword value
-				else
-					emit length: value
-				end if
-				load value:length from address
-			end virtual
-		end if
-		store value:length at address
-	else
-		store disposition
-	end match
-end macro
+	    end iterate
+	end macro
+
+	struc dd? definitions&
+	    label . : dword
+	    iterate value,definitions
+		match ?, value
+		    dd ?
+		else match n =dup? ?, value
+		    dd n dup ?
+		else match n =dup? (?), value
+		    dd n dup ?
+		else match n =dup? v, value
+		    repeat n
+			dword v
+		    end repeat
+		else
+		    dword value
+		end match
+	    end iterate
+	end struc
+
+	macro dq? definitions&
+	    iterate value,definitions
+		match ?, value
+		    dq ?
+		else match n =dup? ?, value
+		    dq n dup ?
+		else match n =dup? (?), value
+		    dq n dup ?
+		else match n =dup? v, value
+		    repeat n
+			qword v
+		    end repeat
+		else
+		    qword value
+		end match
+	    end iterate
+	end macro
+
+	struc dq? definitions&
+	    label . : qword
+	    iterate value,definitions
+		match ?, value
+		    dq ?
+		else match n =dup? ?, value
+		    dq n dup ?
+		else match n =dup? (?), value
+		    dq n dup ?
+		else match n =dup? v, value
+		    repeat n
+			qword v
+		    end repeat
+		else
+		    qword value
+		end match
+	    end iterate
+	end struc
+
+	macro store? disposition
+		match data =at? area:address, disposition
+			store data at area:address
+		else match data =at? address, disposition
+			local value,length
+			match val:len, data
+				value = val
+				length = len
+			else
+				value = data
+				length = sizeof(address)
+			end match
+			if elementsof value
+				virtual at address
+					if length = 4
+						dword value
+					else if length = 8
+						qword value
+					else
+						emit length: value
+					end if
+					load value:length from address
+				end virtual
+			end if
+			store value:length at address
+		else
+			store disposition
+		end match
+	end macro
+
+end if
 
 postpone
 	purge section?

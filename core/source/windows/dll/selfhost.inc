@@ -126,8 +126,9 @@ macro invoke? proc*,args&
 			match size [mem], ?arg
 				pushd arg
 			else if arg relativeto ebp & arg - ebp
-				lea eax,[arg]
 				push eax
+				lea eax,[arg]
+				xchg eax,[esp]
 			else
 				pushd arg
 			end if
