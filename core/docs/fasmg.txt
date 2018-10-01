@@ -409,6 +409,7 @@ This approach also allows to handle other, more difficult cases, like when
 the arguments may contain commas or are delimited in different ways.
 
 
+
 How are the labels processed?
 
 A standard way of defining a label is by following its name with ":" (this
@@ -612,8 +613,46 @@ in its entirety somewhere in the output:
 The "load" reads the whole table into a single string, then "dw" writes it
 into output (padded to multiple of a word, but in this case the string never
 requires such padding).
+  For more complex types of relocations additional modifier may need to be
+employed. For example, if upper and lower portions of an address needed to be
+stored in separate places (for example across two instructions) and relocated
+separately, necessary modifiers could be implemented as follows:
+
+        element MOD.HIGH
+        element MOD.LOW
+
+        HIGH? equ MOD.HIGH +
+        LOW? equ MOD.LOW +
+
+        macro BYTE? value
+                if value relativeto MOD.HIGH + CODE
+                        ; register HIGH relocation
+                        db (value - MOD.HIGH - CODE) shr 8
+                else if value relativeto MOD.LOW + CODE
+                        ; register LOW relocation
+                        db (value - MOD.LOW - CODE) and 0FFh
+                else if value relativeto MOD.HIGH
+                        db (value - MOD.HIGH) shr 8
+                else if value relativeto MOD.LOW
+                        db (value - MOD.LOW) and 0FFh
+                else
+                        db value
+                end if
+        end macro 
+
+The commands that would register relocation have been omitted for clarity,
+in this case not only offset within code but some additional information would
+need to registered in appropriate structures. With such preparation, relocatable
+units in code might be generated like:
+
+        BYTE HIGH address
+        BYTE LOW address
+
+Such approach allows to easily enable syntax with modifiers in any instruction
+that internally uses "byte" macroinstruction when generating code.
 
  
+
 What options are there to parse other kinds of syntax?
 
 In some cases a command that assembler needs to parse may begin with
@@ -679,3 +718,66 @@ directives controlling the flow of the assembly, like "if" or "repeat", and
 they can still be used freely inside such a block. This would change if
 the declaration was in the form "macro ?! line&". Such a variant would
 intercept every line with no exception.
+
+
+
+How can multiple sections of file be generated in parallel?
+
+This assembly engine has a single main output that has to be generated
+sequentially. This may seem problematic when the file needs to contains
+distinct sections for code and data, but the contents of these sections is
+to be collected from interleaved pieces that may be spread across multiple
+source files. However, there are some relatively simple methods that allow
+to do it, all based in one way or the other on forward-referencing capabilities
+of the assembler.
+  A natural approach is to define contents of auxiliary section in "virtual"
+block and copy it to appropriate position in the output with a single
+operation. When a "virtual" block is labeled, it can be re-opened multiple
+times to append more data to it.
+
+                include '8086.inc'
+                org     100h
+                jmp     CodeSection
+
+        DataSection:
+
+                virtual
+                        Data::
+                end virtual
+
+                postpone
+                        virtual Data
+                                load Data.OctetString : $ - $$ from $$
+                        end virtual
+                end postpone
+
+                db Data.OctetString
+
+        CodeSection:
+
+                virtual Data
+                        Hello db "Hello!",24h
+                end virtual
+
+                mov     ah,9
+                mov     dx,Hello
+                int     21h
+
+                virtual Data
+                        ExitCode db 37h
+                end virtual
+
+                mov     ah,4Ch
+                mov     al,[ExitCode]
+                int     21h
+
+This leads to a relatively simple syntax even without help of additional
+macros.
+  Another method could be to put the pieces of the section into macros and
+execute them all at the required position in source. A disadvantage of such
+approach is that tracing errors in definitions might become a bit cumbersome.
+  The techniques that allow to easily append to a section generated in
+parallel can also be very useful to generate data structures like relocation
+tables. Instead of "store" commands used earlier when demonstrating
+the concept, regular data directives could be used inside a re-opened
+"virtual" block to create relocation records.

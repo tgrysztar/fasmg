@@ -111,8 +111,9 @@ VAL_INTERNAL = 1
 VAL_IN_USE = 2
 VAL_UNCONDITIONAL = 4			; for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
 VAL_UNARY = 4				; for SYMCLASS_EXPRESSION
-VAL_SHIFTABLE = 8
-VAL_DETACHED = 10h
+VAL_NONRECURSIVE = 8
+VAL_SHIFTABLE = 10h
+VAL_DETACHED = 20h
 
 RECOGNIZE_CASE_INSENSITIVE = 1
 RECOGNIZE_DEFINITION = 2
@@ -690,8 +691,12 @@ get_available_value:
 	jnz	get_variable_value
 	test	edx,edx
 	jz	symbol_predicted_undefined
-	test	[edx+ValueDefinition.flags],VAL_INTERNAL
+	mov	al,[edx+ValueDefinition.flags]
+	test	al,VAL_INTERNAL
 	jnz	symbol_defined
+	not	al
+	test	al,VAL_IN_USE + VAL_NONRECURSIVE
+	jz	symbol_undefined
 	mov	eax,[current_pass]
 	sub	eax,[edx+ValueDefinition.pass]
 	jz	symbol_defined

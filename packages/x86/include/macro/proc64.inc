@@ -55,7 +55,7 @@ macro fastcall?.inline_string var
 	continue:
 end macro
 
-macro fastcall? proc*,args&
+macro fastcall?: proc*,args&
 	local offset,framesize,type,value
 	if framesize & fastcall?.frame < 0
 		sub rsp,framesize
@@ -215,11 +215,11 @@ macro fastcall? proc*,args&
 	end if
 end macro
 
-macro invoke? proc*,args&
+macro invoke?: proc*,args&
 	fastcall [proc],args 
 end macro 
 
-macro cinvoke? proc*,args& 
+macro cinvoke?: proc*,args&
 	fastcall [proc],args 
 end macro
 

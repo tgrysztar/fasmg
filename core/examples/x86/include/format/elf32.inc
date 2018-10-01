@@ -491,7 +491,7 @@ macro dword? value
 			store R_32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
 			RELOCATION_INDEX = RELOCATION_INDEX + 1
 		end namespace
-		dd 0 scaleof v
+		emit dword: 0 scaleof v
 	else if ~ v relativeto 0 & (v + _GLOBAL_OFFSET_TABLE_) relativeto 1 elementof (v + _GLOBAL_OFFSET_TABLE_) & 1 elementof (1 metadataof (v + _GLOBAL_OFFSET_TABLE_)) relativeto ELF.relocatable
 		namespace ELF
 			v = v + _GLOBAL_OFFSET_TABLE_
@@ -499,7 +499,7 @@ macro dword? value
 			store R_GOTOFF + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
 			RELOCATION_INDEX = RELOCATION_INDEX + 1
 		end namespace
-		dd 0 scaleof v
+		emit dword: 0 scaleof v
 	else if ~ v relativeto 0 & (v + ELF.SECTION_BASE) relativeto 1 elementof (v + ELF.SECTION_BASE)
 		if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto ELF.relocatable
 			namespace ELF
@@ -508,7 +508,7 @@ macro dword? value
 				store R_PC32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
 				RELOCATION_INDEX = RELOCATION_INDEX + 1
 			end namespace
-			dd 0 scaleof v
+			emit dword: 0 scaleof v
 		else if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto PLT
 			namespace ELF
 				v = v + (SECTION_BASE + $% - SECTION_OFFSET)
@@ -516,12 +516,12 @@ macro dword? value
 				store R_PLT32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
 				RELOCATION_INDEX = RELOCATION_INDEX + 1
 			end namespace
-			dd 0 scaleof v
+			emit dword: 0 scaleof v
 		else
-			dd v
+			emit dword: v
 		end if
 	else
-		dd v
+		emit dword: v
 	end if
 end macro
 

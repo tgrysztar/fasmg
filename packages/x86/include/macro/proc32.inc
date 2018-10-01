@@ -8,7 +8,7 @@ macro stdcall?.push_string value&
 	continue:
 end macro
 
-macro stdcall? proc*,args&
+macro stdcall?: proc*,args&
 	local count
 	count = 0
 	match any, args
@@ -65,7 +65,7 @@ macro stdcall? proc*,args&
 	call proc
 end macro
 
-macro ccall? proc*,args&
+macro ccall?: proc*,args&
 	local count
 	count = 0
 	match any, args
@@ -125,11 +125,11 @@ macro ccall? proc*,args&
 	end if
 end macro
 
-macro invoke? proc*,args&
+macro invoke?: proc*,args&
 	stdcall [proc],args
 end macro
 
-macro cinvoke? proc*,args&
+macro cinvoke?: proc*,args&
 	ccall [proc],args
 end macro
 

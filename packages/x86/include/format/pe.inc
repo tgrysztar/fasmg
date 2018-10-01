@@ -888,10 +888,10 @@ if defined PE.Fixups
 	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
 		store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
 		store IMAGE_REL_BASED_HIGHLOW:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
-		dd v - PE.RELOCATION
+		emit dword: v - PE.RELOCATION
 		PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
 	    else
-		dd v
+		emit dword: v
 	    end if
 	end macro
 
@@ -901,10 +901,10 @@ if defined PE.Fixups
 	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
 		store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
 		store IMAGE_REL_BASED_DIR64:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
-		dq v - PE.RELOCATION
+		emit qword: v - PE.RELOCATION
 		PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
 	    else
-		dq v
+		emit qword: v
 	    end if
 	end macro
 

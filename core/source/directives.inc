@@ -2940,6 +2940,7 @@ define_macro:
 	or	[assembly_mode],AMODE_DEFINITION
 	test	[assembly_mode],AMODE_SKIP
 	jnz	assembly_line
+	mov	[macro_flags],VAL_NONRECURSIVE
 	xor	ecx,ecx
 	call	move_to_next_symbol
 	jc	invalid_macro_definition
@@ -2956,13 +2957,19 @@ define_macro:
 	jz	invalid_identifier
     macro_symbol_identified:
 	call	move_to_next_symbol
-	jc	standard_macro
+	jc	macro_symbol_ok
+	cmp	al,':'
+	je	recursive_macro
 	test	ecx,ecx
-	jnz	standard_macro
+	jnz	macro_symbol_ok
 	cmp	al,'!'
 	je	unconditional_macro
-    standard_macro:
-	and	[macro_flags],0
+	jmp	macro_symbol_ok
+    recursive_macro:
+	inc	esi
+	call	move_to_next_symbol
+	and	[macro_flags],not VAL_NONRECURSIVE
+	or	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
 	jmp	macro_symbol_ok
     unconditional_interceptor:
 	mov	ebx,[interceptor_symbol]
@@ -2982,8 +2989,9 @@ define_macro:
 	jnz	prepare_macro
 	mov	eax,[current_pass]
 	sub	eax,[edx+ValueDefinition.pass]
+	jz	macro_already_defined
 	cmp	eax,1
-	jbe	prepare_macro
+	je	prepare_macro
     create_placeholder_value:
 	call	create_value_definition
 	test	edx,edx
@@ -2993,6 +3001,7 @@ define_macro:
 	mov	[edx+ValueDefinition.pass],eax
 	mov	[edx+ValueDefinition.type],VALTYPE_RESERVED
 	mov	al,[macro_flags]
+	or	al,VAL_IN_USE
 	mov	[edx+ValueDefinition.flags],al
 	mov	al,[ebx+SymbolTree_Leaf.flags]
 	test	al,SYM_PREDICTED
@@ -3014,6 +3023,12 @@ define_macro:
 	jnc	check_macro_parameters
     invalid_macro_definition:
 	mov	edx,_invalid_argument
+	call	register_error
+	jmp	assembly_line
+    macro_already_defined:
+	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
+	jz	prepare_macro
+	mov	edx,_conflicting_definition
 	call	register_error
 	jmp	assembly_line
     check_parameter_name:

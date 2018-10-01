@@ -860,11 +860,17 @@ text:
         zero x
 
 And just like other symbols, a macroinstruction may be forward-referenced when
-it is defined exactly once in the entire source. Such macroinstruction may then
-use its own value in a recursive way, analogously to self-referential
-definition of an expression symbol.
+it is defined exactly once in the entire source.
+  The "purge" command discards the definition of a symbol just like "restore",
+but it does so for the symbol of instruction class. It behaves in the same
+way as "restore" in all the other aspects. A macroinstruction can remove its
+own definition with "purge".
+  It is possible for a macroinstruction to use its own value in a recursive way,
+but to avoid inadvertent infinite recursion this feature is only available when
+the macroinstruction is marked as such by following its identifier with ":"
+character.
 
-        macro factorial n
+        macro factorial: n
                 if n
                         factorial n-1
                         result = result * (n)
@@ -873,18 +879,8 @@ definition of an expression symbol.
                 end if
         end macro
 
-  A caution should be taken when redefining the built-in instructions, since
-they are always case-insensitive and if a macroinstruction is defined with the
-same name, but case-sensitive, it will create a symbol that may be
-forward-referenced, while overriding one of the case variants of assembly
-command. Trying to call the original instruction inside such
-macroinstruction may lead to infinite recursion. Therefore when redefining
-a case-insensitive instruction, it is important to not forget the "?" character
-after the name of macroinstruction.
-  The "purge" command discards the definition of a symbol just like "restore",
-but it does so for the symbol of instruction class. It behaves in the same
-way as "restore" in all the other aspects. A macroinstruction can remove its
-own definition with "purge".
+In addition to allowing recursion, such macroinstruction behaves like a constant.
+It cannot be redefined and "purge" cannot be applied to it.
   A macroinstruction may in turn define another macroinstruction or a number
 of them. The blocks designated by "macro" and "end macro" must be properly
 nested one within the other for such definition to be accepted by the

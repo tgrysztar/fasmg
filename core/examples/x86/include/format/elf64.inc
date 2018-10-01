@@ -468,7 +468,7 @@ macro dword? value
 			store R_32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
 			RELOCATION_INDEX = RELOCATION_INDEX + 1
 		end namespace
-		dd ?
+		emit dword: ?
 	else if ~ v relativeto 0 & (v + ELF.SECTION_BASE) relativeto 1 elementof (v + ELF.SECTION_BASE)
 		if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto ELF.relocatable
 			namespace ELF
@@ -478,7 +478,7 @@ macro dword? value
 				store R_PC32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
 				RELOCATION_INDEX = RELOCATION_INDEX + 1
 			end namespace
-			dd ?
+			emit dword: ?
 		else if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto PLT
 			namespace ELF
 				v = v + (SECTION_BASE + $% - SECTION_OFFSET)
@@ -487,12 +487,12 @@ macro dword? value
 				store R_PLT32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
 				RELOCATION_INDEX = RELOCATION_INDEX + 1
 			end namespace
-			dd ?
+			emit dword: ?
 		else
-			dd v
+			emit dword: v
 		end if
 	else
-		dd v
+		emit dword: v
 	end if
 end macro
 
@@ -506,9 +506,9 @@ macro qword? value
 			store R_64 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
 			RELOCATION_INDEX = RELOCATION_INDEX + 1
 		end namespace
-		dq ?
+		emit qword: ?
 	else
-		dq v
+		emit qword: v
 	end if
 end macro
 
