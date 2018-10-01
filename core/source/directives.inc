@@ -2986,7 +2986,7 @@ define_macro:
 	test	edx,edx
 	jz	create_placeholder_value
 	test	[edx+ValueDefinition.flags],VAL_INTERNAL
-	jnz	prepare_macro
+	jnz	macro_already_defined
 	mov	eax,[current_pass]
 	sub	eax,[edx+ValueDefinition.pass]
 	jz	macro_already_defined
