@@ -93,7 +93,7 @@ macro newlocal? var
 	redefine var new
 end macro
 
-macro JCONDEXPR? target,mode,cond
+macro JCONDEXPR?: target,mode,cond
 	local buffer,current,counter
 	local neg,conj
 	local f,t
