@@ -1,12 +1,13 @@
 
-	format binary as 'img'
+	format binary as 'bin'
 	include 'cpu/x64.inc'
 
 	include 'listing.inc'
 
-	org	1600h
 
-	use16
+	ORG	1600h
+
+	USE16
 
 	cli				; disable the interrupts, just in
 					; case they are not disabled yet
