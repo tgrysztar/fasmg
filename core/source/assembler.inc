@@ -1078,6 +1078,7 @@ get_line:
 	je	convert_quoted_string
 	cmp	al,';'
 	jne	preprocess_syntactical_character
+	xor	edx,edx
 	test	[preprocessing_mode],PMODE_RETAIN_COMMENTS
 	jz	skip_comment
     preprocess_syntactical_character:
@@ -1086,20 +1087,36 @@ get_line:
 	je	convert_parameter
 	cmp	al,'\'
 	jne	preprocess_line_from_file
-	cmp	byte [esi],0Ah
-	jne	preprocess_line_from_file
 	test	[preprocessing_mode],PMODE_ISOLATE_LINES
 	jnz	preprocess_line_from_file
+	mov	edx,esi
+    detect_line_concatenation:
+	mov	al,[edx]
+	inc	edx
+	cmp	al,0Ah
+	je	concatenate_line
+	cmp	al,';'
+	je	concatenation_comment
+	cmp	al,20h
+	jne	preprocess_line_from_file
+	jmp	detect_line_concatenation
+    concatenate_line:
+	mov	byte [edi-1],20h
 	inc	esi
-	dec	edi
 	inc	[ebx+SourceEntry.number_of_attached_lines]
 	jmp	preprocess_line_from_file
+    concatenation_comment:
+	test	[preprocessing_mode],PMODE_RETAIN_COMMENTS
+	jnz	preprocess_line_from_file
+	mov	byte [edi-1],20h
+	mov	esi,edx
+	inc	[ebx+SourceEntry.number_of_attached_lines]
     skip_comment:
 	lodsb
 	test	al,al
 	jz	file_ended
 	cmp	al,0Ah
-	je	line_ended
+	je	comment_ended
 	cmp	al,22h
 	je	skip_quoted_string
 	cmp	al,27h
@@ -1109,6 +1126,10 @@ get_line:
 	lodsd
 	lea	esi,[esi+eax+12]
 	jmp	skip_comment
+    comment_ended:
+	test	edx,edx
+	jnz	preprocess_line_from_file
+	jmp	line_ended
     skip_quoted_string:
 	lodsd
 	add	esi,eax

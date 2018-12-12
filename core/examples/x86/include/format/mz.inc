@@ -117,10 +117,10 @@ macro word? value
 	a = $% - MZ.HEADER_LENGTH
 	a = a and 0FFFFh + (a and not 0FFFFh) shl 12
 	store a : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
-	dw v - MZ.segment
+	emit word: v - MZ.segment
 	MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
     else
-	dw v
+	emit word: v
     end if
 end macro
 
@@ -131,10 +131,10 @@ macro dword? value
 	a = $% - MZ.HEADER_LENGTH
 	a = a and 0FFFFh + (a and not 0FFFFh) shl 12
 	store a : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
-	dd v - MZ.segment
+	emit dword: v - MZ.segment
 	MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
     else
-	dd v
+	emit dword: v
     end if
 end macro
 
