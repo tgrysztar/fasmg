@@ -7,7 +7,7 @@ format PE GUI 4.0
 entry start
 
 struc GUID def
-	label . : 10
+	label . : 16
 	match d1-d2-d3-d4-d5, def
 		.Data1 dd 0x#d1
 		.Data2 dw 0x#d2
