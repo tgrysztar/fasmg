@@ -2674,19 +2674,14 @@ if ~ defined AVX_512
 		ns.type = 'mem'
 		ns.segment_prefix = 0
 		match [seg:offs], op
-			ns.segment = +seg
-			if ns.segment eq 1 elementof ns.segment & 1 metadataof ns.segment relativeto x86.sreg
-				ns.segment = 1 metadataof ns.segment - x86.sreg
-				if ns.segment < 4
-					ns.segment_prefix = 26h + ns.segment shl 3
-				else
-					ns.segment_prefix = 64h + ns.segment-4
-				end if
-			else
-				err 'invalid operand'
-			end if
+			x86.parse_segment_prefix ns,seg
 			AVX_512.parse_vsib_address ns,offs
 		else match [addr], op
+			AVX_512.parse_vsib_address ns,addr
+		else match =ptr? seg:offs, op
+			x86.parse_segment_prefix ns,seg
+			AVX_512.parse_vsib_address ns,offs
+		else match =ptr? addr, op
 			AVX_512.parse_vsib_address ns,addr
 		else
 			err 'invalid operand'

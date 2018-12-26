@@ -472,6 +472,20 @@ macro x86.parse_address ns,addr
 	end if
 end macro
 
+macro x86.parse_segment_prefix ns,seg
+	ns.segment = +seg
+	if ns.segment eq 1 elementof ns.segment & 1 metadataof ns.segment relativeto x86.sreg
+		ns.segment = 1 metadataof ns.segment - x86.sreg
+		if ns.segment < 4
+			ns.segment_prefix = 26h + ns.segment shl 3
+		else
+			ns.segment_prefix = 64h + ns.segment-4
+		end if
+	else
+		err 'invalid operand'
+	end if
+end macro
+
 macro x86.parse_operand_value ns,op
 	ns.segment_prefix = 0
 	ns.prefix = 0
@@ -480,18 +494,15 @@ macro x86.parse_operand_value ns,op
 	match [addr], op
 		ns.type = 'mem'
 		match seg:offs, addr
-			ns.segment = +seg
-			if ns.segment eq ns.segment element 1 & ns.segment metadata 1 relativeto x86.sreg
-				ns.segment = ns.segment metadata 1 - x86.sreg
-				if ns.segment < 4
-					ns.segment_prefix = 26h + ns.segment shl 3
-				else
-					x86.require 80386+
-					ns.segment_prefix = 64h + ns.segment-4
-				end if
-			else
-				err 'invalid operand'
-			end if
+			x86.parse_segment_prefix ns,seg
+			x86.parse_address ns,offs
+		else
+			x86.parse_address ns,addr
+		end match
+	else match =ptr? addr, op
+		ns.type = 'mem'
+		match seg:offs, addr
+			x86.parse_segment_prefix ns,seg
 			x86.parse_address ns,offs
 		else
 			x86.parse_address ns,addr

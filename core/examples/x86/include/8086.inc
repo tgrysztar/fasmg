@@ -110,6 +110,9 @@ macro x86.parse_operand_value ns,op
 	match [addr], op
 		ns.type = 'mem'
 		x86.parse_address ns,addr
+	else match =ptr? addr, op
+		ns.type = 'mem'
+		x86.parse_address ns,addr
 	else match seg:offs, op
 		ns.type = 'far'
 		if ns.size & ns.size <> 4
