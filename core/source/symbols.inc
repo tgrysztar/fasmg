@@ -820,7 +820,7 @@ update_value_definition:
 	jz	dynamic_value_definition_ready
 	and	[ebx+SymbolTree_Leaf.flags],not SYM_PREDICTED
 	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED_DEFINED
-	jnz	dynamic_value_definition_ready
+	jz	dynamic_value_definition_ready
 	or	[next_pass_needed],1
     dynamic_value_definition_ready:
 	retn
@@ -908,7 +908,7 @@ create_value_definition:
 	jz	add_value_definition
 	and	[ebx+SymbolTree_Leaf.flags],not SYM_PREDICTED
 	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED_DEFINED
-	jnz	add_value_definition
+	jz	add_value_definition
 	or	[next_pass_needed],1
     add_value_definition:
 	lea	ecx,[ebx+SymbolTree_Leaf.retired_definition]

@@ -241,7 +241,7 @@ macro x86.parse_address ns,addr
 	end if
 end macro
 
-macro x86.parse_segment_prefix ns,seg,offs
+macro x86.parse_segment_prefix ns,seg
 	ns.segment = +seg
 	if ns.segment eq 1 elementof ns.segment & 1 metadataof ns.segment relativeto x86.sreg
 		ns.segment = 1 metadataof ns.segment - x86.sreg

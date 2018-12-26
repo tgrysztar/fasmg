@@ -2993,6 +2993,8 @@ define_macro:
 	cmp	eax,1
 	je	prepare_macro
     create_placeholder_value:
+	test	[macro_flags],VAL_NONRECURSIVE
+	jnz	prepare_macro
 	call	create_value_definition
 	test	edx,edx
 	jz	prepare_macro
