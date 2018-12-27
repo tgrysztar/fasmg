@@ -624,6 +624,7 @@ assembly_pass:
 	mov	dl,SYMCLASS_INSTRUCTION
 	call	identify_symbol
 	jc	empty_line
+	mov	[label_branch],edx
 	test	ebx,ebx
 	jz	unrecognized_instruction
 	mov	al,[ebx+SymbolTree_Leaf.class]
@@ -661,6 +662,13 @@ assembly_pass:
 	jne	execute_interceptor
 	cmp	[label_interceptor],0
 	jne	execute_label_interceptor
+	mov	ebx,[label_branch]
+	mov	[symbol_class],SYMCLASS_INSTRUCTION
+	or	[symbol_required],1
+	or	[symbol_expected],1
+	call	scan_symbol_branch
+	xor	edx,edx
+	call	mark_symbol_as_used
 	mov	edx,_illegal_instruction
 	call	register_error
 	jmp	assembly_line
@@ -668,7 +676,6 @@ assembly_pass:
 	cmp	[interceptor],0
 	jne	unrecognized_instruction
 	mov	[label_leaf],ebx
-	mov	[label_branch],edx
 	mov	[label_instruction_start],esi
 	mov	ebx,[label_interceptor_symbol]
 	call	get_available_value

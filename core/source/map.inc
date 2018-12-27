@@ -114,7 +114,10 @@ put_into_map:
 ;  ecx = string length, zero for ASCIIZ string
 ;  eax = value
 ; preserves: ebx, [esi], edi
-; note: esi is replaced with pointer to the same string in persistent storage
+; note:
+;  esi is replaced with pointer to the same string in persistent storage,
+;  an ASCIIZ string is a key with length including the terminating zero
+;  and when it is put into persistent storage, final zero is copied as well
 	push	eax
 	call	get_bucket
 	test	eax,eax

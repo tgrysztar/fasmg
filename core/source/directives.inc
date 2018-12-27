@@ -2993,8 +2993,9 @@ define_macro:
 	cmp	eax,1
 	je	prepare_macro
     create_placeholder_value:
-	test	[macro_flags],VAL_NONRECURSIVE
-	jnz	prepare_macro
+    ; this section interferes with regular behavior of SYM_PREDICTED, therefore
+    ; any newly introduced mechanism that would set or use SYM_PREDICTED of instruction symbol
+    ; should mark the symbol in some way and then skip this section upon seeing the mark
 	call	create_value_definition
 	test	edx,edx
 	jz	prepare_macro
@@ -3003,12 +3004,19 @@ define_macro:
 	mov	[edx+ValueDefinition.pass],eax
 	mov	[edx+ValueDefinition.type],VALTYPE_RESERVED
 	mov	al,[macro_flags]
-	or	al,VAL_IN_USE
 	mov	[edx+ValueDefinition.flags],al
-	mov	al,[ebx+SymbolTree_Leaf.flags]
-	test	al,SYM_PREDICTED
+	test	al,VAL_UNCONDITIONAL
+	jnz	prepare_macro
+	or	[edx+ValueDefinition.flags],VAL_IN_USE
+	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED
 	jz	prepare_macro
-	test	al,SYM_PREDICTED_DEFINED
+	mov	ecx,[ebx+SymbolTree_Leaf.last_use_pass]
+	cmp	ecx,[current_pass]
+	je	macro_used_earlier
+	and	[ebx+SymbolTree_Leaf.flags],not SYM_PREDICTED
+	jmp	prepare_macro
+      macro_used_earlier:
+	test	al,VAL_NONRECURSIVE
 	jnz	prepare_macro
 	or	[next_pass_needed],-1
     prepare_macro:
