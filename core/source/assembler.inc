@@ -662,15 +662,17 @@ assembly_pass:
 	jne	execute_interceptor
 	cmp	[label_interceptor],0
 	jne	execute_label_interceptor
+	mov	edx,_illegal_instruction
+	call	register_error
 	mov	ebx,[label_branch]
+	test	ebx,ebx
+	jz	assembly_line
 	mov	[symbol_class],SYMCLASS_INSTRUCTION
 	or	[symbol_required],1
 	or	[symbol_expected],1
 	call	scan_symbol_branch
 	xor	edx,edx
 	call	mark_symbol_as_used
-	mov	edx,_illegal_instruction
-	call	register_error
 	jmp	assembly_line
     labeled_instruction:
 	cmp	[interceptor],0
