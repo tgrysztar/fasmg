@@ -12,11 +12,13 @@ if ~ defined MMX
 
 	macro MMX.parse_operand ns,op
 		x86.parse_operand ns,op
-		if ns.type = 'imm' & ns.size = 0 & ns.imm eq 1 elementof ns.imm & 1 metadataof ns.imm relativeto MMX.reg
-			ns.type = 'mmreg'
-			ns.mod = 11b
-			ns.rm = 1 metadataof ns.imm - MMX.reg
-			ns.size = 8
+		if ns.type = 'imm' & ns.size = 0
+			if ns.imm eq 1 elementof ns.imm & 1 metadataof ns.imm relativeto MMX.reg
+				ns.type = 'mmreg'
+				ns.mod = 11b
+				ns.rm = 1 metadataof ns.imm - MMX.reg
+				ns.size = 8
+			end if
 		end if
 	end macro
 

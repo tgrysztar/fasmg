@@ -619,8 +619,10 @@ assembly_pass:
 	xor	edx,edx
       weak_interceptor:
 	mov	[interceptor],edx
-	and	[label_interceptor],0
-	and	[symbol_definition],0
+	xor	eax,eax
+	mov	[label_interceptor],eax
+	mov	[symbol_definition],al
+	mov	[instruction_branch],eax
 	mov	dl,SYMCLASS_INSTRUCTION
 	call	identify_symbol
 	jc	empty_line
@@ -673,6 +675,15 @@ assembly_pass:
 	call	scan_symbol_branch
 	xor	edx,edx
 	call	mark_symbol_as_used
+	mov	ebx,[instruction_branch]
+	test	ebx,ebx
+	jz	assembly_line
+	mov	[symbol_class],SYMCLASS_STRUCTURE
+	or	[symbol_required],1
+	or	[symbol_expected],1
+	call	scan_symbol_branch
+	xor	edx,edx
+	call	mark_symbol_as_used
 	jmp	assembly_line
     labeled_instruction:
 	cmp	[interceptor],0
@@ -698,6 +709,7 @@ assembly_pass:
     identify_structure_instruction:
 	mov	dl,SYMCLASS_STRUCTURE
 	call	identify_symbol
+	mov	[instruction_branch],edx
 	test	ebx,ebx
 	jz	unrecognized_instruction
 	cmp	[ebx+SymbolTree_Leaf.class],SYMCLASS_STRUCTURE

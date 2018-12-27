@@ -17,13 +17,13 @@ if ~ defined SSE
 
 	macro SSE.parse_operand ns,op
 		x86.parse_operand ns,op
-		if ns.type = 'imm' & ns.size = 0 & ns.imm eq 1 elementof ns.imm
-			if 1 metadataof ns.imm relativeto SSE.reg
+		if ns.type = 'imm' & ns.size = 0
+			if 1 metadataof ns.imm relativeto SSE.reg & ns.imm eq 1 elementof ns.imm
 				ns.type = 'mmreg'
 				ns.mod = 11b
 				ns.rm = 1 metadataof ns.imm - SSE.reg
 				ns.size = 16
-			else if 1 metadataof ns.imm relativeto MMX.reg
+			else if 1 metadataof ns.imm relativeto MMX.reg & ns.imm eq 1 elementof ns.imm
 				ns.type = 'mmreg'
 				ns.mod = 11b
 				ns.rm = 1 metadataof ns.imm - MMX.reg

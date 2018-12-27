@@ -297,6 +297,7 @@ identify_parameter_symbol:
 ;  when [SymbolTree_Leaf.class] = SYMCLASS_STRUCTURE:
 ;   [label_leaf] - SymbolTree_Leaf of structure label
 ;   [label_branch] - SymbolTree_Foliage of structure label
+;   [instruction_branch] - SymbolTree_Foliage of structure instruction
 ; out:
 ;  when done, handler should jump to instruction_assembled with esi containing a pointer moved past the processed part of line,
 ;  or jump directly to assembly_line when the rest of line should be ignored
@@ -2993,9 +2994,10 @@ define_macro:
 	cmp	eax,1
 	je	prepare_macro
     create_placeholder_value:
-    ; this section interferes with regular behavior of SYM_PREDICTED, therefore
-    ; any newly introduced mechanism that would set or use SYM_PREDICTED of instruction symbol
-    ; should mark the symbol in some way and then skip this section upon seeing the mark
+    ; for VAL_UNCONDITIONAL macros this helps to detect when a macro tries to call itself,
+    ; for regular ones this section interferes with operation of SYM_PREDICTED to sometimes prevent excess passes,
+    ; any newly introduced mechanism that would expect SYM_PREDICTED to behave reliably for instruction symbol
+    ; should mark the symbol in some way and skip this section upon seeing the mark
 	call	create_value_definition
 	test	edx,edx
 	jz	prepare_macro
@@ -3010,12 +3012,23 @@ define_macro:
 	or	[edx+ValueDefinition.flags],VAL_IN_USE
 	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED
 	jz	prepare_macro
-	mov	ecx,[ebx+SymbolTree_Leaf.last_use_pass]
-	cmp	ecx,[current_pass]
-	je	macro_used_earlier
+	mov	edi,ebx
+	mov	ecx,[current_pass]
+      check_macro_usage:
+	cmp	ecx,[edi+SymbolTree_Leaf.last_use_pass]
+	je	macro_possibly_used_earlier
+	mov	edx,[edi+SymbolTree_Leaf.fallback_neighbour]
+	test	edx,edx
+	jz	look_up_parent_namespace_macro
+	cmp	ecx,[edx+SymbolTree_Leaf.last_use_pass]
+	je	macro_possibly_used_earlier
+      look_up_parent_namespace_macro:
+	mov	edi,[edi+SymbolTree_Leaf.fallback_parent]
+	test	edi,edi
+	jnz	check_macro_usage
 	and	[ebx+SymbolTree_Leaf.flags],not SYM_PREDICTED
 	jmp	prepare_macro
-      macro_used_earlier:
+      macro_possibly_used_earlier:
 	test	al,VAL_NONRECURSIVE
 	jnz	prepare_macro
 	or	[next_pass_needed],-1
@@ -3350,8 +3363,6 @@ use_struc:
 	mov	eax,[current_pass]
 	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	mov	[instruction_value],edx
-	mov	eax,[ebx+SymbolTree_Leaf.branch]
-	mov	[instruction_branch],eax
 	xor	ecx,ecx
 	call	embed_symbolic_value
 	and	[embedded_context],0

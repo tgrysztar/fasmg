@@ -37,6 +37,64 @@ define x86.dword? :4
 define @dest
 define @src
 
+macro x86.parse_operand ns,op
+	ns.size = 0
+	match prefix value, op
+		match :sz, x86.prefix
+			ns.size = sz
+			x86.parse_operand_value ns,value
+		else
+			x86.parse_operand_value ns,op
+		end match
+	else
+		x86.parse_operand_value ns,op
+	end match
+end macro
+
+macro x86.parse_operand_value ns,op
+	ns.segment_prefix = 0
+	match [addr], op
+		ns.type = 'mem'
+		x86.parse_address ns,addr
+	else match =ptr? addr, op
+		ns.type = 'mem'
+		x86.parse_address ns,addr
+	else match seg:offs, op
+		ns.type = 'far'
+		if ns.size & ns.size <> 4
+			err 'operand sizes do not match'
+		else
+			ns.size = 4
+		end if
+		ns.segment = +seg
+		ns.offset = +offs
+	else
+		ns.type = 'imm'
+		ns.imm = +op
+		ns.displacement_size = 0
+		if ns.imm eq 1 elementof ns.imm
+			if 1 metadataof (1 metadataof ns.imm) relativeto x86.reg
+				ns.type = 'reg'
+				ns.mod = 11b
+				ns.rm = 1 metadataof ns.imm - 1 elementof (1 metadataof ns.imm)
+				if ns.size & ns.size <> 1 metadataof (1 metadataof ns.imm) - x86.reg
+					err 'operand sizes do not match'
+				else
+					ns.size = 1 metadataof (1 metadataof ns.imm) - x86.reg
+				end if
+			else if 1 metadataof ns.imm relativeto x86.sreg
+				ns.type = 'sreg'
+				ns.rm = 1 metadataof ns.imm - x86.sreg
+				if ns.size & ns.size <> 2
+					err 'operand sizes do not match'
+				else
+					ns.size = 2
+				end if
+			end if
+		end if
+	end match
+end macro
+
 macro x86.parse_address ns,addr
 	match seg:offs, addr
 		ns.segment = +seg
@@ -103,64 +161,6 @@ macro x86.parse_address ns,addr
 			end if
 		end if
 	end if
-end macro
-
-macro x86.parse_operand_value ns,op
-	ns.segment_prefix = 0
-	match [addr], op
-		ns.type = 'mem'
-		x86.parse_address ns,addr
-	else match =ptr? addr, op
-		ns.type = 'mem'
-		x86.parse_address ns,addr
-	else match seg:offs, op
-		ns.type = 'far'
-		if ns.size & ns.size <> 4
-			err 'operand sizes do not match'
-		else
-			ns.size = 4
-		end if
-		ns.segment = +seg
-		ns.offset = +offs
-	else
-		ns.type = 'imm'
-		ns.imm = +op
-		ns.displacement_size = 0
-		if ns.imm eq 1 elementof ns.imm
-			if 1 metadataof (1 metadataof ns.imm) relativeto x86.reg
-				ns.type = 'reg'
-				ns.mod = 11b
-				ns.rm = 1 metadataof ns.imm - 1 elementof (1 metadataof ns.imm)
-				if ns.size & ns.size <> 1 metadataof (1 metadataof ns.imm) - x86.reg
-					err 'operand sizes do not match'
-				else
-					ns.size = 1 metadataof (1 metadataof ns.imm) - x86.reg
-				end if
-			else if 1 metadataof ns.imm relativeto x86.sreg
-				ns.type = 'sreg'
-				ns.rm = 1 metadataof ns.imm - x86.sreg
-				if ns.size & ns.size <> 2
-					err 'operand sizes do not match'
-				else
-					ns.size = 2
-				end if
-			end if
-		end if
-	end match
-end macro
-
-macro x86.parse_operand ns,op
-	ns.size = 0
-	match prefix value, op
-		match :sz, x86.prefix
-			ns.size = sz
-			x86.parse_operand_value ns,value
-		else
-			x86.parse_operand_value ns,op
-		end match
-	else
-		x86.parse_operand_value ns,op
-	end match
 end macro
 
 macro x86.store_instruction opcode*,rm_operand*,reg*,imm_size:0,imm

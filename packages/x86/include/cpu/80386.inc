@@ -75,184 +75,18 @@ define @dest
 define @src
 define @aux
 
-macro x86.parse_address ns,addr
-	ns.mode = 0
-	match :sz value, x86.addr
-		if sz = 2 | sz = 4 | sz = 8
-			ns.mode = sz shl 3
+macro x86.parse_operand ns,op
+	ns.size = 0
+	match prefix value, op
+		match :sz, x86.prefix
+			ns.size = sz
+			x86.parse_operand_value ns,value
 		else
-			err 'invalid address size'
-		end if
-		ns.address = +value
-		if ns.size = 0
-			ns.size = sizeof (value)
-		end if
+			x86.parse_operand_value ns,op
+		end match
 	else
-		ns.address = +addr
-		if ns.size = 0
-			ns.size = sizeof (addr)
-		end if
+		x86.parse_operand_value ns,op
 	end match
-	ns.address_registers = 0
-	repeat elementsof ns.address
-		if % metadataof ns.address relativeto x86.r16 | % metadataof ns.address relativeto x86.r32
-			ns.address_registers = ns.address_registers + % elementof ns.address * % scaleof ns.address
-		end if
-	end repeat
-	ns.displacement = ns.address - ns.address_registers
-	if ns.mode = 0
-		ns.mode = x86.mode
-		if ns.mode = 16 & ns.displacement relativeto 0 & ns.displacement >= 10000h & ns.address_registers eq 0
-			ns.mode = 32
-		end if
-	else
-		if (ns.mode = 16 & 1 metadataof ns.address_registers relativeto x86.r32) | (ns.mode = 32 & 1 metadataof ns.address_registers relativeto x86.r16)
-			err 'invalid address'
-		end if
-	end if
-	if ns.address_registers eq 0
-		ns.mod = 0
-		if ns.mode = 16
-			ns.rm = 6
-			ns.displacement_size = 2
-		else
-			ns.rm = 5
-			ns.displacement_size = 4
-		end if
-	else if 1 metadataof ns.address_registers relativeto x86.r32
-		ns.mode = 32
-		ns.index_only = 0
-		if 2 scaleof ns.address_registers = 0
-			ns.scale = 1 scaleof ns.address_registers
-			ns.base = 1 metadataof ns.address_registers - x86.r32
-			if ns.scale = 1
-				ns.rm = ns.base
-				if ns.rm = 4
-					ns.index = 4
-				else
-					ns.index = -1
-				end if
-			else if ns.base <> 4 & ns.scale = 2
-				ns.rm = 4
-				ns.index = ns.base
-				ns.scale = 1
-			else if ns.base <> 4 & (ns.scale = 4 | ns.scale = 8)
-				ns.rm = 4
-				ns.index = ns.base
-				ns.base = 5
-				ns.index_only = 1
-			else if ns.base <> 4 & (ns.scale = 3 | ns.scale = 5 | ns.scale = 9)
-				ns.rm = 4
-				ns.index = ns.base
-				ns.scale = ns.scale - 1
-			else
-				err 'invalid address'
-			end if
-		else if 3 scaleof ns.address_registers = 0 & 2 metadataof ns.address_registers relativeto x86.r32
-			ns.rm = 4
-			if 1 scaleof ns.address_registers = 1
-				ns.base = 1 metadataof ns.address_registers - x86.r32
-				ns.index = 2 metadataof ns.address_registers - x86.r32
-				ns.scale = 2 scaleof ns.address_registers
-			else if 2 scaleof ns.address_registers = 1
-				ns.base = 2 metadataof ns.address_registers - x86.r32
-				ns.index = 1 metadataof ns.address_registers - x86.r32
-				ns.scale = 1 scaleof ns.address_registers
-			else
-				err 'invalid address'
-			end if
-			if ns.index = 4
-				if ns.scale = 1
-					ns.index = ns.base
-					ns.base = 4
-				else
-					err 'invalid address'
-				end if
-			else if ns.segment_prefix = 36h & ns.index = 5 & ns.scale = 1
-				ns.index = ns.base
-				ns.base = 5
-			else if ns.segment_prefix = 3Eh & ns.base = 5 & ns.scale = 1
-				ns.base = ns.index
-				ns.index = 5
-			else if ns.scale > 2 & ns.scale <> 4 & ns.scale <> 8
-				err 'invalid address'
-			end if
-		else
-			err 'invalid address'
-		end if
-		ns.displacement_size = 4
-		ns.mod = 2
-		if ns.index_only
-			ns.mod = 0
-		else if ns.displacement relativeto 0
-			if ns.displacement = 0 & ns.rm <> 5 & (ns.rm <> 4 | ns.base <> 5)
-				ns.displacement_size = 0
-				ns.mod = 0
-			else if ns.displacement<80h & ns.displacement>=-80h
-				ns.displacement_size = 1
-				ns.mod = 1
-			else if ns.displacement-100000000h>=-80h & ns.displacement<100000000h
-				ns.displacement = ns.displacement-100000000h
-				ns.displacement_size = 1
-				ns.mod = 1
-			else if ns.segment_prefix = 3Eh & ns.base = 5 & ns.index = 5 & ns.scale = 1
-				ns.scale = 2
-				ns.mod = 0
-			end if
-		end if
-	else if 1 metadataof ns.address_registers relativeto x86.r16
-		ns.mode = 16
-		if ns.address_registers relativeto bx+si
-			ns.rm = 0
-		else if ns.address_registers relativeto bx+di
-			ns.rm = 1
-		else if ns.address_registers relativeto bp+si
-			ns.rm = 2
-		else if ns.address_registers relativeto bp+di
-			ns.rm = 3
-		else if ns.address_registers relativeto si
-			ns.rm = 4
-		else if ns.address_registers relativeto di
-			ns.rm = 5
-		else if ns.address_registers relativeto bp
-			ns.rm = 6
-		else if ns.address_registers relativeto bx
-			ns.rm = 7
-		else
-			err 'invalid address'
-		end if
-		ns.displacement_size = 2
-		ns.mod = 2
-		if ns.displacement relativeto 0
-			if ns.displacement = 0 & ns.rm <> 6
-				ns.displacement_size = 0
-				ns.mod = 0
-			else if ns.displacement<80h & ns.displacement>=-80h
-				ns.displacement_size = 1
-				ns.mod = 1
-			else if ns.displacement-10000h>=-80h & ns.displacement<10000h
-				ns.displacement = ns.displacement-10000h
-				ns.displacement_size = 1
-				ns.mod = 1
-			end if
-		end if
-	else
-		err 'invalid address'
-	end if
-end macro
-
-macro x86.parse_segment_prefix ns,seg
-	ns.segment = +seg
-	if ns.segment eq 1 elementof ns.segment & 1 metadataof ns.segment relativeto x86.sreg
-		ns.segment = 1 metadataof ns.segment - x86.sreg
-		if ns.segment < 4
-			ns.segment_prefix = 26h + ns.segment shl 3
-		else
-			ns.segment_prefix = 64h + ns.segment-4
-		end if
-	else
-		err 'invalid operand'
-	end if
 end macro
 
 macro x86.parse_operand_value ns,op
@@ -313,18 +147,192 @@ macro x86.parse_operand_value ns,op
 	end match
 end macro
 
-macro x86.parse_operand ns,op
-	ns.size = 0
-	match prefix value, op
-		match :sz, x86.prefix
-			ns.size = sz
-			x86.parse_operand_value ns,value
+macro x86.parse_segment_prefix ns,seg
+	ns.segment = +seg
+	if ns.segment eq 1 elementof ns.segment & 1 metadataof ns.segment relativeto x86.sreg
+		ns.segment = 1 metadataof ns.segment - x86.sreg
+		if ns.segment < 4
+			ns.segment_prefix = 26h + ns.segment shl 3
 		else
-			x86.parse_operand_value ns,op
-		end match
+			ns.segment_prefix = 64h + ns.segment-4
+		end if
 	else
-		x86.parse_operand_value ns,op
+		err 'invalid operand'
+	end if
+end macro
+
+macro x86.parse_address ns,addr
+	ns.mode = 0
+	match :sz value, x86.addr
+		if sz = 2 | sz = 4 | sz = 8
+			ns.mode = sz shl 3
+		else
+			err 'invalid address size'
+		end if
+		ns.address = +value
+		if ns.size = 0
+			ns.size = sizeof (value)
+		end if
+	else
+		ns.address = +addr
+		if ns.size = 0
+			ns.size = sizeof (addr)
+		end if
 	end match
+	ns.address_registers = 0
+	repeat elementsof ns.address
+		if % metadataof ns.address relativeto x86.r16 | % metadataof ns.address relativeto x86.r32
+			ns.address_registers = ns.address_registers + % elementof ns.address * % scaleof ns.address
+		end if
+	end repeat
+	ns.displacement = ns.address - ns.address_registers
+	if ns.mode = 0
+		ns.mode = x86.mode
+		if ns.mode = 16 & ns.displacement relativeto 0 & ns.displacement >= 10000h & ns.address_registers eq 0
+			ns.mode = 32
+		end if
+	else
+		if (ns.mode = 16 & 1 metadataof ns.address_registers relativeto x86.r32) | (ns.mode = 32 & 1 metadataof ns.address_registers relativeto x86.r16)
+			err 'invalid address'
+		end if
+	end if
+	if ns.address_registers eq 0
+		ns.mod = 0
+		if ns.mode = 16
+			ns.rm = 6
+			ns.displacement_size = 2
+		else
+			ns.rm = 5
+			ns.displacement_size = 4
+		end if
+	else if 1 metadataof ns.address_registers relativeto x86.r32
+		x86.encode_address_32 ns
+	else if 1 metadataof ns.address_registers relativeto x86.r16
+		x86.encode_address_16 ns
+	else
+		err 'invalid address'
+	end if
+end macro
+
+macro x86.encode_address_16 ns
+	ns.mode = 16
+	if ns.address_registers relativeto bx+si
+		ns.rm = 0
+	else if ns.address_registers relativeto bx+di
+		ns.rm = 1
+	else if ns.address_registers relativeto bp+si
+		ns.rm = 2
+	else if ns.address_registers relativeto bp+di
+		ns.rm = 3
+	else if ns.address_registers relativeto si
+		ns.rm = 4
+	else if ns.address_registers relativeto di
+		ns.rm = 5
+	else if ns.address_registers relativeto bp
+		ns.rm = 6
+	else if ns.address_registers relativeto bx
+		ns.rm = 7
+	else
+		err 'invalid address'
+	end if
+	ns.displacement_size = 2
+	ns.mod = 2
+	if ns.displacement relativeto 0
+		if ns.displacement = 0 & ns.rm <> 6
+			ns.displacement_size = 0
+			ns.mod = 0
+		else if ns.displacement<80h & ns.displacement>=-80h
+			ns.displacement_size = 1
+			ns.mod = 1
+		else if ns.displacement-10000h>=-80h & ns.displacement<10000h
+			ns.displacement = ns.displacement-10000h
+			ns.displacement_size = 1
+			ns.mod = 1
+		end if
+	end if
+end macro
+
+macro x86.encode_address_32 ns
+	ns.mode = 32
+	ns.index_only = 0
+	if 2 scaleof ns.address_registers = 0
+		ns.scale = 1 scaleof ns.address_registers
+		ns.base = 1 metadataof ns.address_registers - x86.r32
+		if ns.scale = 1
+			ns.rm = ns.base
+			if ns.rm = 4
+				ns.index = 4
+			else
+				ns.index = -1
+			end if
+		else if ns.base <> 4 & ns.scale = 2
+			ns.rm = 4
+			ns.index = ns.base
+			ns.scale = 1
+		else if ns.base <> 4 & (ns.scale = 4 | ns.scale = 8)
+			ns.rm = 4
+			ns.index = ns.base
+			ns.base = 5
+			ns.index_only = 1
+		else if ns.base <> 4 & (ns.scale = 3 | ns.scale = 5 | ns.scale = 9)
+			ns.rm = 4
+			ns.index = ns.base
+			ns.scale = ns.scale - 1
+		else
+			err 'invalid address'
+		end if
+	else if 3 scaleof ns.address_registers = 0 & 2 metadataof ns.address_registers relativeto x86.r32
+		ns.rm = 4
+		if 1 scaleof ns.address_registers = 1
+			ns.base = 1 metadataof ns.address_registers - x86.r32
+			ns.index = 2 metadataof ns.address_registers - x86.r32
+			ns.scale = 2 scaleof ns.address_registers
+		else if 2 scaleof ns.address_registers = 1
+			ns.base = 2 metadataof ns.address_registers - x86.r32
+			ns.index = 1 metadataof ns.address_registers - x86.r32
+			ns.scale = 1 scaleof ns.address_registers
+		else
+			err 'invalid address'
+		end if
+		if ns.index = 4
+			if ns.scale = 1
+				ns.index = ns.base
+				ns.base = 4
+			else
+				err 'invalid address'
+			end if
+		else if ns.segment_prefix = 36h & ns.index = 5 & ns.scale = 1
+			ns.index = ns.base
+			ns.base = 5
+		else if ns.segment_prefix = 3Eh & ns.base = 5 & ns.scale = 1
+			ns.base = ns.index
+			ns.index = 5
+		else if ns.scale > 2 & ns.scale <> 4 & ns.scale <> 8
+			err 'invalid address'
+		end if
+	else
+		err 'invalid address'
+	end if
+	ns.displacement_size = 4
+	ns.mod = 2
+	if ns.index_only
+		ns.mod = 0
+	else if ns.displacement relativeto 0
+		if ns.displacement = 0 & ns.rm <> 5 & (ns.rm <> 4 | ns.base <> 5)
+			ns.displacement_size = 0
+			ns.mod = 0
+		else if ns.displacement<80h & ns.displacement>=-80h
+			ns.displacement_size = 1
+			ns.mod = 1
+		else if ns.displacement-100000000h>=-80h & ns.displacement<100000000h
+			ns.displacement = ns.displacement-100000000h
+			ns.displacement_size = 1
+			ns.mod = 1
+		else if ns.segment_prefix = 3Eh & ns.base = 5 & ns.index = 5 & ns.scale = 1
+			ns.scale = 2
+			ns.mod = 0
+		end if
+	end if
 end macro
 
 macro x86.store_operand_prefix size*

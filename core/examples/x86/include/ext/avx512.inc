@@ -45,23 +45,23 @@ if ~ defined AVX_512
 		ns.evex_b = 0
 		ns.memsize = 0
 		x86.parse_operand ns,op
-		if ns.type = 'imm' & ns.size = 0 & ns.imm eq 1 elementof ns.imm
-			if 1 metadataof ns.imm relativeto SSE.reg
+		if ns.type = 'imm' & ns.size = 0
+			if 1 metadataof ns.imm relativeto SSE.reg & ns.imm eq 1 elementof ns.imm
 				ns.type = 'mmreg'
 				ns.mod = 11b
 				ns.rm = 1 metadataof ns.imm - SSE.reg
 				ns.size = 16
-			else if 1 metadataof ns.imm relativeto AVX.reg
+			else if 1 metadataof ns.imm relativeto AVX.reg & ns.imm eq 1 elementof ns.imm
 				ns.type = 'mmreg'
 				ns.mod = 11b
 				ns.rm = 1 metadataof ns.imm - AVX.reg
 				ns.size = 32
-			else if 1 metadataof (1 metadataof ns.imm) relativeto AVX_512.reg
+			else if 1 metadataof (1 metadataof ns.imm) relativeto AVX_512.reg & ns.imm eq 1 elementof ns.imm
 				ns.type = 'mmreg'
 				ns.mod = 11b
 				ns.rm = 1 metadataof ns.imm - 1 elementof (1 metadataof ns.imm)
 				ns.size = 1 metadataof (1 metadataof ns.imm) - AVX_512.reg
-			else if 1 metadataof ns.imm relativeto AVX_512.maskreg
+			else if 1 metadataof ns.imm relativeto AVX_512.maskreg & ns.imm eq 1 elementof ns.imm
 				ns.type = 'maskreg'
 				ns.mod = 11b
 				ns.rm = 1 metadataof ns.imm - 1 elementof (1 metadataof ns.imm)
