@@ -100,7 +100,7 @@ namespace ELF
 	if defined Settings.LoadHeaders
 		LOAD_HEADERS := Settings.LoadHeaders 
 	else  
-		LOAD_HEADERS := 0 
+		LOAD_HEADERS := 1
 	end if
 
 	Header:
