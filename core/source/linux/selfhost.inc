@@ -26,8 +26,12 @@ iterate instr, push,pop
 	end macro
 end iterate
 
-macro format? clause
-	match =ELF? =executable? settings, clause:
+macro format?.ELF? variant
+	match , variant
+		format binary as 'o'
+		include '../../examples/x86/include/format/elf32.inc'
+		use32
+	else match =executable? settings, variant:
 		match brand =at? base:, settings
 			ELF.Settings.ABI = brand
 			ELF.Settings.BaseAddress = base

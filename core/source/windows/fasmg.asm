@@ -470,7 +470,6 @@ section '.bss' readable writeable
 
   timer dd ?
   verbosity_level dd ?
-  string_buffer rb 100h
 
 section '.idata' import data readable writeable
 

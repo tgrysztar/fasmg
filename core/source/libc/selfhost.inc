@@ -26,15 +26,27 @@ iterate instr, push,pop
 	end macro
 end iterate
 
-macro format? clause
-	match =ELF?, clause
+macro format?.ELF? variant
+	match , variant
 		format binary as 'o'
 		include '../../examples/x86/include/format/elf32.inc'
+		use32
+	else match =executable? settings, variant:
+		match brand =at? base:, settings
+			ELF.Settings.ABI = brand
+			ELF.Settings.BaseAddress = base
+		else match =at? base:, settings
+			ELF.Settings.BaseAddress = base
+		else match brand:, settings
+			ELF.Settings.ABI = brand
+		end match
+		include '../../examples/x86/include/format/elfexe.inc'
 		use32
 	else
 		err 'invalid argument'
 	end match
 end macro
+
 
 macro struct? name
 	macro ends?!

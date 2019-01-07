@@ -26,6 +26,20 @@ iterate instr, push,pop
 	end macro
 end iterate
 
+macro format?.MachO? variant
+	match , variant
+		MachO.Settings.FileType equ MH_OBJECT
+		include 'macho.inc'
+		use32
+	else match =executable?, variant
+		MachO.Settings.BaseAddress = 0x1000
+		include 'macho.inc'
+		use32
+	else
+		err 'invalid argument'
+	end match
+end macro
+
 macro struct? name
 	macro ends?!
 			end namespace
@@ -39,20 +53,6 @@ macro struct? name
 	struc name
 		label . : sizeof.name
 		namespace .
-end macro
-
-macro format? clause
-	match =MachO? =executable?, clause
-		MachO.Settings.BaseAddress = 0x1000
-		include 'macho.inc'
-		use32
-	else match =MachO?, clause
-		MachO.Settings.FileType equ MH_OBJECT
-		include 'macho.inc'
-		use32
-	else
-		err 'invalid argument'
-	end match
 end macro
 
 macro ccall? proc*,args&

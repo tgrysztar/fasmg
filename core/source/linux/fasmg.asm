@@ -479,7 +479,6 @@ segment readable writeable
   tenths_of_second dd ?
 
   verbosity_level dd ?
-  string_buffer rb 100h
 
   path_buffer rb 1000h
 

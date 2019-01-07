@@ -64,8 +64,6 @@ section '.text' code readable executable
 			bytes_count dd ?
 			position_high dd ?
 
-			string_buffer rb 100h
-
 			rb  (LocalVariables - $) and 11b
 
 		LOCAL_VARIABLES_SIZE = $ - LocalVariables

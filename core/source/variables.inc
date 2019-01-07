@@ -1,5 +1,6 @@
 
 characters db 256 dup ?
+string_buffer db 256 dup ?
 
 temporary_value dd 4 dup ?
 accumulator dd 3 dup ?
@@ -270,4 +271,3 @@ size_specified db ?
 
 message_volatile db ?
 displayed_byte db ?
-
