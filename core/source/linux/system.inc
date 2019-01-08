@@ -26,7 +26,7 @@ S_IWOTH    = 0002o
 S_IXOTH    = 0001o
 
 system_init:
-	mov	eax,13
+	mov	eax,13			; sys_time
 	mov	ebx,timestamp
 	int	0x80
 	retn
@@ -84,7 +84,7 @@ open:
 ; preserves: esi, edi
 	push	esi edi ebp
 	call	adapt_path
-	mov	eax,5
+	mov	eax,5			; sys_open
 	mov	ecx,O_RDONLY
 	xor	edx,edx
 	int	0x80
@@ -116,7 +116,7 @@ create:
 ; preserves: esi, edi
 	push	esi edi ebp
 	call	adapt_path
-	mov	eax,5
+	mov	eax,5			; sys_open
 	mov	ecx,O_CREAT+O_TRUNC+O_WRONLY
 	mov	edx,S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH
 	int	0x80
@@ -131,7 +131,7 @@ write:
 ; out: cf set on error
 ; preserves: ebx, esi, edi
 	push	ebx ecx esi edi ebp
-	mov	eax,4
+	mov	eax,4			; sys_write
 	xchg	ecx,edx
 	int	0x80
 	pop	ebp edi esi ecx ebx
@@ -146,7 +146,7 @@ read:
 ; out: cf set on error
 ; preserves: ebx, esi, edi
 	push	ebx ecx esi edi ebp
-	mov	eax,3
+	mov	eax,3			; sys_read
 	xchg	ecx,edx
 	int	0x80
 	pop	ebp edi esi ecx ebx
@@ -160,7 +160,7 @@ close:
 ; in: ebx = file handle
 ; preserves: ebx, esi, edi
 	push	ebx esi edi ebp
-	mov	eax,6
+	mov	eax,6			; sys_close
 	int	0x80
 	pop	ebp edi esi ebx
 	ret
@@ -174,7 +174,7 @@ lseek:
 	movzx	edi,cl
 	mov	ecx,edx
 	mov	edx,eax
-	mov	eax,140
+	mov	eax,140 		; sys_llseek
 	mov	esi,loff
 	int	0x80
 	pop	ebp ebx edi esi
@@ -207,7 +207,7 @@ display_string:
 	neg	ecx
 	sub	ecx,2
    write_string_to_stdout:
-	mov	eax,4
+	mov	eax,4			; sys_write
 	mov	ebx,1
 	mov	edx,ecx
 	mov	ecx,esi
@@ -230,7 +230,7 @@ display_error_string:
 	neg	ecx
 	sub	ecx,2
    write_string_to_stderr:
-	mov	eax,4
+	mov	eax,4			; sys_write
 	mov	ebx,2
 	mov	edx,ecx
 	mov	ecx,esi

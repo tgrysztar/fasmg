@@ -73,8 +73,9 @@ show_errors:
 	mov	esi,_line_number_suffix
 	xor	ecx,ecx
 	call	display_error_string
-	mov	ebx,[esp]
-	mov	esi,[esp+4]
+	pop	ebx
+	mov	esi,[esp]
+	push	ebx
 	cmp	[ebx+SourceEntry.line_number],0
 	je	skip_line_content
 	test	[trace_mode],TRACE_ERROR_STACK
