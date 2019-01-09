@@ -311,7 +311,6 @@ convert_number_back:
 ; note:
 ;  the number is treated as unsigned
 ;  returned string is in temporary storage and should be copied out of it immediately
-	mov	[divisor],10
 	mov	edi,[value_workspace.memory_start]
 	add	edi,[value_position]
 	mov	ecx,[edx]
@@ -340,7 +339,7 @@ convert_number_back:
 	xor	edx,edx
     divide_highest_dwords:
 	mov	eax,[esi+ecx]
-	div	[divisor]
+	call	div10
 	test	eax,eax
 	jnz	more_digits_to_come
 	sub	ecx,4
@@ -367,13 +366,39 @@ convert_number_back:
 	sub	ebx,4
 	jc	store_digit
 	mov	eax,[esi+ebx]
-	div	[divisor]
+	call	div10
 	jmp	divide_remaining_dwords
     store_digit:
 	add	dl,'0'
 	dec	edi
 	mov	[edi],dl
 	jmp	obtain_digit
+    div10:
+       ; cmp	 edx,10
+       ; jae	 internal_error
+	push	ebx ecx
+	push	eax
+	mov	ebx,eax
+	mov	ecx,edx
+	shld	edx,eax,2
+	sub	ebx,edx
+	sbb	ecx,0
+	mov	eax,ebx
+	mov	ebx,1999999Ah
+	mul	ebx
+	mov	eax,ecx
+	imul	eax,ebx
+	add	eax,edx
+	pop	edx
+	imul	ecx,eax,10
+	sub	edx,ecx
+	cmp	edx,10
+	jb	div10_done
+	sub	edx,10
+	inc	eax
+      div10_done:
+	pop	ecx ebx
+	retn
 
 fit_value:
 ; in:

@@ -87,7 +87,7 @@ segment readable executable
 	jne	assembly_failed
 
 	mov	eax,[current_pass]
-	mov	edi,string_buffer
+	xor	edx,edx
 	call	itoa
 	call	display_string
 	mov	esi,_passes
@@ -121,14 +121,14 @@ segment readable executable
 	xchg	eax,ebx
 	or	ebx,eax
 	jz	display_output_length
-	mov	edi,string_buffer
+	xor	edx,edx
 	call	itoa
 	call	display_string
 	mov	esi,_message_suffix
 	mov	ecx,1
 	call	display_string
 	mov	eax,[tenths_of_second]
-	mov	edi,string_buffer
+	xor	edx,edx
 	call	itoa
 	call	display_string
 	mov	esi,_seconds
@@ -136,14 +136,15 @@ segment readable executable
 	call	display_string
       display_output_length:
 	call	get_output_length
-	push	eax
-	mov	edi,string_buffer
+	push	eax edx
 	call	itoa
 	call	display_string
-	pop	eax
+	pop	edx eax
 	mov	esi,_bytes
 	cmp	eax,1
 	jne	display_bytes_suffix
+	test	edx,edx
+	jnz	display_bytes_suffix
 	mov	esi,_byte
       display_bytes_suffix:
 	xor	ecx,ecx

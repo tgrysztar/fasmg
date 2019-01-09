@@ -1956,7 +1956,7 @@ iterate <instr,opcode,len>, loopnz,0E0h,0, loopne,0E0h,0, loopz,0E1h,0, loope,0E
 			    loopnzd,0E0h,4, loopned,0E0h,4, loopzd,0E1h,4, looped,0E1h,4, loopd,0E2h,4, \
 			    loopnzq,0E0h,8, loopneq,0E0h,8, loopzq,0E1h,8, loopeq,0E1h,8, loopq,0E2h,8, \
 			    jcxz,0E3h,2, jecxz,0E3h,4, jrcxz,0E3h,8
-	macro instr dest*
+	macro instr? dest*
 		x86.parse_jump_operand @dest,dest
 		if @dest.type = 'imm' & ( @dest.jump_type = 'short' | ~ @dest.jump_type )
 			if len & len shl 3 <> x86.mode

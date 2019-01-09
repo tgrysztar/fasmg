@@ -1,6 +1,5 @@
 
 characters db 256 dup ?
-string_buffer db 256 dup ?
 
 temporary_value dd 4 dup ?
 accumulator dd 3 dup ?

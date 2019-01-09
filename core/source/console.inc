@@ -67,7 +67,7 @@ show_errors:
 	xor	ecx,ecx
 	call	display_error_string
 	mov	eax,[ebx+SourceEntry.line_number]
-	mov	edi,string_buffer
+	xor	edx,edx
 	call	itoa
 	call	display_error_string
 	mov	esi,_line_number_suffix
@@ -302,40 +302,17 @@ show_preprocessed_line:
 
 itoa:
 ; in:
-;  eax = unsigned number
-;  edi - buffer
+;  edx:eax = unsigned number
 ; out:
-;  esi - buffer containing decimal digits
+;  esi - temporary buffer containing decimal digits
 ;  ecx = length of string (number of digits)
-;  edi - first byte in buffer after the digits
-; note:
-;  the buffer must be at least 10 bytes long
-	mov	esi,edi
-	mov	ecx,1000000000
-	xor	edx,edx
-	xor	bl,bl
-    itoa_loop:
-	div	ecx
-	push	edx
-	cmp	ecx,1
-	je	display_digit
-	or	bl,bl
-	jnz	display_digit
-	or	al,al
-	jz	digit_ok
-	not	bl
-      display_digit:
-	add	al,30h
-	stosb
-      digit_ok:
-	mov	eax,ecx
-	xor	edx,edx
-	mov	ecx,10
-	div	ecx
-	mov	ecx,eax
-	pop	eax
-	or	ecx,ecx
-	jnz	itoa_loop
-	mov	ecx,edi
-	sub	ecx,esi
+	mov	edi,temporary_value+4
+	stosd
+	mov	eax,edx
+	stosd
+	mov	edx,temporary_value
+	mov	dword [edx],8
+	call	convert_number_back
+	lea	esi,[edx+4]
+	mov	ecx,[edx]
 	retn
