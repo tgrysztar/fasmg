@@ -3,11 +3,12 @@ The name of flat assembler g (abbreviated to fasmg) is intentionally stylized
 with lowercase letters. This is a nod to the history of its precedessor.
 
 The "source" directory contains the complete source code which
-can be assembled with either fasm or fasmg except for the MacOS version
-which can only be assembled with fasmg.
+can be assembled with either fasm or fasmg except for 64-bit Linux version
+and MacOS version, which can only be assembled with fasmg.
 
-The files "fasmg" and "fasmg.exe" are the executables for Linux and Windows
-respectively. The executable for MacOS is at "source/macos/fasmg".
+The executable file for Windows is "fasmg.exe", while "fasmg" and "fasmg.x64"
+are for Linux in 32-bit and 64-bit format respectively. The executable for MacOS
+is at "source/macos/fasmg".
 
 The "source/libc/fasmg.asm" may be used to assemble fasmg as an ELF object
 that can then be linked to a 32-bit C library with a third-party linker to

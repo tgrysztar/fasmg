@@ -65,6 +65,7 @@ mfree:
 ; in: eax - memory block
 ; out: cf set on error
 ; preserves: ebx, esi, edi
+; note: eax may have value 0 or -1, it should be treated as invalid input then
 	test	eax,eax
 	jz	interface_error
 	cmp	eax,-1

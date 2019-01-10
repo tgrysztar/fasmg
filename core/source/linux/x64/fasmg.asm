@@ -1,8 +1,7 @@
 
 match ,{
 
-	include 'macro/struct.inc'
-	include 'import32.inc'
+	err ; fasm 1 assembly not supported
 
 } match -,{
 else
@@ -12,35 +11,31 @@ else
 end match
 _ equ }
 
-format ELF executable 3
+format ELF64 executable 3
 entry start
 
-include '../version.inc'
-
-interpreter '/lib/ld-linux.so.2'
-needed 'libc.so.6'
-import libc.malloc,'malloc',\
-       libc.calloc,'calloc',\
-       libc.realloc,'realloc',\
-       libc.free,'free'
+include '../../version.inc'
 
 struct timeval
-	time_t dd ?
-	suseconds_t dd ?
+	time_t dq ?
+	suseconds_t dq ?
 ends
 
 segment readable executable
 
   start:
 
-	mov	ecx,[esp]
-	mov	[argc],ecx
-	lea	ebx,[esp+4]
-	mov	[argv],ebx
-	lea	esi,[esp+4+ecx*4+4]
-	mov	[env],esi
+	mov	rcx,[rsp]
+	mov	[argc],rcx
+	lea	rbx,[rsp+8]
+	mov	[argv],rbx
+	lea	rsi,[rsp+8+rcx*8+8]
+	mov	[env],rsi
 
 	call	system_init
+
+	xor	al,al
+	call	assembly_init
 
 	mov	esi,_logo
 	xor	ecx,ecx
@@ -59,10 +54,10 @@ segment readable executable
   init:
 	call	assembly_init
 
-	mov	eax,78			; sys_gettimeofday
-	mov	ebx,start_time
-	xor	ecx,ecx
-	int	0x80
+	mov	eax,96			; sys_gettimeofday
+	mov	edi,start_time
+	xor	esi,esi
+	syscall
 
   assemble:
 	mov	esi,[initial_commands]
@@ -97,31 +92,32 @@ segment readable executable
       display_passes_suffix:
 	xor	ecx,ecx
 	call	display_string
-	mov	eax,78			; sys_gettimeofday
-	mov	ebx,end_time
-	xor	ecx,ecx
-	int	0x80
-	mov	eax,[end_time.time_t]
-	sub	eax,[start_time.time_t]
-	mov	ecx,1000000
-	mul	ecx
-	add	eax,[end_time.suseconds_t]
-	adc	edx,0
-	sub	eax,[start_time.suseconds_t]
-	sbb	edx,0
-	add	eax,50000
-	mov	ecx,1000000
-	div	ecx
-	mov	ebx,eax
-	mov	eax,edx
-	xor	edx,edx
-	mov	ecx,100000
-	div	ecx
+	mov	eax,96			; sys_gettimeofday
+	mov	edi,end_time
+	xor	esi,esi
+	syscall
+	mov	rax,[end_time.time_t]
+	sub	rax,[start_time.time_t]
+	mov	rcx,1000000
+	mul	rcx
+	add	rax,[end_time.suseconds_t]
+	adc	rdx,0
+	sub	rax,[start_time.suseconds_t]
+	sbb	rdx,0
+	add	rax,50000
+	mov	rcx,1000000
+	div	rcx
+	mov	rbx,rax
+	mov	rax,rdx
+	xor	rdx,rdx
+	mov	rcx,100000
+	div	rcx
 	mov	[tenths_of_second],eax
-	xchg	eax,ebx
-	or	ebx,eax
+	xchg	rax,rbx
+	or	rbx,rax
 	jz	display_output_length
-	xor	edx,edx
+	mov	rdx,rax
+	shr	rdx,32
 	call	itoa
 	call	display_string
 	mov	esi,_message_suffix
@@ -136,10 +132,10 @@ segment readable executable
 	call	display_string
       display_output_length:
 	call	get_output_length
-	push	eax edx
+	push	rax rdx
 	call	itoa
 	call	display_string
-	pop	edx eax
+	pop	rdx rax
 	mov	esi,_bytes
 	cmp	eax,1
 	jne	display_bytes_suffix
@@ -161,9 +157,9 @@ segment readable executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	xor	ebx,ebx
-	mov	eax,1			; sys_exit
-	int	0x80
+	xor	edi,edi 	; exit code 0
+	mov	eax,60		; sys_exit
+	syscall
 
   assembly_failed:
 
@@ -172,9 +168,9 @@ segment readable executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	mov	ebx,2
-	mov	eax,1			; sys_exit
-	int	0x80
+	mov	edi,2
+	mov	eax,60		; sys_exit
+	syscall
 
   write_failed:
 	mov	ebx,_write_failed
@@ -199,9 +195,9 @@ segment readable executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	mov	ebx,3
-	mov	eax,1			; sys_exit
-	int	0x80
+	mov	edi,3
+	mov	eax,60		; sys_exit
+	syscall
 
   display_usage_information:
 
@@ -211,9 +207,9 @@ segment readable executable
 
 	call	system_shutdown
 
-	mov	ebx,1
-	mov	eax,1			; sys_exit
-	int	0x80
+	mov	edi,1
+	mov	eax,60		; sys_exit
+	syscall
 
   get_arguments:
 	xor	eax,eax
@@ -223,27 +219,29 @@ segment readable executable
 	mov	[maximum_number_of_passes],100
 	mov	[maximum_number_of_errors],1
 	mov	[maximum_depth_of_stack],10000
-	mov	ecx,[argc]
-	mov	ebx,[argv]
-	add	ebx,4
+	mov	rcx,[argc]
+	mov	rbx,[argv]
+	add	rbx,8
 	dec	ecx
 	jz	error_in_arguments
     get_argument:
-	mov	esi,[ebx]
-	mov	al,[esi]
+	mov	rsi,[rbx]
+	mov	al,[rsi]
 	cmp	al,'-'
 	je	get_option
 	cmp	[source_path],0
 	jne	get_output_file
-	mov	[source_path],esi
+	call	strdup
+	mov	[source_path],eax
 	jmp	next_argument
     get_output_file:
 	cmp	[output_path],0
 	jne	error_in_arguments
-	mov	[output_path],esi
+	call	strdup
+	mov	[output_path],eax
 	jmp	next_argument
     get_option:
-	inc	esi
+	inc	rsi
 	lodsb
 	cmp	al,'e'
 	je	set_errors_limit
@@ -269,12 +267,12 @@ segment readable executable
 	stc
 	ret
     set_verbose_mode:
-	cmp	byte [esi],0
+	cmp	byte [rsi],0
 	jne	get_verbose_setting
 	dec	ecx
 	jz	error_in_arguments
-	add	ebx,4
-	mov	esi,[ebx]
+	add	rbx,8
+	mov	rsi,[rbx]
       get_verbose_setting:
 	call	get_option_value
 	cmp	edx,2
@@ -282,12 +280,12 @@ segment readable executable
 	mov	[verbosity_level],edx
 	jmp	next_argument
     set_errors_limit:
-	cmp	byte [esi],0
+	cmp	byte [rsi],0
 	jne	get_errors_setting
 	dec	ecx
 	jz	error_in_arguments
-	add	ebx,4
-	mov	esi,[ebx]
+	add	rbx,8
+	mov	rsi,[rbx]
       get_errors_setting:
 	call	get_option_value
 	test	edx,edx
@@ -295,12 +293,12 @@ segment readable executable
 	mov	[maximum_number_of_errors],edx
 	jmp	next_argument
     set_recursion_limit:
-	cmp	byte [esi],0
+	cmp	byte [rsi],0
 	jne	get_recursion_setting
 	dec	ecx
 	jz	error_in_arguments
-	add	ebx,4
-	mov	esi,[ebx]
+	add	rbx,8
+	mov	rsi,[rbx]
       get_recursion_setting:
 	call	get_option_value
 	test	edx,edx
@@ -308,19 +306,19 @@ segment readable executable
 	mov	[maximum_depth_of_stack],edx
 	jmp	next_argument
     set_passes_limit:
-	cmp	byte [esi],0
+	cmp	byte [rsi],0
 	jne	get_passes_setting
 	dec	ecx
 	jz	error_in_arguments
-	add	ebx,4
-	mov	esi,[ebx]
+	add	rbx,8
+	mov	rsi,[rbx]
       get_passes_setting:
 	call	get_option_value
 	test	edx,edx
 	jz	error_in_arguments
 	mov	[maximum_number_of_passes],edx
     next_argument:
-	add	ebx,4
+	add	rbx,8
 	dec	ecx
 	jnz	get_argument
 	cmp	[source_path],0
@@ -331,9 +329,9 @@ segment readable executable
 	xor	eax,eax
 	mov	edx,eax
       find_option_value:
-	cmp	byte [esi],20h
+	cmp	byte [rsi],20h
 	jne	get_option_digit
-	inc	esi
+	inc	rsi
 	jmp	find_option_value
       get_option_digit:
 	lodsb
@@ -349,22 +347,22 @@ segment readable executable
 	jc	invalid_option_value
 	jmp	get_option_digit
       option_value_ok:
-	dec	esi
+	dec	rsi
 	clc
 	ret
       invalid_option_value:
 	stc
 	ret
     insert_initial_command:
-	cmp	byte [esi],0
+	cmp	byte [rsi],0
 	jne	measure_initial_command
 	dec	ecx
 	jz	error_in_arguments
-	add	ebx,4
-	mov	esi,[ebx]
+	add	rbx,8
+	mov	rsi,[rbx]
       measure_initial_command:
-	push	ebx ecx edi
-	mov	edi,esi
+	push	rbx rcx rdi
+	mov	rdi,rsi
 	or	ecx,-1
 	xor	al,al
 	repne	scasb
@@ -386,20 +384,20 @@ segment readable executable
 	dec	edi
 	sub	edi,[initial_commands]
 	mov	[initial_commands_length],edi
-	pop	edi ecx ebx
+	pop	rdi rcx rbx
 	jmp	next_argument
       allocate_initial_commands_buffer:
-	push	ecx
+	push	rsi rcx
 	mov	ecx,eax
 	call	malloc
 	jc	out_of_memory
 	mov	[initial_commands],eax
 	mov	[initial_commands_maximum_length],ecx
 	mov	edi,eax
-	pop	ecx
+	pop	rcx rsi
 	jmp	copy_initial_command
       grow_initial_commands_buffer:
-	push	ecx
+	push	rsi rcx
 	mov	ecx,eax
 	mov	eax,[initial_commands]
 	call	realloc
@@ -408,22 +406,45 @@ segment readable executable
 	mov	[initial_commands_maximum_length],ecx
 	mov	edi,eax
 	add	edi,[initial_commands_length]
-	pop	ecx
+	pop	rcx rsi
 	jmp	copy_initial_command
 
-  include 'system.inc'
+  strdup:
+  ; in: rsi - ASCIIZ string
+  ; out: eax - copy of the string in 32-bit addressable memory
+  ; preserves: rbx, rcx, rsi
+	push	rbx rcx rsi
+	mov	rdi,rsi
+	or	ecx,-1
+	xor	al,al
+	repne	scasb
+	not	ecx
+	dec	ecx
+	push	rsi rcx
+	call	malloc
+	pop	rcx rsi
+	jc	out_of_memory
+	mov	edi,eax
+	rep	movsb
+	pop	rsi rcx rbx
+	ret
 
-  include '../assembler.inc'
-  include '../symbols.inc'
-  include '../expressions.inc'
-  include '../conditions.inc'
-  include '../floats.inc'
-  include '../directives.inc'
-  include '../errors.inc'
-  include '../map.inc'
-  include '../reader.inc'
-  include '../output.inc'
-  include '../console.inc'
+  include 'system.inc'
+  include 'malloc.inc'
+
+  include 'modes.inc'
+
+  include '../../assembler.inc'
+  include '../../symbols.inc'
+  include '../../expressions.inc'
+  include '../../conditions.inc'
+  include '../../floats.inc'
+  include '../../directives.inc'
+  include '../../errors.inc'
+  include '../../map.inc'
+  include '../../reader.inc'
+  include '../../output.inc'
+  include '../../console.inc'
 
 segment readable
 
@@ -449,17 +470,24 @@ segment readable
   _out_of_memory db 'not enough memory to complete the assembly',0
   _code_cannot_be_generated db 'could not generate code within the allowed number of passes',0
 
-  _open_mode db 'r',0
-  _create_mode db 'w',0
-
-  include '../tables.inc'
-  include '../messages.inc'
+  include '../../tables.inc'
+  include '../../messages.inc'
 
 segment readable writeable
 
   align 16
 
-  include '../variables.inc'
+  malloc_ffirst dd 0
+  malloc_flast dd 0
+  malloc_fbrk dd 0
+  malloc_lbrk dd 0
+
+  include '../../variables.inc'
+
+  argc dq ?
+  argv dq ?
+  env dq ?
+  timestamp dq ?
 
   source_path dd ?
   output_path dd ?
@@ -468,12 +496,6 @@ segment readable writeable
   initial_commands dd ?
   initial_commands_length dd ?
   initial_commands_maximum_length dd ?
-
-  argc dd ?
-  argv dd ?
-  env dd ?
-  timestamp dq ?
-  loff dq ?
 
   start_time timeval
   end_time timeval
