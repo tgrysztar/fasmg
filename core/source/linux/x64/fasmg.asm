@@ -1,7 +1,8 @@
 
 match ,{
 
-	err ; fasm 1 assembly not supported
+	include 'macro/struct.inc'
+	include '32on64.inc'
 
 } match -,{
 else
@@ -432,7 +433,7 @@ segment readable executable
   include 'system.inc'
   include 'malloc.inc'
 
-  include 'modes.inc'
+  use32on64
 
   include '../../assembler.inc'
   include '../../symbols.inc'

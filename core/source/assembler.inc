@@ -1,4 +1,10 @@
 
+; general note:
+;  with the ability to run in various environments in mind, the entire assembler core
+;  does not use ebp register and never directly touches esp; the stack is managed
+;  with push and pop instructions, occasionally [esp] may be used to access the top value,
+;  but no other assumptions about the stack layout are made
+
 struct Workspace
 	memory_start dd ?
 	memory_end dd ?
