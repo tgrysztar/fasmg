@@ -2013,7 +2013,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand @src,src
 			AVX_512.parse_operand @src2,src2
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
-				if @src.size and not @src2.size
+				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
 				AVX_512.store_instruction @src.size,VEX_66_0F_W0,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
@@ -2036,7 +2036,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand @src,src
 			AVX_512.parse_operand_bcst @src2,src2,4
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
-				if @src.size and not @src2.size
+				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
 				AVX_512.store_instruction @src.size,VEX_66_0F_W0,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
@@ -2059,7 +2059,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand @src,src
 			AVX_512.parse_operand_bcst @src2,src2,8
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
-				if @src.size and not @src2.size
+				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
 				AVX_512.store_instruction @src.size,VEX_66_0F38_W1,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
@@ -2082,7 +2082,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand @src,src
 			AVX_512.parse_operand @src2,src2
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
-				if @src.size and not @src2.size
+				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
 				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
@@ -2100,7 +2100,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand @src,src
 			AVX_512.parse_operand_bcst @src2,src2,unit
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
-				if @src.size and not @src2.size
+				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
 				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
@@ -2119,7 +2119,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand @src2,src2
 			x86.parse_operand @aux,aux
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
-				if @src.size and not @src2.size | @aux.size and not 1
+				if @src2.size and not @src.size | @aux.size and not 1
 					err 'operand sizes do not match'
 				end if
 				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
@@ -2138,7 +2138,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand_bcst @src2,src2,unit
 			x86.parse_operand @aux,aux
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
-				if @src.size and not @src2.size | @aux.size and not 1
+				if @src2.size and not @src.size | @aux.size and not 1
 					err 'operand sizes do not match'
 				end if
 				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
