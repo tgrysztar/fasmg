@@ -104,6 +104,9 @@ malloc_growable:
 	mov	eax,12			; sys_brk
 	xor	edi,edi
 	syscall
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	malloc_error
 	mov	[malloc_fbrk],eax
 	mov	[malloc_lbrk],eax
       malloc_lbrk_valid:

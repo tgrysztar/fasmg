@@ -74,6 +74,11 @@ macro use32on64?
 			ns.mode = 64
 		else
 			x86.encode_address_32_64 ns
+		       ; the following allows to avoid 67h prefixes (leading to reduced code size and slightly improved performance),
+		       ; but it requires that in entire affected code there are no cases when an offset held in register would be negative:
+		       ; if ns.mode = 32 & x86.mode = 64
+		       ;	 ns.mode = 64
+		       ; end if
 		end if
 	end macro
 
