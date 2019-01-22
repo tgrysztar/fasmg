@@ -189,6 +189,19 @@ macro format?.ELF? variant
 		format?.include 'elfexe.inc'
 		format?.include '../cpu/p6.inc'
 		use32
+	else match =dynamic? settings, variant:
+		ELF.Settings.Type = ET_DYN
+		match brand =at? base:, settings
+			ELF.Settings.ABI = brand
+			ELF.Settings.BaseAddress = base
+		else match =at? base:, settings
+			ELF.Settings.BaseAddress = base
+		else match brand:, settings
+			ELF.Settings.ABI = brand
+		end match
+		format?.include 'elfexe.inc'
+		format?.include '../cpu/p6.inc'
+		use32
 	else
 		err 'invalid argument'
 	end match
@@ -202,6 +215,22 @@ macro format?.ELF64? variant
 		use64
 	else match =executable? settings, variant:
 		ELF.Settings.Class = ELFCLASS64
+		ELF.Settings.Machine = EM_X86_64
+		ELF.Settings.BaseAddress = 400000h
+		match brand =at? base:, settings
+			ELF.Settings.ABI = brand
+			ELF.Settings.BaseAddress = base
+		else match =at? base:, settings
+			ELF.Settings.BaseAddress = base
+		else match brand:, settings
+			ELF.Settings.ABI = brand
+		end match
+		format?.include 'elfexe.inc'
+		format?.include '../cpu/x64.inc'
+		use64
+	else match =dynamic? settings, variant:
+		ELF.Settings.Class = ELFCLASS64
+		ELF.Settings.Type = ET_DYN
 		ELF.Settings.Machine = EM_X86_64
 		ELF.Settings.BaseAddress = 400000h
 		match brand =at? base:, settings

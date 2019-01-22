@@ -66,7 +66,7 @@ PF_MASKOS   = 0x0ff00000
 PF_MASKPROC = 0xf0000000
 
 macro align boundary,value:?
-	db (boundary-1)-($+boundary-1) mod boundary dup value
+	db (boundary-1)-($-ELF.DYNAMIC+boundary-1) mod boundary dup value
 end macro
 
 ELF::
@@ -77,6 +77,12 @@ namespace ELF
 		CLASS := Settings.Class
 	else
 		CLASS := ELFCLASS32
+	end if
+
+	if defined Settings.Type
+		TYPE := Settings.Type
+	else
+		TYPE := ET_EXEC
 	end if
 
 	if defined Settings.Machine
@@ -91,10 +97,16 @@ namespace ELF
 		ABI := ELFOSABI_NONE
 	end if
 
-	if defined Settings.BaseAddress
-		BASE_ADDRESS := Settings.BaseAddress
+	if TYPE = ET_DYN
+		element DYNAMIC
 	else
-		BASE_ADDRESS := 8048000h
+		DYNAMIC := 0
+	end if
+
+	if defined Settings.BaseAddress
+		BASE_ADDRESS := DYNAMIC + Settings.BaseAddress
+	else
+		BASE_ADDRESS := DYNAMIC + 8048000h
 	end if
 
 	if defined Settings.LoadHeaders
@@ -106,11 +118,11 @@ namespace ELF
 	Header:
 
 	e_ident 	db 0x7F,'ELF',CLASS,ELFDATA2LSB,EV_CURRENT,ABI,(16-$) dup 0
-	e_type		dw ET_EXEC
+	e_type		dw TYPE
 	e_machine	dw MACHINE
 	e_version	dd EV_CURRENT
 	if CLASS <> ELFCLASS64
-	 e_entry	dd start
+	 e_entry	dd start - DYNAMIC
 	 e_phoff	dd ProgramHeader
 	 e_shoff	dd 0
 	 e_flags	dd 0
@@ -121,7 +133,7 @@ namespace ELF
 	 e_shnum	dw 0
 	 e_shstrndx	dw 0
 	else
-	 e_entry	dq start
+	 e_entry	dq start - DYNAMIC
 	 e_phoff	dq ProgramHeader
 	 e_shoff	dq 0
 	 e_flags	dd 0
@@ -137,8 +149,8 @@ namespace ELF
 	if CLASS <> ELFCLASS64
 	 p_type 	dd PT_LOAD
 	 p_offset	dd 0
-	 p_vaddr	dd BASE_ADDRESS
-	 p_paddr	dd BASE_ADDRESS
+	 p_vaddr	dd BASE_ADDRESS - DYNAMIC
+	 p_paddr	dd BASE_ADDRESS - DYNAMIC
 	 p_filesz	dd 0
 	 p_memsz	dd 0
 	 p_flags	dd PF_R+PF_W+PF_X
@@ -147,8 +159,8 @@ namespace ELF
 	 p_type 	dd PT_LOAD
 	 p_flags	dd PF_R+PF_W+PF_X
 	 p_offset	dq 0
-	 p_vaddr	dq BASE_ADDRESS
-	 p_paddr	dq BASE_ADDRESS
+	 p_vaddr	dq BASE_ADDRESS - DYNAMIC
+	 p_paddr	dq BASE_ADDRESS - DYNAMIC
 	 p_filesz	dq 0
 	 p_memsz	dq 0
 	 p_align	dq 1000h
@@ -172,9 +184,11 @@ namespace ELF
 
 end namespace
 
+RVA? equ -ELF.BASE_ADDRESS +
+
 macro entry? address*
 	namespace ELF
-		store address at ELF:e_entry
+		store address-DYNAMIC at ELF:e_entry
 	end namespace
 end macro
 
@@ -189,8 +203,8 @@ macro segment?
 			OVERLAY_HEADERS = 0
 		end if
 
-		store SEGMENT_BASE at ELF:p_vaddr+SEGMENT_INDEX*SEGMENT_HEADER_LENGTH
-		store SEGMENT_BASE at ELF:p_paddr+SEGMENT_INDEX*SEGMENT_HEADER_LENGTH
+		store SEGMENT_BASE-DYNAMIC at ELF:p_vaddr+SEGMENT_INDEX*SEGMENT_HEADER_LENGTH
+		store SEGMENT_BASE-DYNAMIC at ELF:p_paddr+SEGMENT_INDEX*SEGMENT_HEADER_LENGTH
 		store FILE_OFFSET at ELF:p_offset+SEGMENT_INDEX*SEGMENT_HEADER_LENGTH
 
 		if SEGMENT_TYPE = PT_LOAD
