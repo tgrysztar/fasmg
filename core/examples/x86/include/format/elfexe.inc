@@ -56,6 +56,7 @@ PT_SHLIB	= 5
 PT_PHDR 	= 6
 PT_GNU_EH_FRAME = 0x6474e550
 PT_GNU_STACK	= 0x6474e551
+PT_GNU_RELRO	= 0x6474e552
 PT_LOPROC	= 0x70000000
 PT_HIPROC	= 0x7fffffff
 
@@ -236,7 +237,7 @@ macro segment?
 			store SEGMENT_SIZE at ELF:p_memsz+SEGMENT_INDEX*SEGMENT_HEADER_LENGTH
 
 			if OVERLAY_HEADERS = 0
-				SEGMENT_BASE = SEGMENT_BASE and not 0FFFh + FILE_OFFSET and 0FFFh
+				SEGMENT_BASE = DYNAMIC + (SEGMENT_BASE-DYNAMIC) and not 0FFFh + FILE_OFFSET and 0FFFh
 			else
 				SEGMENT_BASE = $
 			end if
@@ -293,6 +294,8 @@ macro segment? attributes*
 				SEGMENT_TYPE = PT_GNU_STACK
 			else match =gnuehframe?, attribute
 				SEGMENT_TYPE = PT_GNU_EH_FRAME
+			else match =gnurelro?, attribute
+				SEGMENT_TYPE = PT_GNU_RELRO
 			else
 				err 'invalid argument'
 			end match
