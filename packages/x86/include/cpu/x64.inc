@@ -1172,36 +1172,57 @@ macro x86.pop_instruction operand_size,dest
 	end if
 end macro
 
+
+iterate reg, ax,cx,dx,bx,sp,bp,si,di,r8w,r9w,r10w,r11w,r12w,r13w,r14w,r15w, \
+	     eax,ecx,edx,ebx,esp,ebp,esi,edi,r8d,r9d,r10d,r11d,r12d,r13d,r14d,r15d, \
+	     rax,rcx,rdx,rbx,rsp,rbp,rsi,rdi,r8,r9,r10,r11,r12,r13,r14,r15, \
+	     es,cs,ss,ds,fs,gs
+	define x86.compact.reg? {reg}
+end iterate
+
+macro x86.compact: instruction,operand
+	match {reg} more, x86.compact.operand
+		instruction,reg
+		match {reg2} tail, x86.compact.more:
+			x86.compact instruction,more
+		else
+			err 'only register operands allowed in compact syntax'
+		end match
+	else
+		instruction,operand
+	end match
+end macro
+
 macro push? src*
-	x86.push_instruction 0,src
+	x86.compact x86.push_instruction 0,src
 end macro
 
 macro pushw? src*
-	x86.push_instruction 2,src
+	x86.compact x86.push_instruction 2,src
 end macro
 
 macro pushd? src*
-	x86.push_instruction 4,src
+	x86.compact x86.push_instruction 4,src
 end macro
 
 macro pushq? src*
-	x86.push_instruction 8,src
+	x86.compact x86.push_instruction 8,src
 end macro
 
 macro pop? dest*
-	x86.pop_instruction 0,dest
+	x86.compact x86.pop_instruction 0,dest
 end macro
 
 macro popw? dest*
-	x86.pop_instruction 2,dest
+	x86.compact x86.pop_instruction 2,dest
 end macro
 
 macro popd? dest*
-	x86.pop_instruction 4,dest
+	x86.compact x86.pop_instruction 4,dest
 end macro
 
 macro popq? dest*
-	x86.pop_instruction 8,dest
+	x86.compact x86.pop_instruction 8,dest
 end macro
 
 macro retn? operand

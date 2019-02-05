@@ -1341,7 +1341,8 @@ end_conditionally_repeated_block:
 	test	[assembly_mode],AMODE_SKIP
 	jnz	end_control_block
 	push	esi edi
-	push	[line_end] [source_context]
+	push	[line_end]
+	push	[source_context]
 	lea	esi,[edi-sizeof.ConditionalRepeatData]
 	mov	[line_end],esi
 	sub	esi,[esi+ConditionalRepeatData.condition_length]
@@ -1349,7 +1350,8 @@ end_conditionally_repeated_block:
 	mov	[source_context],edi
 	and	[embedded_context],0
 	call	get_condition_value
-	pop	[source_context] [line_end]
+	pop	[source_context]
+	pop	[line_end]
 	pop	edi esi
 	test	al,al
 	jz	end_control_block
@@ -3450,7 +3452,8 @@ use_struc:
 	cmp	edi,[new_local_namespace]
 	jne	invalid_argument
 	push	esi
-	push	[line_end] [embedded_context]
+	push	[line_end]
+	push	[embedded_context]
 	mov	eax,[line_context]
 	mov	[embedded_context],eax
 	mov	esi,[line_start]
@@ -3460,7 +3463,8 @@ use_struc:
 	xor	edx,edx
 	mov	[breakpoint_token],dl
 	call	cut_piece_of_line
-	pop	[embedded_context] [line_end]
+	pop	[embedded_context]
+	pop	[line_end]
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	call	update_value_definition
 	mov	esi,[edi+LineExcerpt.data_start]

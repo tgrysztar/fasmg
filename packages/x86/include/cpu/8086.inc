@@ -479,6 +479,31 @@ macro pop? dest*
 	end if
 end macro
 
+iterate reg, ax,cx,dx,bx,sp,bp,si,di, es,cs,ss,ds
+	define x86.compact.reg? {reg}
+end iterate
+
+macro x86.compact: instruction,operand
+	match {reg} more, x86.compact.operand
+		instruction reg
+		match {reg2} tail, x86.compact.more:
+			x86.compact instruction,more
+		else
+			err 'only register operands allowed in compact syntax'
+		end match
+	else
+		instruction operand
+	end match
+end macro
+
+macro push? src*
+	x86.compact push,src
+end macro
+
+macro pop? src*
+	x86.compact pop,src
+end macro
+
 macro ret? operand
 	match imm, operand
 		db 0C2h

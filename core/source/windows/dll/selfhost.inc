@@ -1,31 +1,6 @@
 
 include '../../../examples/x86/include/80386.inc'
 
-iterate instr, push,pop
-	macro instr? op
-		local sequence
-		sequence equ op --
-		while 1
-			match --, sequence
-				break
-			else match car= cdr, sequence
-				redefine sequence cdr
-				match :sz, x86.car
-					match --, sequence
-						instr car
-						break
-					else match head= tail, sequence
-						redefine sequence tail
-						instr car head
-					end match
-				else
-					instr car
-				end match
-			end match
-		end while
-	end macro
-end iterate
-
 macro format?.PE? settings
 	PE.Settings.Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE or IMAGE_FILE_32BIT_MACHINE or IMAGE_FILE_LINE_NUMS_STRIPPED or IMAGE_FILE_LOCAL_SYMS_STRIPPED
 	PE.Settings.DllCharacteristics = 0

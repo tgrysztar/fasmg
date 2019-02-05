@@ -1,31 +1,6 @@
 
 include '../../examples/x86/include/80386.inc'
 
-iterate instr, push,pop
-	macro instr? op
-		local sequence
-		sequence equ op --
-		while 1
-			match --, sequence
-				break
-			else match car= cdr, sequence
-				redefine sequence cdr
-				match :sz, x86.car
-					match --, sequence
-						instr car
-						break
-					else match head= tail, sequence
-						redefine sequence tail
-						instr car head
-					end match
-				else
-					instr car
-				end match
-			end match
-		end while
-	end macro
-end iterate
-
 macro format?.ELF? variant
 	match , variant
 		format binary as 'o'

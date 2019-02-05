@@ -40,31 +40,6 @@ macro struct? name
 		namespace .
 end macro
 
-iterate instr, push,pop
-	macro instr? op
-		local sequence
-		sequence equ op --
-		while 1
-			match --, sequence
-				break
-			else match car= cdr, sequence
-				redefine sequence cdr
-				match :sz, x86.car
-					match --, sequence
-						instr car
-						break
-					else match head= tail, sequence
-						redefine sequence tail
-						instr car head
-					end match
-				else
-					instr car
-				end match
-			end match
-		end while
-	end macro
-end iterate
-
 macro use32on64?
 
 	macro x86.encode_address_32_64 ns
@@ -99,50 +74,37 @@ macro use32on64?
 		end macro
 	end iterate
 
-	purge push?,pop?
-
-	macro push? arg
-		match :reg64, promote.arg
+	macro push64?: arg
+		match :reg64 tail, promote.arg:
 			push	reg64
+			match more:, tail
+				push64 more
+			end match
 		else
 			mov	r8d,arg
 			push	r8
 		end match
 	end macro
 
-	macro pop? arg
-		match :reg64, promote.arg
+	macro pop64?: arg
+		match :reg64 tail, promote.arg:
 			pop	reg64
+			match more:, tail
+				pop64 more
+			end match
 		else
 			pop	r8
 			mov	arg,r8d
 		end match
 	end macro
 
-	iterate instr, push,pop
-		macro instr? op
-			local sequence
-			sequence equ op --
-			while 1
-				match --, sequence
-					break
-				else match car= cdr, sequence
-					redefine sequence cdr
-					match :sz, x86.car
-						match --, sequence
-							instr car
-							break
-						else match head= tail, sequence
-							redefine sequence tail
-							instr car head
-						end match
-					else
-						instr car
-					end match
-				end match
-			end while
-		end macro
-	end iterate
+	macro push? arg
+		push64	arg
+	end macro
+
+	macro pop? arg
+		pop64	arg
+	end macro
 
 	macro jecxz? target
 		if target-($+1) < 80h & target-($+1) >= -80h
