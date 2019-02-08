@@ -92,7 +92,6 @@ create_area:
     create_area_definition:
 	mov	ecx,sizeof.ValueDefinition
 	call	create_tree_element
-	jc	out_of_memory
 	mov	ecx,eax
 	xchg	ecx,[value_definition_chain]
 	mov	[eax+ValueDefinition.interlink],ecx
@@ -118,7 +117,6 @@ create_area:
 	push	edx
 	call	malloc_growable
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+ValueDefinition.value],eax
 	mov	[edx+ValueDefinition.block_length],ecx
     initialize_area_block:
@@ -163,7 +161,6 @@ initialize_output:
 	mov	ecx,edx
 	call	realloc
 	pop	edx
-	jc	out_of_memory
 	mov	ebx,eax
 	add	edi,eax
 	mov	[edx+ValueDefinition.value],ebx

@@ -229,7 +229,6 @@ add_block_parameter:
 	pop	ecx
 	call	malloc
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+ValueDefinition.value],eax
 	mov	[edx+ValueDefinition.block_length],ecx
 	mov	edi,eax
@@ -3317,7 +3316,6 @@ add_line_to_macro:
 	mov	eax,[macro_buffer]
 	sub	edi,eax
 	call	realloc
-	jc	out_of_memory
 	add	edi,eax
 	mov	[macro_buffer],eax
 	mov	[macro_buffer_length],ecx
@@ -3347,7 +3345,6 @@ add_line_break_to_macro:
 	jb	macro_line_break
 	add	ecx,100h
 	call	realloc
-	jc	out_of_memory
 	mov	[macro_buffer],eax
 	mov	[macro_buffer_length],ecx
 	mov	ecx,[macro_end_position]
@@ -3414,7 +3411,6 @@ use_struc:
     create_namespace_counter:
 	mov	ecx,sizeof.ValueDefinition
 	call	create_tree_element
-	jc	out_of_memory
 	mov	[ebx+SymbolTree_Leaf.definition],eax
 	inc	[eax+ValueDefinition.reference_count]
 	mov	[eax+ValueDefinition.type],VALTYPE_PLAIN

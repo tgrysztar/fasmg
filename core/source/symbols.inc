@@ -571,7 +571,6 @@ create_tree_element:
 	push	ecx edx edi
 	mov	ecx,10000h
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	edx,eax
 	xchg	edx,[tree_blocks]
 	mov	[eax],edx
@@ -618,7 +617,6 @@ store_string:
 	push	ecx
 	mov	ecx,10000h
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	edx,eax
 	xchg	edx,[storage_blocks]
 	mov	[eax],edx
@@ -632,7 +630,6 @@ store_string:
 	push	ecx
 	add	ecx,4
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	edx,[storage_blocks]
 	test	edx,edx
 	jz	long_first_string
@@ -929,7 +926,6 @@ create_value_definition:
     new_value_definition:
 	mov	ecx,sizeof.ValueDefinition
 	call	create_tree_element
-	jc	out_of_memory
 	mov	ecx,eax
 	xchg	ecx,[value_definition_chain]
 	mov	[eax+ValueDefinition.interlink],ecx
@@ -972,7 +968,6 @@ create_value_definition:
     reallocate_for_duplicate:
 	call	malloc
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+ValueDefinition.value],eax
 	mov	[edx+ValueDefinition.block_length],ecx
 	mov	edi,eax
@@ -1084,7 +1079,6 @@ assign_value:
 	pop	ecx
 	call	malloc
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+ValueDefinition.value],eax
 	mov	[edx+ValueDefinition.block_length],ecx
 	mov	edi,eax
@@ -1178,7 +1172,6 @@ expand_value:
 	push	edx
 	call	realloc
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+ValueDefinition.value],eax
 	mov	[edx+ValueDefinition.block_length],ecx
 	mov	edi,eax

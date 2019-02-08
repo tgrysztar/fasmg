@@ -128,7 +128,6 @@ assembly_init:
 	call	get_environment_variable
 	mov	ecx,eax
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	[include_paths],eax
 	mov	edi,eax
 	call	get_environment_variable
@@ -177,20 +176,17 @@ assembly_init:
 
 	mov	ecx,100h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[tree_stack_base],eax
 	add	eax,ecx
 	mov	[tree_stack_end],eax
 
 	mov	ecx,1000h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[source_context],eax
 	mov	[source_context_maximum_length],ecx
 
 	mov	ecx,1000h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[line_embeddings],eax
 	mov	[line_embeddings_maximum_length],ecx
 
@@ -204,35 +200,30 @@ assembly_init:
 
 	mov	ecx,1000h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[directives_stack_base],eax
 	add	eax,ecx
 	mov	[directives_stack_end],eax
 
 	mov	ecx,1000h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[counters_stack_base],eax
 	add	eax,ecx
 	mov	[counters_stack_end],eax
 
 	mov	ecx,100h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[operator_stack_base],eax
 	add	eax,ecx
 	mov	[operator_stack_end],eax
 
 	mov	ecx,10h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[condition_stack_base],eax
 	add	eax,ecx
 	mov	[condition_stack_end],eax
 
 	mov	ecx,100h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[assembly_stack_base],eax
 	add	eax,ecx
 	mov	[assembly_stack_end],eax
@@ -263,30 +254,25 @@ assembly_init:
 
 	mov	ecx,100h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[display_buffer],eax
 	mov	[display_buffer_length],ecx
 
 	mov	ecx,100h
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[macro_buffer],eax
 	mov	[macro_buffer_length],ecx
 
 	mov	ecx,32*6*sizeof.ExpressionTerm
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	[temporary_terms],eax
 	mov	[free_temporary_terms],eax
 
 	mov	ecx,4*sizeof.FloatData
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	[temporary_floats],eax
 
 	mov	ecx,256*4
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	[operator_table],eax
 	mov	edi,eax
 	mov	ecx,256
@@ -847,7 +833,6 @@ allocate_workspace:
 	push	edx
 	call	malloc_growable
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+Workspace.memory_start],eax
 	add	eax,ecx
 	mov	[edx+Workspace.memory_end],eax
@@ -888,7 +873,6 @@ reserve_workspace:
 	push	edx
 	call	realloc
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+Workspace.memory_start],eax
 	add	edi,eax
 	add	eax,ecx
@@ -903,7 +887,6 @@ reserve_workspace:
 	pop	ecx
 	call	malloc_growable
 	pop	edx
-	jc	out_of_memory
 	mov	[edx+Workspace.memory_start],eax
 	mov	edi,eax
 	add	eax,ecx
@@ -927,7 +910,6 @@ grow_stack:
 	shl	edx,cl
 	mov	ecx,edx
 	call	realloc
-	jc	out_of_memory
 	retn
 
 create_source_entry:
@@ -951,7 +933,6 @@ create_source_entry:
 	mov	eax,ebx
 	mov	ebx,edx
 	call	realloc
-	jc	out_of_memory
 	mov	[source_context],eax
 	mov	[source_context_maximum_length],ecx
 	mov	edx,ebx

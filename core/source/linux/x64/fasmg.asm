@@ -200,6 +200,9 @@ segment readable executable
 	mov	eax,60		; sys_exit
 	syscall
 
+  internal_error:
+	int3
+
   display_usage_information:
 
 	mov	esi,_usage

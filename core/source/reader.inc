@@ -44,7 +44,6 @@ read_source:
 	inc	ecx
 	mov	[source_text_length],ecx
 	call	malloc
-	jc	error_reading_file
 	mov	[source_text],eax
 	mov	edx,eax
 	mov	ecx,[source_text_length]
@@ -121,7 +120,6 @@ tokenize_source:
 	shl	ecx,1
 	add	ecx,18
 	call	malloc_growable
-	jc	out_of_memory
 	mov	[tokenization_buffer],eax
 	mov	[tokenization_buffer_length],ecx
 	add	eax,ecx
@@ -146,7 +144,6 @@ tokenize_source:
 	add	ecx,18
 	mov	eax,[tokenization_buffer]
 	call	realloc
-	jc	out_of_memory
 	sub	edi,[tokenization_buffer]
 	add	edi,eax
 	mov	[tokenization_buffer],eax
@@ -256,7 +253,6 @@ tokenize_source:
 	mov	eax,[tokenization_buffer]
 	sub	ecx,eax
 	call	realloc
-	jc	out_of_memory
 	mov	[tokenization_buffer],eax
 	mov	[tokenization_buffer_length],ecx
 	retn
@@ -300,7 +296,6 @@ get_file_data:
 	push	edi
 	mov	ecx,sizeof.FileData
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	edi,eax
 	xor	eax,eax
 	mov	edx,eax
@@ -419,7 +414,6 @@ read_file_data:
 	push	ecx
 	add	ecx,sizeof.FileCache
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	ebx,eax
 	mov	eax,[file_cache_pointer]
 	mov	edx,ebx

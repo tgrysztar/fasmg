@@ -24,7 +24,6 @@ create_string_map:
 	shl	ebx,2
 	lea	ecx,[sizeof.Map+ebx*4]
 	call	malloc_fixed
-	jc	out_of_memory
 	xchg	ebx,eax
 	mov	ecx,eax
 	dec	eax
@@ -34,7 +33,6 @@ create_string_map:
 	rep	stosd
 	mov	ecx,1000h
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	[ebx+Map.linked_blocks],eax
 	xor	edx,edx
 	mov	[eax],edx
@@ -159,7 +157,6 @@ put_into_map:
 	push	ecx edx
 	mov	ecx,1000h
 	call	malloc_fixed
-	jc	out_of_memory
 	mov	edx,eax
 	xchg	[ebx+Map.linked_blocks],edx
 	mov	[eax],edx

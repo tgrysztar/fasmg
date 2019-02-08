@@ -16,7 +16,7 @@ malloc:
 malloc_fixed:
 malloc_growable:
 ; in: ecx = requested size
-; out: eax - allocated block, ecx = allocated size, cf set on error
+; out: eax - allocated block, ecx = allocated size, on error jumps to out_of_memory (does not return)
 ; preserves: ebx, esi, edi
 ; note:
 ;  use of malloc_fixed hints that block will be kept as is until the end of assembly
@@ -56,7 +56,6 @@ malloc_growable:
     ;  eax = size of the free block, including the preceding header
     ;  ecx = requested size, including the preceding header (must be aligned to MALLOC_MINIMUM_SIZE and in range from 12 to eax)
     ; out:
-    ;  cf cleared
     ;  eax - allocated block (the same address as the free block that was given)
     ;  ecx = allocated size (preceding header not included)
     ;  edi = what was in r12d
@@ -85,18 +84,16 @@ malloc_growable:
 	sub	ecx,4
 	mov	edi,r12d
 	mov	esi,r13d
-	clc
 	ret
     malloc_brk:
     ; in:
     ;  r14d = requested size
     ; out:
-    ;  cf set on error
+    ;  eax - allocated block, equal to previous value of [malloc_lbrk]
+    ;  ecx = allocated size
     ;  edi = what was in r12d
     ;  esi = what was in r13d
-    ;  when cf = 0:
-    ;	eax - allocated block, equal to previous value of [malloc_lbrk]
-    ;	ecx = allocated size
+    ;  on error jumps to out_of_memory (does not return)
     ; preserves: rbx
     ; note: for internal use only
 	cmp	dword [malloc_lbrk],0
@@ -106,7 +103,7 @@ malloc_growable:
 	syscall
 	mov	ecx,eax
 	cmp	rcx,rax
-	jne	malloc_error
+	jne	out_of_memory
 	mov	[malloc_fbrk],eax
 	mov	[malloc_lbrk],eax
       malloc_lbrk_valid:
@@ -114,13 +111,13 @@ malloc_growable:
 	mov	edi,[malloc_lbrk]
 	and	ecx,not MALLOC_SYSTEM_MASK
 	add	edi,ecx
-	jc	malloc_error
+	jc	out_of_memory
 	mov	eax,12			; sys_brk
 	syscall
 	mov	edx,eax
 	lea	ecx,[4+r14d+MALLOC_MINIMUM_MASK]
 	sub	edx,[malloc_lbrk]
-	jz	malloc_error
+	jz	out_of_memory
 	and	ecx,not MALLOC_MINIMUM_MASK
 	xchg	[malloc_lbrk],eax
 	mov	[eax],ecx		; the size of block to return
@@ -150,14 +147,6 @@ malloc_growable:
 	add	eax,4
 	mov	edi,r12d
 	mov	esi,r13d
-	clc
-	ret
-    malloc_error:
-	xor	eax,eax
-	xor	ecx,ecx
-	mov	edi,r12d
-	mov	esi,r13d
-	stc
 	ret
     unlink_from_freelist:
     ; in: edx - block in freelist to unlink
@@ -234,7 +223,7 @@ mfree:
 
 realloc:
 ; in: eax - memory block, ecx = requested size
-; out: eax - resized block, ecx = allocated size, cf set on error
+; out: eax - resized block, ecx = allocated size, on error jumps to out_of_memory (does not return)
 ; preserves: ebx, esi, edi
 ; note: this implementation does not shrink allocations
 	mov	edx,[eax-4]
@@ -270,7 +259,6 @@ realloc:
 	add	ecx,[eax-4]
 	mov	[eax-4],ecx
 	sub	ecx,4
-	clc
 	ret
    realloc_brk:
 	mov	r14d,ecx
@@ -280,19 +268,16 @@ realloc:
 	push	rax
 	call	malloc_brk
 	pop	rax
-	jc	realloc_failed
 	mov	edx,[eax-4]
 	mov	ecx,edx
 	add	ecx,[eax+edx]
 	mov	[eax-4],ecx
 	sub	ecx,4
-	clc
 	ret
    realloc_and_copy:
 	push	rax rdi rsi
 	call	malloc
 	pop	rsi rdi r14
-	jc	realloc_failed
 	mov	r12d,edi
 	mov	r13d,esi
 	mov	edi,eax
@@ -357,15 +342,9 @@ realloc:
 	pop	rcx rax
 	mov	edi,r12d
 	mov	esi,r13d
-	clc
-	ret
-    realloc_failed:
-	xor	eax,eax
-	stc
 	ret
     realloc_already_satisfied:
 	mov	ecx,edx
-	clc
 	ret
 
 if used mcheck
@@ -385,8 +364,7 @@ if used mcheck
 	je	mcheck_ok
 	jb	mcheck_walk
       mcheck_break:
-	int3
-	nop
+	jmp	internal_error
       mcheck_ok:
 	pop	rsi rax
 	ret

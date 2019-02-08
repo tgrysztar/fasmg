@@ -84,7 +84,6 @@ register_error:
 	sub	ecx,[error_line_start]
 	mov	edi,edx
 	call	malloc
-	jc	out_of_memory
 	mov	[ebx],eax
 	mov	[eax+Error.message],edi
 	xor	ecx,ecx
@@ -119,7 +118,6 @@ register_error:
 	add	ecx,[esi]
 	inc	ecx
 	call	malloc
-	jc	out_of_memory
 	add	edi,eax
 	mov	[ebx],eax
 	mov	edx,eax
