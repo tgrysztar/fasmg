@@ -20,7 +20,7 @@ virtual at 0
 	end repeat
 end virtual
 
-macro zipfile name*
+macro zipfile? name*
 	namespace ZIP
 		endzipfile
 
@@ -41,8 +41,8 @@ macro zipfile name*
 		e.Comment := ''
 		e.CommentLength := lengthof e.Comment
 
-		macro endzipfile
-			purge endzipfile
+		macro endzipfile?
+			purge endzipfile?
 			FILE_INDEX = FILE_INDEX + 1
 			e.UncompressedSize = $% - e.FileOffset
 			e.CompressedSize = e.UncompressedSize
@@ -52,7 +52,7 @@ macro zipfile name*
 			c = 0xffffffff
 			repeat e.CompressedSize, a:0
 				load b:byte from :e.FileOffset+a
-				load t dword from crc32table:(b xor (c and 0xFF))*4
+				load t:dword from crc32table:(b xor (c and 0xFF))*4
 				c = c shr 8 xor t
 			end repeat
 			store c xor 0xffffffff :dword at :e.Crc32Offset
@@ -77,12 +77,10 @@ macro zipfile name*
 		e.FileOffset:
 
 		org 0
-
   end namespace
-
 end macro
 
-macro endzipfile
+macro endzipfile?
 end macro
 
 postpone
