@@ -4329,15 +4329,8 @@ load_value:
       load_length_ready:
 	retn
     load_from_output_offset:
-	and	[current_constituent],0
-	call	get_numeric_constant_value
-	test	edx,edx
-	jz	invalid_argument
-	mov	edi,file_offset
-	mov	ecx,8
-	call	fit_value
+	call	read_output_offset
 	jc	value_out_of_range
-	js	value_out_of_range
 	mov	edx,assembly_workspace
 	mov	edi,[edx+Workspace.memory_start]
 	mov	eax,[value_length]
@@ -4539,6 +4532,7 @@ store_value:
 	mov	edi,value_length
 	call	fit_value
 	jc	invalid_relative_address
+	js	invalid_relative_address
 	mov	edi,esi
       addressed_length_ok:
 	pop	esi
@@ -4559,8 +4553,38 @@ store_value:
 	pop	esi
 	stc
 	retn
-    store_at_output_offset:
+    read_output_offset:
 	and	[current_constituent],0
+	call	get_numeric_constant_value
+	test	edx,edx
+	jz	invalid_argument
+	push	edi
+	mov	edi,file_offset
+	mov	ecx,8
+	call	fit_value
+	pop	edi
+	jc	output_offset_out_of_range
+	js	output_offset_out_of_range
+	cmp	[size_specified],0
+	jne	output_offset_ok
+	and	[value_length],0
+	mov	edx,[edi+ExpressionTerm.metadata]
+	test	edx,edx
+	jz	output_offset_ok
+	mov	ecx,4
+	mov	edi,value_length
+	call	fit_value
+	jc	output_offset_out_of_range
+	js	output_offset_out_of_range
+      output_offset_ok:
+	clc
+	retn
+      output_offset_out_of_range:
+	stc
+	retn
+    store_at_output_offset:
+	call	read_output_offset
+	jc	value_out_of_range
 	mov	ecx,[value_length]
 	mov	edx,assembly_workspace
 	mov	edi,[edx+Workspace.memory_start]
@@ -4569,14 +4593,6 @@ store_value:
 	mov	ecx,[value_length]
 	call	fit_value
 	jc	value_out_of_range
-	call	get_numeric_constant_value
-	test	edx,edx
-	jz	invalid_argument
-	mov	edi,file_offset
-	mov	ecx,8
-	call	fit_value
-	jc	value_out_of_range
-	js	value_out_of_range
 	push	esi
 	mov	esi,[assembly_workspace.memory_start]
 	call	rewrite_output

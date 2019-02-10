@@ -603,6 +603,7 @@ get_numeric_constant_value:
 ; out:
 ;  esi = pointer advanced past the processed part of line
 ;  edx - 32-bit length followed by numeric data, null when expression gave no result
+;  edi - ExpressionTerm, null when expression gave no result
 	call	get_expression_value
 	jc	empty_numeric_constant
 	call	forbid_variable_terms
@@ -610,6 +611,7 @@ get_numeric_constant_value:
 	retn
     empty_numeric_constant:
 	xor	edx,edx
+	xor	edi,edi
 	retn
 
 get_expression_value:
