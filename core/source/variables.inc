@@ -232,8 +232,10 @@ symbol_expected db ?
 kept_symbol_flags db ?
 chosen_class db ?
 expected_class db ?
-forced_definition db ?
 symbol_definition db ?
+symbol_solid db ?
+recognizer_setting db ?
+label_solid db ?
 value_type db ?
 waiting_for_digit db ?
 literal_exponent_sign db ?

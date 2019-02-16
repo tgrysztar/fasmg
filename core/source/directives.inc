@@ -17,6 +17,7 @@ ends
 
 struct NamespaceData
 	prior_namespace dd ?
+	prior_label dd ?
 ends
 
 struct VirtualBlockData
@@ -296,6 +297,7 @@ identify_parameter_symbol:
 ;  when [SymbolTree_Leaf.class] = SYMCLASS_STRUCTURE:
 ;   [label_leaf] - SymbolTree_Leaf of structure label
 ;   [label_branch] - SymbolTree_Foliage of structure label
+;   [label_solid] = non-zero when initial component of label was a name and not a dot
 ; out:
 ;  when done, handler should jump to instruction_assembled with esi containing a pointer moved past the processed part of line,
 ;  or jump directly to assembly_line when the rest of line should be ignored
@@ -306,8 +308,10 @@ set_namespace:
 	mov	dl,DBLOCK_NAMESPACE
 	mov	ecx,sizeof.NamespaceData
 	call	add_directive_block
-	mov	eax,[current_namespace]
-	mov	[edi-sizeof.NamespaceData+NamespaceData.prior_namespace],eax
+	mov	edx,[current_namespace]
+	mov	[edi-sizeof.NamespaceData+NamespaceData.prior_namespace],edx
+	mov	eax,[edx+SymbolTree_Root.current_label]
+	mov	[edi-sizeof.NamespaceData+NamespaceData.prior_label],eax
 	and	[symbol_definition],0
 	mov	dl,SYMCLASS_EXPRESSION
 	call	identify_symbol
@@ -316,13 +320,16 @@ set_namespace:
 	jz	invalid_identifier
 	call	get_symbol_namespace
 	mov	[current_namespace],ebx
+	and	[ebx+SymbolTree_Root.current_label],0
 	jmp	instruction_assembled
 end_namespace:
 	mov	dl,DBLOCK_NAMESPACE
 	call	find_directive_block
 	jc	unexpected_instruction
-	mov	eax,[edi-sizeof.NamespaceData+NamespaceData.prior_namespace]
-	mov	[current_namespace],eax
+	mov	edx,[edi-sizeof.NamespaceData+NamespaceData.prior_namespace]
+	mov	eax,[edi-sizeof.NamespaceData+NamespaceData.prior_label]
+	mov	[current_namespace],edx
+	mov	[edx+SymbolTree_Root.current_label],eax
 	call	close_directive_block
 	jmp	instruction_assembled
 
@@ -443,10 +450,10 @@ define_label:
 	or	[edx+ValueDefinition.flags],VAL_SHIFTABLE
 	retn
     update_current_label:
+	cmp	[label_solid],0
+	je	current_label_ok
 	mov	edx,[label_branch]
-	mov	edi,[edx+SymbolTree_Foliage.root]
-	test	[edi+SymbolTree_Root.attributes],SYMTREE_LOCAL
-	jnz	current_label_ok
+	mov	edi,[current_namespace]
 	mov	[edi+SymbolTree_Root.current_label],edx
       current_label_ok:
 	retn
@@ -783,6 +790,8 @@ label_directive:
 	jz	invalid_identifier
 	mov	[label_leaf],ebx
 	mov	[label_branch],edx
+	mov	al,[symbol_solid]
+	mov	[label_solid],al
 	and	[metadata_available],0
 	call	peek_at_constituent_value
 	jc	label_at_current_address

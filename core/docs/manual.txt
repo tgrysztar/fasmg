@@ -134,9 +134,9 @@ followed by it refers to the case-insensitive symbol.
         t = tester?      ; t = 0
 
   Every symbol has its own namespace of descendants, called child namespace. When two
-names are connected by a dot with no whitespace in between, such identifier refers to
-the symbol with the second name in a namespace of descendants to the symbol specified
-by the first name. This operation can be repeated many times within a single identifier,
+names are connected with a dot (with no whitespace in between), such identifier refers to
+an entity named by the second one in the namespace of descendants to the symbol specified
+by the first one. This operation can be repeated many times within a single identifier,
 allowing to refer to descendants of descendants in a chain of any length.
 
         space:
@@ -152,8 +152,8 @@ to mark that it refers to a case-insensitive symbol. If "?" is inserted in
 the middle of the name (effectively splitting it into separate tokens) such
 identifier is considered a syntactical error.
   When an identifier starts with a dot (in other words: when the name of the parent
-symbol is empty), it refers to the symbol in the namespace of the latest label
-that was defined in the current base namespace. This allows to rewrite the above sample
+symbol is empty), it refers to the symbol in the namespace of the most recent 
+regular label defined before it. This allows to rewrite the above sample
 like this:
 
         space:
@@ -164,15 +164,13 @@ like this:
         .color.g = 0
         .color.b = 0
 
-After the "space" label is defined, it becomes the latest label defined within
-the base namespace, so the following ".x" refers to the "space.x" symbol and
-then the ".color" refers to the "space.color". This symbol becomes the latest
-label defined within the child namespace of "space", but it does not affect the
-current namespace, where "space" remains the newest label.
+After the "space" label is defined, it becomes the most recently defined normal
+label, so the following ".x" refers to the "space.x" symbol and then the ".color"
+refers to the "space.color".
   The "namespace" command followed by a symbol identifier changes the base
 namespace for a section of source text. It must be paired with the
-"end namespace" command later in the source to mark the end of such section. This
-can be used to again rewrite the above sample in a different way:
+"end namespace" command later in the source to mark the end of such block.
+This can be used to again rewrite the above sample in a different way:
 
         space:
         namespace space
@@ -215,13 +213,13 @@ appear redundant, but it can be used to alter the way the definition of a symbol
 works, because it forces the assembler to look for an already existing symbol that
 it can alter instead of squarely creating a new one in the current namespace. 
 For instance, if in the fourth line of the previous example "regional." was put
-in place of "regional", it would define a new value for the original "regional"
+in place of "regional", it would rewrite a value of the original "regional"
 symbol instead of making a new symbol in the child namespace. Similarly,
 a definition formed this way may assign a new value to a symbol regardless of
 whether it was previously defined as case-insensitive or not.
-  If an identifier is just a single dot, by the above rules it refers to the
-latest label defined in the current base namespace. This can be applied to
-rewrite the earlier example in yet another way:
+  If an identifier is just a single dot, by the above rules it refers to the most
+recent label that did not start with a dot. This can be applied to rewrite
+the earlier example in yet another way:
 
         space:
         namespace .
@@ -244,16 +242,20 @@ them to be interpreted as a single name formed by concatenating the tokens.
         varia#ble = var#iable + 2       ; variable = 3
 
 This can also be applied to numbers.
-  There is a couple of additional rules concerning the use of dots in 
-identifiers. When an identifier starts with a dot, but there has been no label
-defined in the current base namespace, the identifier refers to the descendant
-of a special symbol that resides in the current namespace but has no name. If
-an identifier starts with a sequence of two or more dots, the identifier refers
-to the descedant of a similar unnamed symbol, but it is a distinct one for any
-given number of dots. While the namespace accessed with a single starting dot
-changes every time a new label is defined within the current namespace, the
-special namespace accessed with two or more dots in the beginning of an
-identifier remains the same everywhere within the current base namespace:
+  Inside a block defined with "namespace" there is initially no label that would
+be considered base for identifiers starting with dot (however the label that 
+served this purpose earlier is brought back to use after "end namespace").
+A similar thing also happens in the beginning of the source text, before any
+label has been defined. This is connected to a couple of additional rules
+concerning use of dots in identifiers.
+  When an identifier starts with a dot, but there is no label that would be
+a parent for it, the identifier refers to the descendant of a special symbol
+that resides in the current namespace but has no name. If an identifier starts
+with a sequence of two or more dots, the identifier refers to the descedant of
+a similar unnamed symbol, but it is a distinct one for any given number of dots.
+While the namespace accessed with a single starting dot changes every time a new
+regular label is defined, the special namespace accessed with two or more dots
+in the beginning of an identifier remains the same:
 
         first:
                 .child = 1
@@ -289,12 +291,12 @@ and it would be the same symbol as identified by simple ".." inside the
 namespace of the "base" symbol.
   Any identifier can be prepended with a "?" character and such modifier gives
 an added effect only when it is used in a context where identifier can be
-interpreted either as an instruction or as a label or variable to be
-defined. In such case identifier starting with "?" is never going to be
-treated as an instruction. This can be used to define a variable that shares
-a name with an existing command:
+interpreted as something different than a label or variable to be defined.
+For example, identifier starting with "?" is not going to be treated as
+an instruction, even if it is the first symbol on the line. This can be used
+to define a variable that shares a name with an existing command:
 
-        ?restore = 0
+        ?namespace = 0
 
   A number can be used in a role of a name inside an identifier, but not when
 it is placed at the beginning, because then it is considered a literal value.
@@ -304,16 +306,15 @@ This restriction also may be bypassed by prepending an identifier with "?".
 3. Basic symbol definitions
 
 When a symbol is defined as a label, it must be the only definition of
-this symbol in the entire source. A value that is in this way assigned to
-the symbol can be accesed from every place in the source, even before the
-label is actually defined. When a symbol is used before it is defined (this is
-often called forward-referencing) the assembler tries to correctly predict the
-value of the symbol by doing multiple passes over the source text. Only when
-all predictions prove to be correct, the assembler generates the final
-output.
-  This kind of symbols, which can only be defined once and thus have a universal
-value that can always be forward-referenced, is called a constant symbol.
-All labels are constants.
+this symbol in the entire source. A value that is assigned to the symbol this way
+can be accesed from every place in the source, even before the label is actually
+defined. When a symbol is used before it is defined (this is often called
+forward-referencing) the assembler tries to correctly predict the value of
+the symbol by doing multiple passes over the source text. Only when all
+predictions prove to be correct, the assembler generates the final output.
+  This kind of symbol, which can only be defined once and thus have a universal
+value that can always be forward-referenced, is called a constant. All labels
+are constants.
   When a symbol is defined with a "=" command, it may have multiple definitions
 of this kind. Such symbol is called variable and when it is used, the value from
 its latest definition is accessed. A symbol defined with such command can also be
@@ -536,16 +537,13 @@ instruction class is recognized only when it is the first identifier of the
 command, while a symbol from the expression class is recognized only when used
 to provide a value of arguments to some command.
   All the types of definitions that were described in the earlier sections
-create the expression class symbols. The "label" and "restore" are the examples
+create the expression class symbols. The "label" and "restore" are examples
 of built-in symbols belonging to the instruction class.
   In any namespace it is allowed for symbols of different classes to share the
 same name, for example it is possible to define the instruction named "shl",
 while there is also an operator with the same name - but an operator belongs
 to the expression class. It is however recommended to avoid name clashes of
-this kind. An existing instruction may actually prevent definition of a
-symbol with the same name using a command like "=", because such definition
-requires the name to be the first identifier in command, and then it would
-be automatically interpreted as an instruction.
+this kind.
   The third class of symbols are the labeled instructions. A symbol belonging
 to this class may be recognized only when the first identifier of the command
 is not an instruction - in such case the first identifier becomes a label to
@@ -736,6 +734,8 @@ identifier. This condition is true when the value of specified symbol has
 been used anywhere in the source.
   The "assert" is an instruction that signalizes an error when a condition
 specified by its argument is not met.
+
+        assert a < 65536
 
 
 8. Macroinstructions
@@ -977,7 +977,7 @@ portions of the text. The following sample defines a macroinstruction which
 allows to define a block of comments by skiping all the lines of text until it
 encounters a line with content equal to the argument given to "comment".
 
-        macro comment?! ender
+        macro comment? ender
                 macro ?! line&
                         if `line = `ender
                                 purge ?

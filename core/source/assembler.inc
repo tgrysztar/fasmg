@@ -619,6 +619,8 @@ assembly_pass:
 	call	identify_symbol
 	jc	empty_line
 	mov	[label_branch],edx
+	mov	al,[symbol_solid]
+	mov	[label_solid],al
 	test	ebx,ebx
 	jz	unrecognized_instruction
 	mov	al,[ebx+SymbolTree_Leaf.class]
@@ -2070,6 +2072,7 @@ identify_symbol:
 ;   edx - SymbolTree_Foliage, may be null if either ebx or edi is null
 ;   edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
 ;   [symbol_start] - first token of identified symbol (within current embedded value or preprocessed line)
+;   [symbol_solid] = non-zero when initial component of identifier was a name and not a dot
 ; note:
 ;  when ebx is null but edi is not, the identifier was malformed
 ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
@@ -2101,6 +2104,7 @@ identify_symbol:
     ;	edx - SymbolTree_Foliage, may be null if either ebx or edi is null
     ;	edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
     ;	[symbol_start] - first token of identified symbol
+    ;	[symbol_solid] = non-zero when initial component of identifier was a name and not a dot
     ; note:
     ;  when ebx is null but edi is not, the identifier was malformed
     ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
@@ -2126,7 +2130,11 @@ identify_symbol:
 	mov	[recognition_context.current_label],eax
     namespaces_ok:
 	mov	[symbol_start],esi
-	and	[forced_definition],0
+	and	[symbol_solid],0
+	cmp	[symbol_definition],0
+	setnz	dh
+	shl	dh,bsf RECOGNIZE_DEFINITION
+	mov	[recognizer_setting],dh
 	xor	edi,edi
 	mov	al,[esi]
 	cmp	al,'.'
@@ -2140,6 +2148,8 @@ identify_symbol:
     starting_with_name:
 	call	detect_numeric_symbol
 	jc	return_no_identifier
+    valid_starting_name:
+	or	[symbol_solid],1
     valid_name:
 	inc	esi
 	mov	[name_token],esi
@@ -2148,10 +2158,7 @@ identify_symbol:
 	and	[name_volatile],0
 	xor	ecx,ecx
     identify_name:
-	mov	dh,[symbol_definition]
-	or	dh,[forced_definition]
-	setnz	dh
-	shl	dh,bsf RECOGNIZE_DEFINITION
+	mov	dh,[recognizer_setting]
 	call	move_to_next_symbol
 	jc	run_recognizer
 	cmp	al,'#'
@@ -2260,12 +2267,12 @@ identify_symbol:
 	cmp	[symbol_definition],0
 	jne	no_forced_definition
 	mov	[expected_class],SYMCLASS_EXPRESSION
-	or	[forced_definition],1
+	or	[recognizer_setting],RECOGNIZE_DEFINITION
     no_forced_definition:
 	cmp	al,'.'
 	je	starting_dot
 	cmp	al,1Ah
-	je	valid_name
+	je	valid_starting_name
 	cmp	al,30h
 	je	concatenation_with_internal_number
     alone_question_mark:
@@ -2495,10 +2502,7 @@ identify_symbol:
 	je	starting_question_mark
 	jmp	malformed_identifier
     identify_name_with_empty_concatenation:
-	mov	dh,[symbol_definition]
-	or	dh,[forced_definition]
-	setnz	dh
-	shl	dh,bsf RECOGNIZE_DEFINITION
+	mov	dh,[recognizer_setting]
 	call	move_to_next_symbol
 	jc	run_recognizer
 	jmp	name_complete
