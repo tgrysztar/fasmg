@@ -161,12 +161,12 @@ if ~ defined AVX_512
 		end match
 	end macro
 
-	macro AVX_512.parse_sae ns,op,vsize:64
-		if ns.type = 'mem' | ns.size <> vsize
+	macro AVX_512.parse_sae ns,op
+		if ns.type = 'mem'
 			err 'invalid operand'
 		else match { =sae? }, op
 			ns.evex_b = 1
-			ns.rounding = 0
+			ns.rounding = -1
 		else
 			err 'invalid operand'
 		end match
@@ -204,7 +204,7 @@ if ~ defined AVX_512
 			rm_operand.evex = rm_operand.evex or rm_operand.evex_b shl 20
 		end if
 
-		if rm_operand.mod = 11b & rm_operand.evex_b
+		if rm_operand.mod = 11b & rm_operand.evex_b & rm_operand.rounding >= 0
 			rm_operand.evex = rm_operand.evex or (rm_operand.rounding shl 21)
 		else if vsize = 64
 			rm_operand.evex = rm_operand.evex or (1 shl 22)
@@ -447,7 +447,7 @@ if ~ defined AVX_512
 		AVX_512.parse_operand @src,src
 		match src2=,sae, src_sae
 			AVX_512.parse_operand @src2,src2
-			AVX_512.parse_sae @src2,sae,(unit-1) and not 15 + 16
+			AVX_512.parse_sae @src2,sae
 		else
 			AVX_512.parse_operand @src2,src_sae
 		end match
@@ -469,7 +469,7 @@ if ~ defined AVX_512
 		AVX_512.parse_operand @src,src
 		AVX_512.parse_operand @src2,src2
 		match sae=,imm, aux
-			AVX_512.parse_sae @src2,sae,(unit-1) and not 15 + 16
+			AVX_512.parse_sae @src2,sae
 			x86.parse_operand @aux,imm
 		else
 			x86.parse_operand @aux,aux
@@ -911,7 +911,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand @src,src
 			AVX_512.parse_operand @src2,src2
 			match sae=,imm, aux
-				AVX_512.parse_sae @src2,sae,16
+				AVX_512.parse_sae @src2,sae
 				x86.parse_operand @aux,imm
 			else
 				x86.parse_operand @aux,aux
@@ -968,7 +968,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand_k1z @dest,dest
 			match src=,sae, src_sae
 				AVX_512.parse_operand @src,src
-				AVX_512.parse_sae @src,sae,(unit-1) and not 15 + 16
+				AVX_512.parse_sae @src,sae
 			else
 				AVX_512.parse_operand @src,src_sae
 			end match
@@ -1167,7 +1167,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand_k1z @dest,dest
 			match src=,sae, src_sae
 				AVX_512.parse_operand @src,src
-				AVX_512.parse_sae @src,sae,32
+				AVX_512.parse_sae @src,sae
 			else
 				AVX_512.parse_operand_bcst @src,src_sae,4
 			end match
@@ -1253,7 +1253,7 @@ if ~ defined AVX_512
 		AVX_512.parse_operand_k1z @dest,dest
 		match src=,sae, src_sae
 			AVX_512.parse_operand @src,src
-			AVX_512.parse_sae @src,sae,32
+			AVX_512.parse_sae @src,sae
 		else
 			AVX_512.parse_operand @src,src_sae
 		end match
@@ -1329,7 +1329,7 @@ if ~ defined AVX_512
 			x86.parse_operand @dest,dest
 			match src=,sae, src_sae
 				AVX_512.parse_operand @src,src
-				AVX_512.parse_sae @src,sae,16
+				AVX_512.parse_sae @src,sae
 			else
 				AVX_512.parse_operand @src,src_sae
 			end match
