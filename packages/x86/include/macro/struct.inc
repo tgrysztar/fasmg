@@ -80,25 +80,22 @@ macro struct? name
 						field def
 					else match :v, def
 						field def
-					else if struct?.counter < 0
-						field def
-						if defined field
-							field.__length := $ - field
-						end if
 					else
-						struct?.counter = struct?.counter + 1
-						repeat 1, i:struct?.counter
-							match sub, struct?.substruct
-								define sub.__field#i field
-							else
-								define __field#i field
-							end match
-						end repeat
+						if struct?.counter >= 0
+							struct?.counter = struct?.counter + 1
+							repeat 1, i:struct?.counter
+								match sub, struct?.substruct
+									define sub.__field#i field
+								else
+									define __field#i field
+								end match
+							end repeat
+						end if
 						field def
 						if defined field
 							field.__length := $ - field
 						end if
-					end if
+					end match
 				end struc
 				struct?.name
 				restruc ?
@@ -113,7 +110,7 @@ macro struct? name
 	esc macro struct?.name
 end macro
 
-macro struct?.container
+macro struct?.container?:
 	struct?.current
 end macro
 
