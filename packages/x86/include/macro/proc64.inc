@@ -296,8 +296,8 @@ macro proc? statement&
 
 	match name declaration, statement :
 	if used name
-	name:
 	namespace name
+	name:
 	outscope match local?, proclocal
 
 		match =stdcall? args :, declaration
@@ -346,20 +346,22 @@ macro proc? statement&
 		end match
 
 		virtual at parmbase@proc
-			match args, params
-				iterate arg, args
-					match argname:type, arg
-						label argname:type
-						rb type
-					else
-						?arg dq ?
-					end match
-				end iterate
-			end match
-			parmbytes := $-(parmbase@proc)
-			match p, pcountsuffix
-				name#p = parmbytes/8
-			end match
+			namespace name
+				match args, params
+					iterate arg, args
+						match argname:type, arg
+							label argname:type
+							rb type
+						else
+							?arg dq ?
+						end match
+					end iterate
+				end match
+				parmbytes := $-(parmbase@proc)
+				match p, pcountsuffix
+					name#p = parmbytes/8
+				end match
+			end namespace
 		end virtual
 
 		match prologue:reglist, prologue@proc:<regs>
