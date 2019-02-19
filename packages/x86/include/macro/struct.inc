@@ -4,7 +4,7 @@ define union?
 struct?.counter = -1
 struct?.subcounter = -1
 
-struc struct?.init_field name,field,value&
+struc struct?.init_field: name,field,value&
 	match =struct type, name.field.__type
 		.field struct?.init type,value
 	else match =substruct type, name.field.__type
@@ -31,7 +31,7 @@ struc struct?.init_field name,field,value&
 	end if
 end struc
 
-struc struct?.init name,args&
+struc struct?.init: name,args&
 	iterate definition, args
 		match field:value, definition
 			. struct?.init_field name,field,value
@@ -82,6 +82,9 @@ macro struct? name
 						field def
 					else if struct?.counter < 0
 						field def
+						if defined field
+							field.__length := $ - field
+						end if
 					else
 						struct?.counter = struct?.counter + 1
 						repeat 1, i:struct?.counter
@@ -114,7 +117,7 @@ macro struct?.container
 	struct?.current
 end macro
 
-macro struct?.begin
+macro struct?.begin:
 	macro struct?.end
 		purge struct?.end
 		if struct?.subcounter >= 0
@@ -143,7 +146,7 @@ macro struct?.begin
 	end macro
 end macro
 
-macro union?.begin
+macro union?.begin:
 	local instance
 	label instance
 	macro struct?!
@@ -158,7 +161,7 @@ macro union?.begin
 		struc (field) ? def&
 			if $-instance = 0
 				match !--, def
-					struct?.current
+					struct?.container
 				else
 					field def
 				end match
@@ -168,7 +171,7 @@ macro union?.begin
 			else
 				virtual at instance
 					match !--, def
-						struct?.current
+						struct?.container
 					else
 						field def
 					end match
