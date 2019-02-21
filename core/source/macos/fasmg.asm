@@ -387,7 +387,6 @@ section '__text' align 16
 	push	ecx
 	mov	ecx,eax
 	call	malloc
-	jc	out_of_memory
 	mov	[initial_commands],eax
 	mov	[initial_commands_maximum_length],ecx
 	mov	edi,eax
@@ -398,7 +397,6 @@ section '__text' align 16
 	mov	ecx,eax
 	mov	eax,[initial_commands]
 	call	realloc
-	jc	out_of_memory
 	mov	[initial_commands],eax
 	mov	[initial_commands_maximum_length],ecx
 	mov	edi,eax

@@ -623,11 +623,11 @@ assembly_pass:
 	mov	[label_solid],al
 	test	ebx,ebx
 	jz	unrecognized_instruction
-	mov	al,[ebx+SymbolTree_Leaf.class]
-	cmp	al,SYMCLASS_EXPRESSION
-	je	labeled_instruction
-	cmp	al,SYMCLASS_INSTRUCTION
-	jne	unrecognized_instruction
+	assert	SYMCLASS_EXPRESSION < SYMCLASS_INSTRUCTION
+	assert	SYMCLASS_STRUCTURE > SYMCLASS_INSTRUCTION
+	cmp	[ebx+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
+	jb	labeled_instruction
+	ja	unrecognized_instruction
 	call	get_available_value
 	jc	unrecognized_instruction
 	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
@@ -725,10 +725,9 @@ assembly_pass:
 	jmp	[edx+ValueDefinition.value]
     empty_line:
 	mov	al,[assembly_mode]
-	test	al,AMODE_SKIP
-	jnz	assembly_line
-	test	al,AMODE_DEFINITION
-	jnz	add_line_to_macro
+	and	al,AMODE_SKIP or AMODE_DEFINITION
+	cmp	al,AMODE_DEFINITION
+	je	add_line_to_macro
 	jmp	assembly_line
     execute_interceptor:
 	mov	ebx,[interceptor_symbol]
@@ -1040,17 +1039,17 @@ get_line:
 ; out:
 ;  cf set if there are no more lines to assemble
 ;  esi = pointer into preprocessed line
-	mov	[symbol_class],SYMCLASS_PARAMETER
-	and	[symbol_expected],0
-	and	[symbol_required],0
-	and	[name_volatile],0
-	mov	ebx,[source_context]
-	mov	eax,[ebx+SourceContext.number_of_entries]
-	dec	eax
-	imul	eax,sizeof.SourceEntry
-	lea	ebx,[ebx+sizeof.SourceContext+eax]
 	xor	eax,eax
+	mov	[symbol_class],SYMCLASS_PARAMETER
+	mov	[symbol_expected],al
+	mov	[symbol_required],al
+	mov	[name_volatile],al
 	mov	[preprocessed_context],eax
+	mov	ebx,[source_context]
+	mov	ecx,[ebx+SourceContext.number_of_entries]
+	dec	ecx
+	imul	ecx,sizeof.SourceEntry
+	lea	ebx,[ebx+sizeof.SourceContext+ecx]
 	xchg	eax,[ebx+SourceEntry.number_of_attached_lines]
 	inc	eax
 	add	[ebx+SourceEntry.line_number],eax
@@ -1076,16 +1075,16 @@ get_line:
 	mov	edx,preprocessing_workspace
 	call	reserve_workspace
 	lodsb
-	test	al,al
-	jz	file_ended
-	cmp	al,0Ah
-	je	line_ended
 	cmp	al,1Ah
 	je	convert_name_symbol
 	cmp	al,22h
 	je	convert_quoted_string
 	cmp	al,27h
 	je	convert_quoted_string
+	test	al,al
+	jz	file_ended
+	cmp	al,0Ah
+	je	line_ended
 	cmp	al,';'
 	jne	preprocess_syntactical_character
 	xor	edx,edx
@@ -1242,10 +1241,10 @@ get_line:
 	mov	edx,preprocessing_workspace
 	call	reserve_workspace
 	lodsb
-	test	al,al
-	jz	macro_line_ended
 	cmp	al,1Ah
 	je	reproduce_name_symbol
+	test	al,al
+	jz	macro_line_ended
 	stosb
 	cmp	al,22h
 	je	reproduce_quoted_string
@@ -2137,14 +2136,21 @@ identify_symbol:
 	mov	[recognizer_setting],dh
 	xor	edi,edi
 	mov	al,[esi]
+	cmp	al,1Ah
+	je	starting_with_name
 	cmp	al,'.'
 	je	starting_dot
 	cmp	al,'#'
 	je	starting_with_concatenation
 	cmp	al,'?'
 	je	starting_question_mark
-	cmp	al,1Ah
-	jne	return_no_identifier
+    return_no_identifier:
+	xor	ebx,ebx
+    return_no_namespace:
+	xor	edx,edx
+	xor	edi,edi
+	clc
+	retn
     starting_with_name:
 	call	detect_numeric_symbol
 	jc	return_no_identifier
@@ -2243,13 +2249,6 @@ identify_symbol:
 	mov	al,[expected_class]
 	cmp	al,SYMCLASS_EXPRESSION
 	jne	find_expected_class
-	clc
-	retn
-    return_no_identifier:
-	xor	ebx,ebx
-    return_no_namespace:
-	xor	edx,edx
-	xor	edi,edi
 	clc
 	retn
     starting_question_mark:

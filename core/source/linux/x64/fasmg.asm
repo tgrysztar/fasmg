@@ -394,7 +394,6 @@ segment readable executable
 	push	rsi rcx
 	mov	ecx,eax
 	call	malloc
-	jc	out_of_memory
 	mov	[initial_commands],eax
 	mov	[initial_commands_maximum_length],ecx
 	mov	edi,eax
@@ -405,7 +404,6 @@ segment readable executable
 	mov	ecx,eax
 	mov	eax,[initial_commands]
 	call	realloc
-	jc	out_of_memory
 	mov	[initial_commands],eax
 	mov	[initial_commands_maximum_length],ecx
 	mov	edi,eax
@@ -427,7 +425,6 @@ segment readable executable
 	push	rsi rcx
 	call	malloc
 	pop	rcx rsi
-	jc	out_of_memory
 	mov	edi,eax
 	rep	movsb
 	pop	rsi rcx rbx
