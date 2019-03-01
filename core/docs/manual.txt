@@ -290,11 +290,12 @@ refer to the unnamed parent of the namespace where the "other" symbol resides,
 and it would be the same symbol as identified by simple ".." inside the
 namespace of the "base" symbol.
   Any identifier can be prepended with a "?" character and such modifier gives
-an added effect only when it is used in a context where identifier can be
-interpreted as something different than a label or variable to be defined.
-For example, identifier starting with "?" is not going to be treated as
-an instruction, even if it is the first symbol on the line. This can be used
-to define a variable that shares a name with an existing command:
+an added effect only when it is used in a context where identifier could mean
+something different than a label or variable to be defined. This modifier then
+suppresses any other interpretation. For example, identifier starting with "?"
+is not going to be treated as an instruction, even if it is the first symbol
+on the line. This can be used to define a variable that shares a name with
+an existing command:
 
         ?namespace = 0
 
@@ -317,7 +318,7 @@ value that can always be forward-referenced, is called a constant. All labels
 are constants.
   When a symbol is defined with a "=" command, it may have multiple definitions
 of this kind. Such symbol is called variable and when it is used, the value from
-its latest definition is accessed. A symbol defined with such command can also be
+its latest definition is accessed. A symbol defined with such command may also be
 forward-referenced, but only when it is defined exactly once in the entire
 source and as such has a single unambiguous value.
 
@@ -542,8 +543,7 @@ of built-in symbols belonging to the instruction class.
   In any namespace it is allowed for symbols of different classes to share the
 same name, for example it is possible to define the instruction named "shl",
 while there is also an operator with the same name - but an operator belongs
-to the expression class. It is however recommended to avoid name clashes of
-this kind.
+to the expression class.
   The third class of symbols are the labeled instructions. A symbol belonging
 to this class may be recognized only when the first identifier of the command
 is not an instruction - in such case the first identifier becomes a label to
@@ -759,7 +759,7 @@ these names define the parameters of macroinstruction. When this instruction
 is then used, it may be followed by at most the same number of arguments
 separated with commas, and their values are assigned to the consecutive
 parameters. Before any line of text inside the macroinstruction is interpreted,
-the name tokens that correspond to any the parameters are replaced with their
+the name tokens that correspond to any of the parameters are replaced with their
 assigned values.
 
         macro lower name,value
@@ -771,7 +771,7 @@ assigned values.
 The value of a parameter can be any text, not necessarily a correct expression.
 If a line calling the macroinstruction contains fewer arguments than the
 number of defined parameters, the excess parameters receive the empty values.
-  When the name of parameter is defined, it may be followed by "?" character
+  When a name of a parameter is defined, it may be followed by "?" character
 to denote that it is case-insensitive, analogously to a name in a symbol
 identifier. There must be no whitespace between the name and "?".
 A definition of a parameter may also be followed by "*" to denote that it
@@ -813,7 +813,7 @@ this parameter is the entire text of arguments following the instruction.
 
         id 2, 7,1,8
 
-  When the name of a parameter is to be replaced with its value and it is
+  When a name of a parameter is to be replaced with its value and it is
 preceded by "`" character (without any whitespace inbetween), the text of
 the value is embedded into a quoted string and this string replaces
 both the "`" character and the name of parameter.
@@ -824,12 +824,12 @@ both the "`" character and the name of parameter.
 
         text x+1        ; db 'x+1'
 
-  The "local" is a command that may only be used inside the macroinstruction.
+  The "local" is a command that may only be used inside a macroinstruction.
 It should be followed by one or more names separated with commas, and it
-declares that the names from this list should in context of current
-macroinstruction be interpreted as belonging to the special namespace
+declares that the names from this list should in the context of current
+macroinstruction be interpreted as belonging to a special namespace
 associated with this macroinstruction instead of current base namespace. This
-allows to create some unique symbols every time the macroinstruction is called.
+allows to create unique symbols every time the macroinstruction is called.
 Such declaration defines an additional parameter with the specified name and it
 only affects the uses of that name that follow within the same macroinstruction.
 Declaring the same name as local multiple times within the same macroinstruction
@@ -917,9 +917,9 @@ account when counting the nested "macro" and "end macro" pairs.
         end macro
 
   When an identifer of macroinstruction in its definition is followed by "!"
-character, it defines the unconditional macroinstruction. This is a special
+character, it defines an unconditional macroinstruction. This is a special
 kind of instruction class symbol, which is evaluated even in places where the
-assembly is suspended - like inside the conditional block whose condition is
+assembly is suspended - like inside a conditional block whose condition is
 false, or inside a definition of another macroinstruction. This allows to
 define instructions that can be used where otherwise a directly stated
 "end if" or "end macro" would be required, as in the following example:
@@ -1285,11 +1285,11 @@ followed by "*" to require that the parameter has a value that is not empty,
 or ":" and a default value.
   The "break" instruction plus both the "%" and "%%" parameters can be used
 inside the "iterate" block with the same effects as in case of "repeat".
-  The "indx" is an instruction that can be only be used inside the iterated
+  The "indx" is an instruction that can be only be used inside an iterated
 block and it changes the values of all the iterated parameters to the ones
 corresponding to iteration with number specified by the argument to "indx" (but
 when the next iteration is started, the values of parameters are again assigned
-in the normal way). This allows to process the iterated values in a different
+the normal way). This allows to process the iterated values in a different
 order. In the following example the values are processed from the last to the
 first:
 
@@ -1332,7 +1332,7 @@ when parameters are recognized inside the preprocessed line, it does not matter
 whether they are followed by "?" there. The only modifier that is recognized
 by preprocessor when it replaces the parameter with its value is the "`"
 character.
-  The repeating instructions together with "if" belong to the group called
+  The repeating instructions together with "if" belong to a group called
 control directives. They are the instructions that control the flow of
 assembly. Each of them defines its own block of subordinate instructions,
 closed with corresponding "end" command, and if these blocks are nested within
@@ -1340,7 +1340,7 @@ each other, it always must be a proper nesting - the inner block must always
 be closed before the outer one. All control directives are therefore the
 unconditional instructions - they are recognized even when they are inside
 an otherwise skipped block.
-  The "postpone" is another control directive, which causes the block of
+  The "postpone" is another control directive, which causes a block of
 instructions to be assembled later, when all of the following source text
 has already been processed.
 
@@ -1366,7 +1366,7 @@ even later than the ones declared by "postpone" with no arguments. They
 may be used to perform some finalizing tasks, like the computation of a
 checksum of the assembled code.
   The "irpv" is another repeating instruction and an iterator. It has just two
-arguments, first being the name of parameter and second the identifier of 
+arguments, first being a name of parameter and second an identifier of 
 a variable. It iterates through all the stacked values of symbolic
 variable, starting from the oldest one (this applies only to the values
 defined earlier in the source).
@@ -1415,9 +1415,9 @@ pattern given by the first one. A text is separated from a pattern with a comma
 character, and it includes everything that follows this separator up to the end
 of line.
   Every special character (except for the "," and "=", which have a specific
-meaning in the pattern) is matched literally - it must be paired with the
-identical token in the text. In the following example the content of the first
-block is assembled, while the content of the second one is not.
+meaning in the pattern) is matched literally - it must be paired with identical
+token in the text. In the following example the content of the first block
+is assembled, while the content of the second one is not.
 
         match +,+
                 assert 1        ; positive match
@@ -1430,8 +1430,8 @@ block is assembled, while the content of the second one is not.
   The quoted strings are also matched literally, but name tokens in the pattern
 are treated differently. Every name acts as a wildcard and can match any
 sequence of tokens which is not empty. If the match is successful, the
-parameters with such names are created, and each is assigned the value equal
-to the text this wildcard was matched with.
+parameters with such names are created, and each is assigned a value equal
+to the text the wildcard was matched with.
 
         match a[b], 100h[3]
                 dw a+b          ; dw 100h+3
@@ -1440,15 +1440,15 @@ to the text this wildcard was matched with.
   A parameter name in pattern can have an extra "?" character attached to it
 to indicate that it is a case-insensitive name.
   The "=" character causes the token that follows it to be matched literally.
-It allows to perform the matching of name tokens, and also of the special
-characters that would otherwise have a different meaning, like "," or "=",
-or "?" following the name.
+It allows to perform matching of name tokens, and also of special characters
+that would otherwise have a different meaning, like "," or "=", or "?" following
+a name.
 
         match =a==a, a=8
                 db a            ; db 8
         end match
 
-  If the "=" is followed by name token with "?" character attached to it, this
+  If "=" is followed by name token with "?" character attached to it, this
 element is matched literally but in a case-insensitive way:
 
         match =a?==a, A=8
@@ -1477,11 +1477,11 @@ first wildcard consumes as little as possible:
                 db `rest        ; db '3+4:5+6'
         end match
 
-  While any whitespace next to the wildcards is ignored, the presence or
-absence of whitespace between the literally matched elements is meaningful.
+  While any whitespace next to a wildcard is ignored, the presence or
+absence of whitespace between literally matched elements is meaningful.
 If such elements have no whitespace between them, their counterparts must
 contain no whitespace between them either. But if there is a whitespace
-between the elements in pattern, it places no constraints on the use of
+between elements in pattern, it places no constraints on the use of
 whitespace in the corresponding text - it can be present of not.
 
         match ++,++
@@ -1535,7 +1535,7 @@ executed:
         let x+=7                ; x = x + 7
         let x++                 ; x = x + 1
 
-It is even possible to mix the "if" and "match" conditions in a sequence of
+It is even possible to mix "if" and "match" conditions in a sequence of
 "else" blocks. The entire construction must be closed with "end" command
 corresponding to whichever of the two was used last:
 
@@ -1571,10 +1571,10 @@ the last value, can be rewritten to use "match" instead:
         assert x = 2
 
 The difference between them is that "irpv" would execute its block even for
-an empty value, while in the case of "match" the "else" block would have to be
-added to handle the empty text.
+an empty value, while in the case of "match" the "else" block would need to be
+added to handle an empty text.
   When the evaluation of symbolic variables in the matched text is undesirable,
-the symbol created with "define" can be used as a proxy to preserve the text,
+a symbol created with "define" can be used as a proxy to preserve the text,
 because the replacement is not recursive:
 
         macro drop value
@@ -1596,7 +1596,7 @@ because the replacement is not recursive:
 
 A concern could arise that "define" may modify the meaning of text by
 equipping it with a local context. But when the value for "define" comes from
-the parameter of macroinstruction (as in the above sample), it already carries
+a parameter of macroinstruction (as in the above sample), it already carries
 its original context and "define" does not alter it.
   The "rawmatch" directive (with a synonym "rmatch") is very similar to "match",
 but it operates on the raw text of the second argument. Not only it does not
