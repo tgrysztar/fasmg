@@ -412,9 +412,7 @@ define_label:
     define_simple_label:
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_label_to_macro
-	mov	[line_start],esi
-	mov	eax,[embedded_context]
-	mov	[line_context],eax
+	mov	[argument_start],esi
 	call	get_current_address_value
 	mov	edi,ecx
 	mov	ebx,[label_leaf]
@@ -425,15 +423,16 @@ define_label:
 	call	assign_shiftable_value
     label_defined:
 	call	update_current_label
-	mov	esi,[line_start]
+	mov	esi,[argument_start]
+	mov	[line_start],esi
+	mov	eax,[embedded_context]
+	mov	[line_context],eax
 	jmp	assemble_instruction
     define_area_label:
 	inc	esi
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_label_to_macro
-	mov	[line_start],esi
-	mov	eax,[embedded_context]
-	mov	[line_context],eax
+	mov	[argument_start],esi
 	mov	ebx,[label_leaf]
 	mov	edx,[current_area]
 	call	update_value_link

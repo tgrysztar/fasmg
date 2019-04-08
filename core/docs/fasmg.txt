@@ -653,74 +653,6 @@ that internally uses "byte" macroinstruction when generating code.
 
  
 
-What options are there to parse other kinds of syntax?
-
-In some cases a command that assembler needs to parse may begin with
-something different than a name of instruction or a label. It may be
-that a name is preceded by a special character, like "." or "!", 
-or that it is an entirely different kind of construction. It is then
-necessary to use "macro ?" to intercept whole lines of source text
-and process any special syntax of such kind.
-  For example, if it was required to allow a command written as ".CODE",
-it would not be possible to implement it directly as a macroinstruction,
-because initial dot causes the symbol to be interpreted as a local one
-and globally defined instruction could never be executed this way.
-The intercepting macroinstruction provides a solution:
-
-        macro ? line&
-                match .=CODE?, line
-                        CODE
-                else match .=DATA?, line
-                        DATA
-                else
-                        line
-                end match
-        end macro  
-
-The lines that contain either ".CODE" or ".DATA" text are processed here
-in such a way, that they invoke the global macroinstruction with
-corresponding name, while all other intercepted lines are executed without
-changes. This method allows to filter out any special syntax and let
-the assembler process the regular instructions as usual. 
-  Sometimes unconventional syntax is expected only in a specific area
-of source text, like inside a block with defined boundaries. The
-parsing macroinstruction should then be applied only in this place,
-and removed with "purge" when the block ends:
-
-        macro concise
-                macro ? line&
-                        match =end =concise, line
-                                purge ?
-                        else match dest+==src, line
-                                ADD dest,src
-                        else match dest-==src, line
-                                SUB dest,src
-                        else match dest==src, line
-                                LD dest,src
-                        else match dest++, line
-                                INC dest
-                        else match dest--, line
-                                DEC dest
-                        else match any, line
-                                err "syntax error"
-                        end match
-                end macro
-        end macro
-
-        concise
-                C=0
-                B++
-                A+=2
-        end concise
-
-A macroinstruction defined this way does not intercept lines that contain
-directives controlling the flow of the assembly, like "if" or "repeat", and
-they can still be used freely inside such a block. This would change if
-the declaration was in the form "macro ?! line&". Such a variant would
-intercept every line with no exception.
-
-
-
 How can multiple sections of file be generated in parallel?
 
 This assembly engine has a single main output that has to be generated
@@ -781,3 +713,212 @@ parallel can also be very useful to generate data structures like relocation
 tables. Instead of "store" commands used earlier when demonstrating
 the concept, regular data directives could be used inside a re-opened
 "virtual" block to create relocation records.
+
+
+
+What options are there to parse other kinds of syntax?
+
+In some cases a command that assembler needs to parse may begin with
+something different than a name of instruction or a label. It may be
+that a name is preceded by a special character, like "." or "!", 
+or that it is an entirely different kind of construction. It is then
+necessary to use "macro ?" to intercept whole lines of source text
+and process any special syntax of such kind.
+  For example, if it was required to allow a command written as ".CODE",
+it would not be possible to implement it directly as a macroinstruction,
+because initial dot causes the symbol to be interpreted as a local one
+and globally defined instruction could never be executed this way.
+The intercepting macroinstruction provides a solution:
+
+        macro ? line&
+                match .=CODE?, line
+                        CODE
+                else match .=DATA?, line
+                        DATA
+                else
+                        line
+                end match
+        end macro  
+
+The lines that contain either ".CODE" or ".DATA" text are processed here
+in such a way, that they invoke the global macroinstruction with
+corresponding name, while all other intercepted lines are executed without
+changes. This method allows to filter out any special syntax and let
+the assembler process the regular instructions as usual.
+  Sometimes unconventional syntax is expected only in a specific area
+of source text, like inside a block with defined boundaries. The
+parsing macroinstruction should then be applied only in this place,
+and removed with "purge" when the block ends:
+
+        macro concise
+                macro ? line&
+                        match =end =concise, line
+                                purge ?
+                        else match dest+==src, line
+                                ADD dest,src
+                        else match dest-==src, line
+                                SUB dest,src
+                        else match dest==src, line
+                                LD dest,src
+                        else match dest++, line
+                                INC dest
+                        else match dest--, line
+                                DEC dest
+                        else match any, line
+                                err "syntax error"
+                        end match
+                end macro
+        end macro
+
+        concise
+                C=0
+                B++
+                A+=2
+        end concise
+
+A macroinstruction defined this way does not intercept lines that contain
+directives controlling the flow of the assembly, like "if" or "repeat", and
+they can still be used freely inside such a block. This would change if
+the declaration was in the form "macro ?! line&". Such a variant would
+intercept every line with no exception.
+  Another option to catch special commands might be to use "struc ?"
+to intercept only lines that do not start with a known instruction 
+(the initial symbol is then treated as label). Since this one only tests
+unknown commands, it should cause less overhead on the assembly:
+
+        struc (head) ? tail&
+                match .=CODE?, head
+                        CODE tail
+                else
+                        head tail
+                end match
+        end struc
+
+  All these approaches hide a subtle trap. A label defined with ":" may be
+followed by another instruction in the same line. If that next instruction
+(which here becomes hidden in the "tail" parameter) is a control directive
+like "if", putting it inside the "else" clause is going to cause broken nesting
+of control blocks. A solution is to somehow invoke "tail" contents outside of
+"match" block. One way could be to call a special macro:
+
+        struc (head) ? tail&
+                local invoker
+                match .=CODE?, head
+                        macro invoker
+                                CODE tail
+                        end macro
+                else
+                        macro invoker
+                                head tail
+                        end macro
+                end match
+                invoker
+        end struc
+
+But a simpler option is to call the original line directly and when override
+is needed, cause it to be ignored with help of another line interceptor
+(disposing of itself immediately after):
+
+        struc (head) ? tail&
+                match .=CODE?, head
+                        CODE tail
+                        macro ? line&
+                                purge ?
+                        end macro
+                end match
+                head tail
+        end struc
+
+Another macro for the purpose of ignoring the following line could
+be added to make this solution more compact.
+  It may happen that a language can be in general easily implemented with
+macros, but it needs to include a command with the same name as one of
+the directives of assembler. While it is possible to override any
+instruction with a macro, macros themself may require an access to
+the original directive. To allow the same name call a different instruction
+depending on the context, the implemented language may be interpreted
+within a namespace that contains overriding macro, while all the macros
+requiring access to original directive would have to temporarily switch
+to another namespace where it has not have been overridden. This would 
+require every such macro to pack its contents in a "namespace" block.
+  But there is another trick, related to how texts of macro parameters
+or symbolic variables preserve the context under which the symbols within
+them should be interpreted (this includes the base namespace and
+the parent label for symbols starting with dot). 
+  Unlike the two mentioned occurences, the text of a macro normally does
+not carry such extra information, but if a macro is constructed in such way
+that it contains text that was once carried within a parameter to another
+macro or within a symbolic variable, then this text retains the information
+about context even when it becomes a part of a newly defined macro.
+For example:
+
+        macro definitions end?
+                namespace embedded
+                struc LABEL? size
+                        match , size
+                                .:
+                        else
+                                label . : size
+                        end match
+                end struc
+                macro E#ND? name
+                        end namespace
+                        match any, name
+                                ENTRYPOINT := name
+                        end match
+                        macro ?! line&
+                        end macro
+                end macro
+        end macro
+
+        definitions end
+
+        start LABEL
+        END start
+
+The parameter given to "definitions" macro may appear to do nothing, as it
+replaces every instance of "end" with exactly the same word - but the text
+that comes from the parameter is equipped with additional information about
+context, and this attribute is then preserved when the text becomes a part
+of a new macro. Thanks to that, macro "LABEL" can be used in a namespace
+where "end" instruction has taken a different meaning, but the instances
+of "end" within its body still refer to the symbol in the outer namespace.
+  In this example the parameter has been made case-insensitive, and thus
+it would replace even the "END" in "macro" statement that is supposed to
+define a symbol in "embedded" namespace. For this reason the identifier
+has been split with a concatenation operator to prevent it from being
+recognized as parameter. This would not be necessary if the parameter
+was case-sensitive (as more usual).
+  The same effect can be achieved through use of symbolic variables instead
+of macro parameters, with help of "match" to extract the text of a symbolic
+variable:
+
+        define link end
+        match end, link
+                namespace embedded
+                struc LABEL? size
+                        match , size
+                                .:
+                        else
+                                label . : size
+                        end match
+                end struc
+                macro END? name
+                        end namespace
+                        match any, name
+                                ENTRYPOINT := name
+                        end match
+                        macro ?! line&
+                        end macro
+                end macro
+        end match
+
+        start LABEL
+        END start
+
+This would not work without passing the text through symbolic variable,
+because parameters defined by control directives like "match" do not
+add context information to the text unless it was already there.
+  The instructions that need to be available in the custom language
+would have to be defined using one of these tricks if internally they
+used any commands that are not generally accessible.
