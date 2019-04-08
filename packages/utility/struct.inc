@@ -1,3 +1,23 @@
+
+; Basic implementation of STRUCT and UNION.
+
+; A structure should be declared like:
+;	struct POINT
+;		x dd ?
+;		y dd ?
+;	ends
+; This defines field offsets like POINT.x and POINT.y and allows to instantiate structure
+; either in default form:
+;	first POINT
+; or with some (or all) of the fields initialized with specified values:
+;	second POINT x:10
+
+; A union can be used as a part of structure or standalone:
+;	union
+;		name dq ?
+;		initial db ?
+;	endu
+
 macro struct? name
 	macro ends?!
 			end namespace
@@ -23,12 +43,12 @@ macro struct? name
 end macro
 
 macro union?
-	union?. = $
-	macro endu?!
-		purge ?,endu?
-	end macro
+	local union
+	union = $
 	macro ? line&
-		if $-union = 0
+		match =endu?, line
+			purge ?
+		else if $-union = 0
 			line
 		else
 			virtual at union
