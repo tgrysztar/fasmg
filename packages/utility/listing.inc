@@ -63,7 +63,7 @@ postpone ?
 					db ' ',source,13,10
 				end if
 				source = string object scale 0
-				$ = string object scale 1
+				$ = object scale 1
 			end irpv
 		end virtual
 	end namespace
