@@ -73,3 +73,9 @@ macro ? line&
 	Listing.collection =: `line + Listing.1*($ scale 0) + Listing.2*$% + Listing.3*$%%
 	line
 end macro
+
+macro restartout?
+	while defined Listing.collection
+		restore Listing.collection
+	end while
+end macro
