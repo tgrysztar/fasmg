@@ -78,4 +78,5 @@ macro restartout?
 	while defined Listing.collection
 		restore Listing.collection
 	end while
+	restartout
 end macro

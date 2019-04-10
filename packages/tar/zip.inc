@@ -1,5 +1,5 @@
 
-; based on prototype by Grom PE
+; Uncompressed ZIP archive generator, based on a prototype by Grom PE.
 
 ZIP::
 
@@ -77,7 +77,7 @@ macro zipfile? name*
 		e.FileOffset:
 
 		org 0
-  end namespace
+	end namespace
 end macro
 
 macro endzipfile?

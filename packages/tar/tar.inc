@@ -1,4 +1,6 @@
 
+; Tarball generator that emulates $%, $%% and POSTPONE for the encapsulated file sources.
+
 macro tar_number? value*,length:8
 	local d
 	repeat length-1
