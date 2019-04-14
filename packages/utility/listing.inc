@@ -74,9 +74,9 @@ macro ? line&
 	line
 end macro
 
-macro restartout?
+macro restartout? origin
 	while defined Listing.collection
 		restore Listing.collection
 	end while
-	restartout
+	restartout origin
 end macro
