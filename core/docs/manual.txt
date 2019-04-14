@@ -1004,9 +1004,9 @@ identifier is of the labeled instruction class:
 
         get some        ; "db 1" is assembled here
 
-  Inside the labeled macroinstruction identifiers starting with dot no longer
-refer to the namespace of latest label in the current base namespace. Instead
-they refer to the namespace of label with which the instruction was labeled.
+  Inside a labeled macroinstruction identifiers starting with dot no longer
+refer to the namespace of a previously defined regular label. Instead they
+refer to the namespace of label with which the instruction was labeled.
 
         struc POINT
                 label . : qword
