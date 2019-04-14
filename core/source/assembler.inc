@@ -2134,6 +2134,7 @@ identify_symbol:
 	setnz	dh
 	shl	dh,bsf RECOGNIZE_DEFINITION
 	mov	[recognizer_setting],dh
+	xor	edx,edx
 	xor	edi,edi
 	mov	al,[esi]
 	cmp	al,1Ah
