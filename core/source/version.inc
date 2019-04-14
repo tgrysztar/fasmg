@@ -1,1 +1,1 @@
-VERSION equ "iip5g"
+VERSION equ "iip6m"

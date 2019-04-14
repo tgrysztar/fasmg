@@ -452,6 +452,9 @@ define_label:
 	cmp	[label_solid],0
 	je	current_label_ok
 	mov	edx,[label_branch]
+	mov	edi,[edx+SymbolTree_Foliage.root]
+	test	[edi+SymbolTree_Root.attributes],SYMTREE_LOCAL
+	jnz	current_label_ok
 	mov	edi,[current_namespace]
 	mov	[edi+SymbolTree_Root.current_label],edx
       current_label_ok:
