@@ -830,10 +830,10 @@ declares that the names from this list should in the context of current
 macroinstruction be interpreted as belonging to a special namespace
 associated with this macroinstruction instead of current base namespace. This
 allows to create unique symbols every time the macroinstruction is called.
-Such declaration defines an additional parameter with the specified name and it
-only affects the uses of that name that follow within the same macroinstruction.
-Declaring the same name as local multiple times within the same macroinstruction
-gives no additional effect.
+Such declaration defines additional parameters with the specified names and
+therefore only affects the uses of those names that follow within the same
+macroinstruction. Declaring the same name as local multiple times within
+the same macroinstruction gives no additional effect.
 
         macro measured name,string
                 local top
@@ -843,6 +843,12 @@ gives no additional effect.
 
         measured hello, 'Hello!'        ; hello.length = 6
 
+  A symbol that is local to macroinstruction is never considered the most
+recent label that is base for symbols starting with dot. Moreover, its
+descendant namespace is disconnected from the main tree of symbols, so if
+"namespace" command was used with a local symbol as the argument, symbols
+from the main tree would no longer be visible (including all the named 
+instructions of the assembler, even commands like "end namespace").
   Just like an expression symbol may be redefined and refer to its previous
 value in the definition of the new one, the macroinstructions can also be
 redefined, and use the previous value of this instruction symbol in its
