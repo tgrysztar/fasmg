@@ -10,7 +10,7 @@
 ;		include 'cpu/p5.inc'
 ;	list
 
-Listing? = 1
+define Listing?
 
 namespace Listing
 	base = $$  
@@ -24,86 +24,83 @@ namespace Listing
 end namespace
 
 macro Listing.process line&
-	if Listing
-		namespace Listing
-			if ~ $$ eq base
-				base = $$
-				address = $$
+	namespace Listing
+		if ~ $$ eq base
+			base = $$
+			address = $$
+		end if
+		bytes = $ - address
+		if $ - bytes < $$
+			bytes = $ - $$
+		end if
+		address = $
+		virtual Text
+		repeat 16
+		       load digit:byte from HexDigits:((address scale 0-bytes) shr ((%%-%) shl 2)) and 0Fh
+		       db digit
+		end repeat
+		db ': '
+		end virtual
+		if bytes < 0
+			bytes = 0
+		end if
+		while bytes > 0
+			if bytes > 8
+				bytes_in_row = 8
+			else
+				bytes_in_row = bytes
 			end if
-			bytes = $ - address
-			if $ - bytes < $$
-				bytes = $ - $$
+			if $ - bytes + bytes_in_row <= $@
+				readable_bytes = bytes_in_row
+			else if $ - bytes_in_row >= $@
+				readable_bytes = 0
+			else
+				readable_bytes = bytes_in_row - ($ - $@)
 			end if
-			address = $
+			load data:readable_bytes from $ - bytes
 			virtual Text
-			repeat 16
-			       load digit:byte from HexDigits:((address scale 0-bytes) shr ((%%-%) shl 2)) and 0Fh
-			       db digit
+			repeat readable_bytes
+				load digit:byte from HexDigits:(data shr ((%-1) shl 3 + 4)) and 0Fh
+				db digit
+				load digit:byte from HexDigits:(data shr ((%-1) shl 3)) and 0Fh
+				db digit,' '
 			end repeat
-			db ': '
-			end virtual
-			if bytes < 0
-				bytes = 0
+			repeat bytes_in_row - readable_bytes
+				db '?? '
+			end repeat
+			if bytes > bytes_in_row
+				db 13,10,16+2 dup ' '
+				end virtual
+				bytes = bytes - bytes_in_row
+			else
+				end virtual
+				break
 			end if
-			while bytes > 0
-				if bytes > 8
-					bytes_in_row = 8
-				else
-					bytes_in_row = bytes
-				end if
-				if $ - bytes + bytes_in_row <= $@
-					readable_bytes = bytes_in_row
-				else if $ - bytes_in_row >= $@
-					readable_bytes = 0
-				else
-					readable_bytes = bytes_in_row - ($ - $@)
-				end if
-				load data:readable_bytes from $ - bytes
-				virtual Text
-				repeat readable_bytes
-					load digit:byte from HexDigits:(data shr ((%-1) shl 3 + 4)) and 0Fh
-					db digit
-					load digit:byte from HexDigits:(data shr ((%-1) shl 3)) and 0Fh
-					db digit,' '
-				end repeat
-				repeat bytes_in_row - readable_bytes
-					db '?? '
-				end repeat
-				if bytes > bytes_in_row
-					db 13,10,16+2 dup ' '
-					end virtual
-					bytes = bytes - bytes_in_row
-				else
-					end virtual
-					break
-				end if
-			end while
-			virtual Text
-			repeat 8-bytes
-				db '   '
-			end repeat
-			db `line,13,10
-			end virtual
-		end namespace
-	end if
-end macro
-
-macro ? line&
-	line
-	Listing.process line
+		end while
+		virtual Text
+		repeat 8-bytes
+			db '   '
+		end repeat
+		db `line,13,10
+		end virtual
+	end namespace
 end macro
 
 macro nolist?
-	Listing? =: 0
+	purge ?
+	macro Listing.process line&
+		purge Listing.process
+	end macro
 end macro
 
 macro list?
-	restore Listing?
-	macro Listing.process list
-		purge Listing.process
+	macro ? line&
+		line
+		Listing.process line
 	end macro
 end macro
 
 postpone
 	nolist 
 end postpone
+list
