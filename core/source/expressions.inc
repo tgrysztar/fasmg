@@ -1079,6 +1079,8 @@ calculate_parsed_expression:
 	je	push_numeric_symbol
 	cmp	al,VALTYPE_ELEMENT
 	je	push_element
+	cmp	al,VALTYPE_AREA
+	je	push_element
 	cmp	al,VALTYPE_STRING
 	je	push_string
 	cmp	al,VALTYPE_FLOAT
@@ -1219,7 +1221,7 @@ calculate_parsed_expression:
 	jmp	area_address_value
     base_address_value:
 	mov	eax,[current_area]
-      area_address_value:
+    area_address_value:
 	mov	ebx,[eax+ValueDefinition.value]
 	add	ebx,sizeof.AreaHeader
 	mov	edx,calculation_workspace
@@ -2376,11 +2378,16 @@ extract_metadata:
 	mov	edx,[edx+SymbolTree_Leaf.definition]
 	test	edx,edx
 	jz	replace_with_zero
+	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
+	je	extract_area_metadata
 	cmp	[edx+ValueDefinition.type],VALTYPE_ELEMENT
 	jne	replace_with_zero
 	mov	ecx,[edx+ValueDefinition.value_length]
 	jecxz	replace_with_zero
 	jmp	push_numeric_symbol
+    extract_area_metadata:
+	mov	eax,edx
+	jmp	area_address_value
 
 extract_size:
 	call	pop_terms
