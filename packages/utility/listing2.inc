@@ -13,8 +13,6 @@
 define Listing?
 
 namespace Listing
-	base = $$  
-	address = $
 	virtual at 0
 		HexDigits:: db '0123456789ABCDEF'
 	end virtual
@@ -87,17 +85,25 @@ macro Listing.process line&
 end macro
 
 macro nolist?
-	purge ?
-	macro Listing.process line&
-		purge Listing.process
-	end macro
+	Listing? = Listing? - 1
+	if Listing? = 0
+		purge ?
+		macro Listing.process line&
+			purge Listing.process
+		end macro
+	end if
 end macro
 
 macro list?
-	macro ? line&
-		line
-		Listing.process line
-	end macro
+	Listing? = Listing? + 1
+	if Listing? = 1
+		Listing.base = $$
+		Listing.address = $
+		macro ? line&
+			line
+			Listing.process line
+		end macro
+	end if
 end macro
 
 postpone
