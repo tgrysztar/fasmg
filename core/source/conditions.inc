@@ -571,6 +571,15 @@ check_if_defined:
 	lodsd
 	test	eax,eax
 	jnz	invalid_logical_value
+	xor	ecx,ecx
+	jmp	check_expression_element
+check_if_defined_earlier:
+	lodsd
+	test	eax,eax
+	jnz	invalid_logical_value
+	cmp	[esi],eax
+	je	invalid_logical_value
+	mov	ecx,[current_pass]
     check_expression_element:
 	lodsd
 	test	eax,eax
@@ -596,6 +605,11 @@ check_if_defined:
 	lodsd
 	test	eax,eax
 	jz	evaluated_false
+	jecxz	check_expression_element
+	test	[eax+ValueDefinition.flags],VAL_INTERNAL
+	jnz	check_expression_element
+	cmp	[eax+ValueDefinition.pass],ecx
+	jne	evaluated_false
 	jmp	check_expression_element
 
 check_if_used:

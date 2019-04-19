@@ -157,6 +157,9 @@ symbols:
   db 4,'used',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_COMPARATOR,VAL_INTERNAL,0
   dd check_if_used
 
+  db 8,'definite',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_COMPARATOR,VAL_INTERNAL,0
+  dd check_if_defined_earlier
+
   db 6,'eqtype',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_COMPARATOR,VAL_INTERNAL,0
   dd check_if_type_equal
 

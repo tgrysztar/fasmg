@@ -623,11 +623,8 @@ assembly_pass:
 	mov	[label_solid],al
 	test	ebx,ebx
 	jz	unrecognized_instruction
-	assert	SYMCLASS_EXPRESSION < SYMCLASS_INSTRUCTION
-	assert	SYMCLASS_STRUCTURE > SYMCLASS_INSTRUCTION
 	cmp	[ebx+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
-	jb	labeled_instruction
-	ja	unrecognized_instruction
+	jne	labeled_instruction
 	call	get_available_value
 	jc	unrecognized_instruction
 	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
@@ -653,7 +650,6 @@ assembly_pass:
 	jnz	assembly_line
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_line_to_macro
-    illegal_instruction:
 	cmp	[interceptor],0
 	jne	execute_interceptor
 	cmp	[label_interceptor],0
@@ -680,8 +676,6 @@ assembly_pass:
 	call	mark_symbol_as_used
 	jmp	assembly_line
     labeled_instruction:
-	cmp	[interceptor],0
-	jne	unrecognized_instruction
 	mov	[label_leaf],ebx
 	mov	[label_instruction_start],esi
 	mov	ebx,[label_interceptor_symbol]
@@ -714,6 +708,8 @@ assembly_pass:
 	jnz	execute_labeled_instruction
 	test	[assembly_mode],AMODE_SKIP or AMODE_DEFINITION
 	jnz	unrecognized_instruction
+	cmp	[interceptor],0
+	jne	unrecognized_instruction
 	cmp	[label_interceptor],0
 	jne	unrecognized_instruction
     execute_labeled_instruction:
