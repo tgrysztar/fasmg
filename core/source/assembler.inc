@@ -637,12 +637,10 @@ assembly_pass:
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC
 	je	use_macro
-	cmp	al,VALTYPE_RESERVED
-	je	macro_self_reference
 	cmp	al,VALTYPE_NATIVE_COMMAND
+	je	execute_native_instruction
+	cmp	al,VALTYPE_RESERVED
 	jne	unrecognized_instruction
-	jmp	[edx+ValueDefinition.value]
-    macro_self_reference:
 	mov	edx,_symbolic_self_reference
 	call	register_error
     unrecognized_instruction:
@@ -709,15 +707,18 @@ assembly_pass:
 	test	[assembly_mode],AMODE_SKIP or AMODE_DEFINITION
 	jnz	unrecognized_instruction
 	cmp	[interceptor],0
-	jne	unrecognized_instruction
+	jne	execute_interceptor
 	cmp	[label_interceptor],0
-	jne	unrecognized_instruction
+	jne	execute_label_interceptor
     execute_labeled_instruction:
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC
 	je	use_struc
 	cmp	al,VALTYPE_NATIVE_COMMAND
 	jne	unrecognized_instruction
+    execute_native_instruction:
+	mov	eax,[current_pass]
+	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	jmp	[edx+ValueDefinition.value]
     empty_line:
 	mov	al,[assembly_mode]
