@@ -92,6 +92,7 @@ assembly_init:
 	mov	[value_workspace.memory_start],eax
 	mov	[expression_workspace.memory_start],eax
 	mov	[calculation_workspace.memory_start],eax
+	mov	[auxiliary_workspace.memory_start],eax
 
 	mov	[display_buffer],eax
 	mov	[macro_buffer],eax
@@ -237,6 +238,10 @@ assembly_init:
 	call	allocate_workspace
 
 	mov	edx,identifier_workspace
+	mov	ecx,100h
+	call	allocate_workspace
+
+	mov	edx,auxiliary_workspace
 	mov	ecx,100h
 	call	allocate_workspace
 
@@ -459,6 +464,8 @@ assembly_shutdown:
 	mov	eax,[expression_workspace.memory_start]
 	call	mfree
 	mov	eax,[calculation_workspace.memory_start]
+	call	mfree
+	mov	eax,[auxiliary_workspace.memory_start]
 	call	mfree
 
 	mov	eax,[display_buffer]

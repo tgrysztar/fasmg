@@ -144,6 +144,8 @@ macro dw? definitions&
 	    dw ?
 	else match n =dup? ?, value
 	    dw n dup ?
+	else match n =dup? (?), value
+	    dw n dup ?
 	else match n =dup? v, value
 	    repeat n
 		word v
@@ -161,6 +163,8 @@ struc dw? definitions&
 	    dw ?
 	else match n =dup? ?, value
 	    dw n dup ?
+	else match n =dup? (?), value
+	    dw n dup ?
 	else match n =dup? v, value
 	    repeat n
 		word v
@@ -176,6 +180,8 @@ macro dd? definitions&
 	match ?, value
 	    dd ?
 	else match n =dup? ?, value
+	    dd n dup ?
+	else match n =dup? (?), value
 	    dd n dup ?
 	else match n =dup? v, value
 	    repeat n
@@ -193,6 +199,8 @@ struc dd? definitions&
 	match ?, value
 	    dd ?
 	else match n =dup? ?, value
+	    dd n dup ?
+	else match n =dup? (?), value
 	    dd n dup ?
 	else match n =dup? v, value
 	    repeat n

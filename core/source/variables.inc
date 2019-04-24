@@ -68,6 +68,7 @@ identifier_workspace Workspace
 value_workspace Workspace
 expression_workspace Workspace
 calculation_workspace Workspace
+auxiliary_workspace Workspace
 
 line_start dd ?
 line_end dd ?
@@ -198,6 +199,7 @@ parameter_index dd ?
 value_index dd ?
 value dd ?
 value_length dd ?
+metadata_length dd ?
 sequence_header_cursor dd ?
 sequence_header_length dd ?
 expression_sequence_cursor dd ?
@@ -267,7 +269,6 @@ macro_definition_active db ?
 macro_flags db ?
 macro_greedy db ?
 
-metadata_available db ?
 size_specified db ?
 
 message_volatile db ?

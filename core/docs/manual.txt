@@ -1813,6 +1813,10 @@ present in the original "virtual" block.
                 db 'Hello!',13,10
         end virtual
 
+  If an area label is used in an expression, it forms a variable term of a
+linear polynomial. The metadata of such term is a string "::", allowing
+to determine that area label was used to form the value, since metadata
+of terms made with "element" is always numeric.
   There is an additional variant of "load" and "store" directives that allows
 to read and modify already generated data in the output file given simply
 an offset within that output. This variant is recognized when the "at" or

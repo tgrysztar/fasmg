@@ -794,7 +794,7 @@ label_directive:
 	mov	[label_branch],edx
 	mov	al,[symbol_solid]
 	mov	[label_solid],al
-	and	[metadata_available],0
+	and	[metadata_length],0
 	call	peek_at_constituent_value
 	jc	label_at_current_address
 	cmp	al,1Ah
@@ -810,11 +810,13 @@ label_directive:
 	jne	get_label_size
 	and	[current_constituent],0
       get_label_size:
-	call	get_numeric_constant_value
-	test	edx,edx
-	jz	invalid_argument
-	call	keep_value
-	or	[metadata_available],1
+	call	get_expression_value
+	jc	invalid_argument
+	push	esi
+	mov	edx,auxiliary_workspace
+	call	convert_terms_to_numeric_value_in_workspace
+	mov	[metadata_length],ecx
+	pop	esi
 	call	peek_at_constituent_value
 	jc	label_at_current_address
 	cmp	al,1Ah
@@ -856,18 +858,14 @@ label_directive:
 	jmp	instruction_assembled
     prepare_label_value:
 	add	edi,esi
-	cmp	[metadata_available],0
+	cmp	[metadata_length],0
 	je	label_metadata_ok
 	push	edx esi
-	call	get_kept_value
-	mov	esi,edx
-	mov	ecx,[esi]
-	add	ecx,4
+	mov	ecx,[metadata_length]
 	mov	edx,assembly_workspace
 	call	reserve_workspace
-	lodsd
-	stosd
-	mov	ecx,eax
+	mov	esi,[auxiliary_workspace.memory_start]
+	mov	ecx,[metadata_length]
 	rep	movsb
 	pop	esi edx
       label_metadata_ok:
@@ -889,10 +887,8 @@ virtual_block:
 	jne	invalid_argument
 	test	edx,edx
 	jz	invalid_argument
-	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
-	je	continue_virtual_block
 	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_PREPOSITION
-	jne	invalid_argument
+	jne	continue_virtual_block
 	mov	eax,[edx+ValueDefinition.value]
 	cmp	eax,PREPOSITION_AS
 	je	virtual_at_current_address
@@ -943,12 +939,13 @@ virtual_block:
 	pop	ecx
 	jmp	validate_extension
     continue_virtual_block:
-	and	[current_constituent],0
-	call	mark_symbol_as_used
+	and	[leave_opening_parentheses],0
+	mov	edi,[expression_workspace.memory_start]
+	call	parse_expression
+	mov	edi,[expression_workspace.memory_start]
+	call	get_area_value
+	jc	invalid_area
 	mov	eax,[edx+ValueDefinition.value]
-	mov	ecx,[current_pass]
-	cmp	[edx+ValueDefinition.pass],ecx
-	jne	invalid_area
 	test	[eax+AreaHeader.flags],AREA_VIRTUAL
 	jz	invalid_area
 	test	[edx+ValueDefinition.flags],VAL_IN_USE
@@ -3999,7 +3996,7 @@ define_labeled_data:
 	push	esi
 	call	get_current_address_value
 	lea	edi,[esi+ecx]
-	mov	ecx,4+4
+	mov	ecx,4+4+4
 	mov	edx,assembly_workspace
 	call	reserve_workspace
 	mov	edx,[data_unit_length]
@@ -4010,6 +4007,8 @@ define_labeled_data:
 	stosd
 	mov	[edi],edx
 	add	edi,eax
+	xor	eax,eax
+	stosd
 	mov	ebx,[label_leaf]
 	call	create_constant_value_definition
 	test	edx,edx
@@ -4207,19 +4206,10 @@ load_value:
 	jne	source_address_parsed
 	and	[current_constituent],0
 	mov	edi,[expression_workspace.memory_start]
-	cmp	byte [edi],EXPR_SYMBOL
-	jne	invalid_source_area
-	cmp	dword [edi+3*4],0
-	jne	invalid_source_area
-	mov	ebx,[edi+4]
-	mov	[data_area_symbol],ebx
-	mov	edx,[edi+2*4]
-	call	mark_symbol_as_used
-	test	edx,edx
-	jz	invalid_source_area
-	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
-	jne	invalid_source_area
+	call	get_area_value
+	jc	invalid_area
 	mov	[data_area],edx
+	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
     source_address_parsed:
 	call	calculate_relative_address
@@ -4437,19 +4427,10 @@ store_value:
 	jne	destination_address_parsed
 	and	[current_constituent],0
 	mov	edi,[expression_workspace.memory_start]
-	cmp	byte [edi],EXPR_SYMBOL
-	jne	invalid_area
-	cmp	dword [edi+3*4],0
-	jne	invalid_area
-	mov	edx,[edi+2*4]
-	test	edx,edx
-	jz	invalid_area
-	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
-	jne	invalid_area
-	mov	ecx,[current_pass]
-	cmp	[edx+ValueDefinition.pass],ecx
-	jne	invalid_area
+	call	get_area_value
+	jc	invalid_area
 	mov	[data_area],edx
+	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
     destination_address_parsed:
 	call	calculate_relative_address
@@ -4544,6 +4525,9 @@ store_value:
 	call	fit_value
 	jc	invalid_relative_address
 	js	invalid_relative_address
+	mov	ecx,[edx]
+	cmp	dword [edx+4+ecx],0
+	jne	invalid_relative_address
 	mov	edi,esi
       addressed_length_ok:
 	pop	esi

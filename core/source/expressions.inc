@@ -640,14 +640,21 @@ convert_terms_to_numeric_value:
 ;  esi - value in VALTYPE_NUMERIC format
 ;  ecx = length of value
 ; note: the returned value is placed in assembly workspace
-	mov	ebx,edi
-	mov	edi,[assembly_workspace.memory_start]
-      copy_numeric_term_values:
-	xchg	ebx,edi
-	call	get_numeric_term_value
-	xchg	ebx,edi
-	mov	esi,edx
 	mov	edx,assembly_workspace
+    convert_terms_to_numeric_value_in_workspace:
+    ; in:
+    ;  edx - Workspace
+    ;  edi - list of ExpressionTerm elements as returned by get_expression_value
+    ; out:
+    ;  esi - value in VALTYPE_NUMERIC format (same [edx+Workspace.memory_start])
+    ;  ecx = length of value
+    ; preserves: edx
+	mov	ebx,[edx+Workspace.memory_start]
+      copy_numeric_term_values:
+	mov	esi,edx
+	call	get_numeric_term_value
+	xchg	esi,edx
+	xchg	ebx,edi
 	mov	ecx,[esi]
 	add	ecx,8
 	call	reserve_workspace
@@ -667,11 +674,12 @@ convert_terms_to_numeric_value:
 	test	eax,eax
 	jz	next_numeric_term
 	stosd
+	xchg	ebx,edi
 	jmp	copy_numeric_term_values
       numeric_term_values_copied:
 	xor	eax,eax
 	stosd
-	mov	esi,[assembly_workspace.memory_start]
+	mov	esi,[edx+Workspace.memory_start]
 	mov	ecx,edi
 	sub	ecx,esi
 	retn
@@ -722,6 +730,81 @@ update_predicted_shift:
       dword_from_three_bytes:
 	mov	eax,[esi+4-1]
 	sar	eax,8
+	retn
+
+get_area_value:
+; in:
+;  edi - command sequence created by parse_expression
+; out:
+;  cf set if expression does not yield a valid and accessible VALTYPE_AREA value
+;  when cf = 0:
+;   edx - ValueDefinition
+; preserves: esi
+	cmp	byte [edi],EXPR_SYMBOL
+	jne	no_plain_area_symbol
+	cmp	dword [edi+3*4],0
+	jne	no_plain_area_symbol
+	mov	edx,[edi+2*4]
+	test	edx,edx
+	jz	no_plain_area_symbol
+	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
+	jne	no_plain_area_symbol
+	mov	ebx,[edi+4]
+	call	mark_symbol_as_used
+      got_area_symbol:
+	mov	ecx,[current_pass]
+	cmp	[edx+ValueDefinition.pass],ecx
+	jne	invalid_area_symbol
+	clc
+	retn
+      no_plain_area_symbol:
+	push	esi
+	mov	esi,edi
+	mov	edi,[calculation_workspace.memory_start]
+	call	calculate_parsed_expression
+	jc	invalid_area_expression
+	call	pop_terms
+	jc	invalid_area_expression
+	mov	eax,edi
+	xor	esi,esi
+      extract_variable_term:
+	add	eax,sizeof.ExpressionTerm
+	cmp	[eax+ExpressionTerm.attributes],0
+	je	variable_term_extracted
+	cmp	[eax+ExpressionTerm.metadata],0
+	je	extract_variable_term
+	test	esi,esi
+	jnz	invalid_area_expression
+	mov	esi,eax
+	jmp	extract_variable_term
+      variable_term_extracted:
+	test	esi,esi
+	jz	invalid_area_expression
+	call	get_term_value
+	xor	ecx,ecx
+	mov	edi,ecx
+	call	fit_value
+	jc	invalid_area_expression
+	mov	edi,esi
+	call	get_term_value
+	mov	ecx,1
+	mov	edi,value
+	call	fit_value
+	jc	invalid_area_expression
+	cmp	byte [value],1
+	jne	invalid_area_expression
+	mov	ebx,[esi+ExpressionTerm.metadata]
+	mov	edx,[ebx+SymbolTree_Leaf.definition]
+	test	edx,edx
+	jz	invalid_area_expression
+	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
+	jne	invalid_area_expression
+	pop	esi
+	jmp	got_area_symbol
+      invalid_area_expression:
+	pop	esi
+      invalid_area_symbol:
+	stc
 	retn
 
 get_constituent_value:
@@ -1224,6 +1307,7 @@ calculate_parsed_expression:
     area_address_value:
 	mov	ebx,[eax+ValueDefinition.value]
 	add	ebx,sizeof.AreaHeader
+    push_numeric_value:
 	mov	edx,calculation_workspace
 	mov	ecx,sizeof.ExpressionTerm
 	call	reserve_workspace
@@ -2339,13 +2423,19 @@ extract_element:
       no_such_term:
 	stc
 	retn
+    replace_with_area_metadata:
+	mov	edx,area_metadata
+	mov	eax,EXPR_STRING
+	jmp	replace_with_simple_constant
     replace_with_constant_unit:
 	mov	edx,singular_value
-	jmp	replace_with_simple_constant
+	jmp	replace_with_simple_number
     replace_with_zero:
 	mov	edx,zero_value
+    replace_with_simple_number:
+	mov	eax,EXPR_NUMBER
     replace_with_simple_constant:
-	mov	[edi+ExpressionTerm.attributes],EXPR_NUMBER
+	mov	[edi+ExpressionTerm.attributes],eax
 	mov	[edi+ExpressionTerm.value],edx
 	xor	eax,eax
 	mov	[edi+ExpressionTerm.metadata],eax
@@ -2371,30 +2461,28 @@ extract_metadata_reverse:
 extract_metadata:
 	call	get_indexed_term
 	jc	replace_with_zero
-	mov	edx,[ebx+ExpressionTerm.metadata]
-	test	edx,edx
+	mov	ebx,[ebx+ExpressionTerm.metadata]
+	test	ebx,ebx
 	jz	replace_with_zero
-	jecxz	replace_with_simple_constant
-	mov	edx,[edx+SymbolTree_Leaf.definition]
+	test	ecx,ecx
+	jz	push_numeric_value
+	mov	edx,[ebx+SymbolTree_Leaf.definition]
 	test	edx,edx
 	jz	replace_with_zero
 	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
-	je	extract_area_metadata
+	je	replace_with_area_metadata
 	cmp	[edx+ValueDefinition.type],VALTYPE_ELEMENT
 	jne	replace_with_zero
 	mov	ecx,[edx+ValueDefinition.value_length]
 	jecxz	replace_with_zero
 	jmp	push_numeric_symbol
-    extract_area_metadata:
-	mov	eax,edx
-	jmp	area_address_value
 
 extract_size:
 	call	pop_terms
-	mov	edx,[edi+ExpressionTerm.metadata]
-	test	edx,edx
+	mov	ebx,[edi+ExpressionTerm.metadata]
+	test	ebx,ebx
 	jz	replace_with_zero
-	jmp	replace_with_simple_constant
+	jmp	push_numeric_value
 
 get_term_value:
 ; in: edi - ExpressionTerm

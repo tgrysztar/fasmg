@@ -557,3 +557,6 @@ zero_value dd 0
 singular_value dd 1
 	       db 1
 	       dd 0
+
+area_metadata dd 2
+	      db '::'
