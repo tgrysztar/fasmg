@@ -296,8 +296,8 @@ macro proc? statement&
 
 	match name declaration, statement :
 	if used name
-	namespace name
 	name:
+	namespace name
 	outscope match local?, proclocal
 
 		match =stdcall? args :, declaration
