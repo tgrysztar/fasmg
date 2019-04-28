@@ -412,6 +412,8 @@ define_label:
     define_simple_label:
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_label_to_macro
+	cmp	[interceptor],0
+	jne	execute_interceptor
 	mov	[argument_start],esi
 	call	get_current_address_value
 	mov	edi,ecx
@@ -432,6 +434,8 @@ define_label:
 	inc	esi
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_label_to_macro
+	cmp	[interceptor],0
+	jne	execute_interceptor
 	mov	[argument_start],esi
 	mov	ebx,[label_leaf]
 	mov	edx,[current_area]
@@ -464,6 +468,8 @@ define_numeric_symbol:
 	jnz	assembly_line
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_line_to_macro
+	cmp	[interceptor],0
+	jne	execute_interceptor
 	inc	esi
 	xor	ecx,ecx
 	call	move_to_next_symbol
@@ -481,6 +487,8 @@ define_numeric_symbol:
 define_numeric_constant:
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_line_to_macro
+	cmp	[interceptor],0
+	jne	execute_interceptor
 	inc	esi
 	call	get_expression_value
 	jc	missing_argument
