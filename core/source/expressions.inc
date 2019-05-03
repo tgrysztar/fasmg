@@ -751,10 +751,6 @@ get_area_value:
 	jne	no_plain_area_symbol
 	mov	ebx,[edi+4]
 	call	mark_symbol_as_used
-      got_area_symbol:
-	mov	ecx,[current_pass]
-	cmp	[edx+ValueDefinition.pass],ecx
-	jne	invalid_area_symbol
 	clc
 	retn
       no_plain_area_symbol:
@@ -800,7 +796,8 @@ get_area_value:
 	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
 	jne	invalid_area_expression
 	pop	esi
-	jmp	got_area_symbol
+	clc
+	retn
       invalid_area_expression:
 	pop	esi
       invalid_area_symbol:

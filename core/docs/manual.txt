@@ -1778,7 +1778,7 @@ read earlier in the source, it can be achieved by copying this data into
 a different area that would not be constrained in such way. This is analogous
 to defining a constant with a final value of some variable:
 
-        load char from const:0
+        load char : byte from const:0
 
         virtual
                 var::
@@ -1786,7 +1786,7 @@ to defining a constant with a final value of some variable:
                 .length = $
         end virtual
 
-        store 'A' at var:0
+        store 'A' : byte at var:0
 
         virtual
                 const::

@@ -953,6 +953,9 @@ virtual_block:
 	mov	edi,[expression_workspace.memory_start]
 	call	get_area_value
 	jc	invalid_area
+	mov	ecx,[current_pass]
+	cmp	[edx+ValueDefinition.pass],ecx
+	jne	invalid_area
 	mov	eax,[edx+ValueDefinition.value]
 	test	[eax+AreaHeader.flags],AREA_VIRTUAL
 	jz	invalid_area
@@ -3071,13 +3074,16 @@ define_macro:
 	call	register_error
 	jmp	assembly_line
     check_parameter_name:
+	cmp	al,'?'
+	je	parameter_starting_question_mark
 	cmp	al,1Ah
 	jne	invalid_macro_definition
 	call	detect_numeric_symbol
 	jc	invalid_macro_definition
-    parameter_name_present:
+      parameter_name_token:
 	inc	esi
 	lodsd
+      parameter_name_present:
 	xor	ecx,ecx
 	call	move_to_next_symbol
 	jc	macro_parameters_correct
@@ -3090,16 +3096,38 @@ define_macro:
 	call	move_to_next_symbol
 	jc	macro_parameters_correct
 	jmp	check_parameter_modifiers
-    check_parameter_name_concatenation:
+      parameter_starting_question_mark:
+	inc	esi
+      parameter_name_freeform:
+	call	move_to_next_symbol
+	jc	macro_parameters_correct
 	cmp	al,1Ah
-	je	parameter_name_present
+	je	parameter_name_token
+	cmp	al,'#'
+	je	parameter_name_freeform_concatenation
+	cmp	al,30h
+	jne	invalid_macro_definition
+      parameter_number_token:
+	inc	esi
+	lodsd
+	add	esi,eax
+	jmp	parameter_name_present
+      parameter_name_freeform_concatenation:
+	call	check_concatenation
+	jc	invalid_macro_definition
+	jmp	parameter_name_freeform
+      check_parameter_name_concatenation:
+	cmp	al,1Ah
+	je	parameter_name_token
+	cmp	al,30h
+	je	parameter_number_token
 	cmp	al,'?'
 	jne	check_parameter_modifiers
-    check_parameter_name_modifier:
+      check_parameter_name_modifier:
 	inc	esi
 	call	move_to_next_symbol
 	jc	macro_parameters_correct
-    check_parameter_modifiers:
+      check_parameter_modifiers:
 	cmp	al,':'
 	je	check_default_value
 	cmp	al,'='
@@ -3117,13 +3145,13 @@ define_macro:
 	jc	check_plain_default_value
 	cmp	al,'<'
 	je	check_enclosed_default_value
-    check_plain_default_value:
+      check_plain_default_value:
 	mov	dl,','
 	xor	dh,dh
 	mov	[breakpoint_token],'&'
 	call	cut_piece_of_line
 	jmp	check_next_parameter
-    check_enclosed_default_value:
+      check_enclosed_default_value:
 	inc	esi
 	mov	dl,'>'
 	mov	dh,'<'
@@ -3402,7 +3430,6 @@ use_struc:
 	add	esi,4
 	jmp	measure_macro_header
       measure_internal_token:
-	inc	esi
 	lodsd
 	add	esi,eax
 	jmp	measure_macro_header
@@ -4437,6 +4464,9 @@ store_value:
 	mov	edi,[expression_workspace.memory_start]
 	call	get_area_value
 	jc	invalid_area
+	mov	ecx,[current_pass]
+	cmp	[edx+ValueDefinition.pass],ecx
+	jne	invalid_area
 	mov	[data_area],edx
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
