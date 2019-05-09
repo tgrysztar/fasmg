@@ -46,8 +46,10 @@ maximum allowed depth of entering macroinstructions and including additional
 source files. The "-v" switch can enable showing all the lines from this stack
 when reporting an error (by default the assembler tries to select only the
 lines that are likely the most informative, but this simple heuristic may not
-always be correct). The "-i" switch allows to insert any command at the
-beginning of processed source.
+always be correct). If "-v" switch is used with value 2, it in addition makes
+all the messages displayed by commands from the source text to be shown in real
+time (in every consecutive pass). The "-i" switch allows to insert any command at
+the beginning of processed source.
 
 
 1. Fundamental syntax rules

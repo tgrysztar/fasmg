@@ -42,12 +42,14 @@ segment readable executable
 
 	call	system_init
 
+	call	get_arguments
+	jc	display_usage_information
+	cmp	[no_logo],0
+	jne	arguments_ok
 	mov	esi,_logo
 	xor	ecx,ecx
 	call	display_string
-
-	call	get_arguments
-	jc	display_usage_information
+      arguments_ok:
 
 	xor	al,al
 	mov	ecx,[verbosity_level]
@@ -76,8 +78,17 @@ segment readable executable
 
 	call	show_display_data
 
-	mov	ebx,_code_cannot_be_generated
-	jmp	fatal_error
+	mov	esi,_error_prefix
+	xor	ecx,ecx
+	call	display_error_string
+	mov	esi,_code_cannot_be_generated
+	xor	ecx,ecx
+	call	display_error_string
+	mov	esi,_message_suffix
+	xor	ecx,ecx
+	call	display_error_string
+
+	jmp	assembly_failed
 
   assembly_done:
 
@@ -86,6 +97,8 @@ segment readable executable
 	cmp	[first_error],0
 	jne	assembly_failed
 
+	cmp	[no_logo],0
+	jne	summary_done
 	mov	eax,[current_pass]
 	xor	edx,edx
 	call	itoa
@@ -152,6 +165,7 @@ segment readable executable
 	mov	esi,_new_line
 	xor	ecx,ecx
 	call	display_string
+      summary_done:
 
 	mov	ebx,[source_path]
 	mov	edi,[output_path]
@@ -265,6 +279,14 @@ segment readable executable
 	je	set_verbose_mode
 	cmp	al,'V'
 	je	set_verbose_mode
+	cmp	al,'n'
+	je	set_no_logo
+	cmp	al,'N'
+	jne	error_in_arguments
+    set_no_logo:
+	or	[no_logo],-1
+	cmp	byte [esi],0
+	je	next_argument
     error_in_arguments:
 	stc
 	ret
@@ -434,6 +456,7 @@ segment readable
 	 db '    -r limit    Set the maximum depth of stack (default 10000)',10
 	 db '    -v flag     Enable or disable showing all lines from the stack (default 0)',10
 	 db '    -i command  Insert instruction at the beginning of source',13,10
+	 db '    -n          Do not show logo nor summary',13,10
 	 db 0
 
   _pass db ' pass, ',0
@@ -478,6 +501,7 @@ segment readable writeable
   tenths_of_second dd ?
 
   verbosity_level dd ?
+  no_logo db ?
 
   path_buffer rb 1000h
 

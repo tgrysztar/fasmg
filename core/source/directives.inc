@@ -4663,7 +4663,9 @@ display_data:
 	mov	esi,edx
 	lodsd
 	mov	ecx,eax
+	jecxz	display_next_bypassing_value
 	call	display_string
+      display_next_bypassing_value:
 	mov	esi,ebx
 	jmp	display_next_value
     display_byte:

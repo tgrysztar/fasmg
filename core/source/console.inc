@@ -16,6 +16,8 @@ show_display_data:
 show_errors:
 	mov	esi,[first_error]
     display_error:
+	test	esi,esi
+	jz	display_data_shown
 	push	esi
 	mov	eax,[esi+sizeof.Error+SourceContext.number_of_entries]
 	test	eax,eax
@@ -140,9 +142,7 @@ show_errors:
 	mov	esi,ebx
     next_error:
 	mov	esi,[esi+Error.next]
-	test	esi,esi
-	jnz	display_error
-	retn
+	jmp	display_error
 
 show_line_content:
 ; in:
