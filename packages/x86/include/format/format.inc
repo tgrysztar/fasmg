@@ -295,7 +295,7 @@ macro format?.MS? variant
 	end match
 end macro
 
-macro format?.MS64?
+macro format?.MS64? variant
 	match =COFF?, variant
 		format binary as 'obj'
 		COFF.Settings.Machine = IMAGE_FILE_MACHINE_AMD64

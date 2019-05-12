@@ -1027,7 +1027,7 @@ else
 				MachO.reloc = MachO.reloc + 1 shl 59
 			end if
 			MachO.NRELOC = MachO.NRELOC + 1
-			dd 0 scaleof (1 metadataof v) + 0 scaleof v
+			emit dword: 0 scaleof (1 metadataof v) + 0 scaleof v
 		else if ~ v relativeto 0 & (v + $) relativeto 1 elementof (v + $) & (1 elementof (1 metadataof (v + $)) eq MachO.section | 1 elementof (1 metadataof (v + $)) eq MachO.symbol)
 			if MachO.CPUTYPE = CPU_TYPE_X86_64
 				if 1 elementof (1 metadataof (v + $)) eq MachO.symbol
@@ -1044,9 +1044,9 @@ else
 				MachO.reloc = MachO.reloc + 1 shl 59
 			end if
 			MachO.NRELOC = MachO.NRELOC + 1
-			dd 0 scaleof v
+			emit dword: 0 scaleof v
 		else
-			dd v
+			emit dword: v
 		end if
 	end macro
 
@@ -1156,12 +1156,14 @@ else
 				length = sizeof(address)
 			end match
 			if elementsof value
+				$%? = $%?-($-address)
 				virtual at address
 					if length = 4
 						dword value
 						load value:dword from address
 					end if
 				end virtual
+				restore $%?
 			end if
 			store value:length at address
 		else

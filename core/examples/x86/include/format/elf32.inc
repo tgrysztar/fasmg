@@ -575,10 +575,12 @@ macro store? disposition
 			length = sizeof(address)
 		end match
 		if elementsof value & length = 4
+			$%? = $%?-($-address)
 			virtual at address
 				dword value
 				load value:dword from address
 			end virtual
+			restore $%?
 		end if
 		store value:length at address
 	else

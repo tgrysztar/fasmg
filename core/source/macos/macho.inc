@@ -1156,12 +1156,14 @@ else
 				length = sizeof(address)
 			end match
 			if elementsof value
+				$%? = $%?-($-address)
 				virtual at address
 					if length = 4
 						dword value
 						load value:dword from address
 					end if
 				end virtual
+				restore $%?
 			end if
 			store value:length at address
 		else

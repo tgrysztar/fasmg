@@ -599,6 +599,7 @@ macro store? disposition
 			length = sizeof(address)
 		end match
 		if elementsof value
+			$%? = $%?-($-address)
 			virtual at address
 				if length = 4
 					dword value
@@ -608,6 +609,7 @@ macro store? disposition
 					load value:qword from address
 				end if
 			end virtual
+			restore $%?
 		end if
 		store value:length at address
 	else
