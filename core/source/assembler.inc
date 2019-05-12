@@ -2352,6 +2352,7 @@ identify_symbol:
 	mov	edi,[recognition_context.base_namespace]
 	jmp	symbol_identified
     identify_current_label:
+	or	[symbol_solid],1
 	call	get_current_label
     get_label_symbol:
 	mov	edi,ebx
