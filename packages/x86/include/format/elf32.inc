@@ -521,7 +521,7 @@ macro dword? value
 			emit dword: v
 		end if
 	else
-		dd v
+		emit dword: v
 	end if
 end macro
 

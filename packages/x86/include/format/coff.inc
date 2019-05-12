@@ -360,7 +360,7 @@ macro dword? value
 			store RELOC_ADDR32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
 			RELOCATION_INDEX = RELOCATION_INDEX + 1
 		end namespace
-		dd 0 scaleof v
+		emit dword: 0 scaleof v
 	else if ~ v relativeto 0 & (v + COFF.SECTION_BASE) relativeto 1 elementof (v + COFF.SECTION_BASE)
 		if 1 elementof (1 metadataof (v + COFF.SECTION_BASE)) relativeto COFF.relocatable
 			namespace COFF
@@ -370,12 +370,12 @@ macro dword? value
 				store RELOC_REL32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
 				RELOCATION_INDEX = RELOCATION_INDEX + 1
 			end namespace
-			dd 0 scaleof v
+			emit dword: 0 scaleof v
 		else
-			dd v
+			emit dword: v
 		end if
 	else
-		dd v
+		emit dword: v
 	end if
 end macro
 

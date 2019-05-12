@@ -351,7 +351,7 @@ previous value, "=:" preserves it so it can later be brought back with the
         a = 3           ; discards a = 2 and replaces it with a = 3
         restore a       ; brings back a = 1
 
-The "restore" may be followed by multiple symbol identifiers separated with
+A "restore" may be followed by multiple symbol identifiers separated with
 commas, and it discards the latest definition of every one of them. It is not
 considered an error to use "restore" with a symbol that has no active
 definition (either because it was never defined or because all of its
@@ -847,7 +847,7 @@ the same macroinstruction gives no additional effect.
 
         measured hello, 'Hello!'        ; hello.length = 6
 
-  A symbol that is local to macroinstruction is never considered the most
+  A symbol that is local to a macroinstruction is never considered the most
 recent label that is base for symbols starting with dot. Moreover, its
 descendant namespace is disconnected from the main tree of symbols, so if
 "namespace" command was used with a local symbol as the argument, symbols
