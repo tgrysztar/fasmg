@@ -518,7 +518,7 @@ if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 				store IMAGE_REL_I386_DIR32 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
 				RELOCATION_INDEX = RELOCATION_INDEX + 1
 			end namespace
-			dd 0 scaleof v
+			emit dword: 0 scaleof v
 		else if ~ v relativeto 0 & (v + COFF.IMAGE_BASE) relativeto 1 elementof (v + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (v + COFF.IMAGE_BASE)) relativeto COFF.relocatable
 			namespace COFF
 				v = v + COFF.IMAGE_BASE
@@ -527,7 +527,7 @@ if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 				store IMAGE_REL_I386_DIR32NB at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
 				RELOCATION_INDEX = RELOCATION_INDEX + 1
 			end namespace
-			dd 0 scaleof v
+			emit dword: 0 scaleof v
 		else if ~ v relativeto 0 & (v + COFF.SECTION_BASE) relativeto 1 elementof (v + COFF.SECTION_BASE)
 			if 1 elementof (1 metadataof (v + COFF.SECTION_BASE)) relativeto COFF.relocatable
 				namespace COFF
@@ -537,17 +537,17 @@ if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 					store IMAGE_REL_I386_REL32 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
 					RELOCATION_INDEX = RELOCATION_INDEX + 1
 				end namespace
-				dd 0 scaleof v
+				emit dword: 0 scaleof v
 			else
-				dd v
+				emit dword: v
 			end if
 		else
-			dd v
+			emit dword: v
 		end if
 	end macro
 
 	macro qword? value
-		dq value
+		emit qword: value
 	end macro
 
 else if COFF.MACHINE = IMAGE_FILE_MACHINE_AMD64
