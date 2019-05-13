@@ -2725,274 +2725,67 @@ macro leave?
 	db 0C9h
 end macro
 
-macro x86.setcc_instruction ext,dest
-	x86.parse_operand @dest,dest
-	if @dest.size > 1
-		err 'invalid operand size'
-	end if
-	if @dest.type = 'reg' | @dest.type = 'mem'
-		x86.store_instruction <0Fh,ext>,@dest,0
-	else
-		err 'invalid operand'
-	end if
-end macro
+iterate <cond,code>, o,0, no,1, c,2, b,2, nae,2, nc,3, nb,3, ae,3, z,4, e,4, nz,5, ne,5, na,6, be,6, a,7, nbe,7, \
+		     s,8, ns,9, p,0Ah, pe,0Ah, np,0Bh, po,0Bh, l,0Ch, nge,0Ch, nl,0Dh, ge,0Dh, ng,0Eh, le,0Eh, g,0Fh, nle,0Fh
 
-macro seto? dest*
-	x86.setcc_instruction 90h,dest
-end macro
+	macro set#cond? dest*
+		x86.parse_operand @dest,dest
+		if @dest.size > 1
+			err 'invalid operand size'
+		end if
+		if @dest.type = 'reg' | @dest.type = 'mem'
+			x86.store_instruction <0Fh,90h+code>,@dest,0
+		else
+			err 'invalid operand'
+		end if
+	end macro
 
-macro setno? dest*
-	x86.setcc_instruction 91h,dest
-end macro
+	macro cmov#cond? dest*,src*
+		x86.parse_operand @dest,dest
+		x86.parse_operand @src,src
+		local size
+		if @dest.size <> 0 & @src.size <> 0 & @dest.size <> @src.size
+			err 'operand sizes do not match'
+		else
+			size = @dest.size or @src.size
+		end if
+		if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
+			x86.select_operand_prefix @src,@dest.size
+			x86.store_instruction <0Fh,40h+code>,@src,@dest.rm
+		else
+			err 'invalid combination of operands'
+		end if
+	end macro
 
-macro setc? dest*
-	x86.setcc_instruction 92h,dest
-end macro
+end iterate
 
-macro setb? dest*
-	x86.setcc_instruction 92h,dest
-end macro
+iterate <instr,opcode>, fcmovb,<0DAh,0C0h>, fcmove,<0DAh,0C8h>, fcmovbe,<0DAh,0D0h>, fcmovu,<0DAh,0D8h>, \
+			fcmovnb,<0DBh,0C0h>, fcmovne,<0DBh,0C8h>, fcmovnbe,<0DBh,0D0h>, fcmovnu,<0DBh,0D8h>
 
-macro setnae? dest*
-	x86.setcc_instruction 92h,dest
-end macro
+	macro instr? dest*,src*
+		x87.parse_operand @dest,dest
+		x87.parse_operand @src,src
+		if @dest.type = 'streg' & @dest.rm = 0 & @src.type = 'streg'
+			db opcode + @src.rm
+		else
+			err 'invalid operand'
+		end if
+	end macro
 
-macro setnc? dest*
-	x86.setcc_instruction 93h,dest
-end macro
+end iterate
 
-macro setnb? dest*
-	x86.setcc_instruction 93h,dest
-end macro
+iterate <instr,opcode,postbyte>, fucomi,0DBh,5, fucomip,0DFh,5, fcomi,0DBh,6, fcomip,0DFh,6
 
-macro setae? dest*
-	x86.setcc_instruction 93h,dest
-end macro
+	macro instr? src:st1
+		x87.parse_operand @src,src
+		if @src.type = 'streg'
+			db opcode, 11b shl 6 + postbyte shl 3 + @src.rm
+		else
+			err 'invalid operand'
+		end if
+	end macro
 
-macro setz? dest*
-	x86.setcc_instruction 94h,dest
-end macro
-
-macro sete? dest*
-	x86.setcc_instruction 94h,dest
-end macro
-
-macro setnz? dest*
-	x86.setcc_instruction 95h,dest
-end macro
-
-macro setne? dest*
-	x86.setcc_instruction 95h,dest
-end macro
-
-macro setna? dest*
-	x86.setcc_instruction 96h,dest
-end macro
-
-macro setbe? dest*
-	x86.setcc_instruction 96h,dest
-end macro
-
-macro seta? dest*
-	x86.setcc_instruction 97h,dest
-end macro
-
-macro setnbe? dest*
-	x86.setcc_instruction 97h,dest
-end macro
-
-macro sets? dest*
-	x86.setcc_instruction 98h,dest
-end macro
-
-macro setns? dest*
-	x86.setcc_instruction 99h,dest
-end macro
-
-macro setp? dest*
-	x86.setcc_instruction 9Ah,dest
-end macro
-
-macro setpe? dest*
-	x86.setcc_instruction 9Ah,dest
-end macro
-
-macro setnp? dest*
-	x86.setcc_instruction 9Bh,dest
-end macro
-
-macro setpo? dest*
-	x86.setcc_instruction 9Bh,dest
-end macro
-
-macro setl? dest*
-	x86.setcc_instruction 9Ch,dest
-end macro
-
-macro setnge? dest*
-	x86.setcc_instruction 9Ch,dest
-end macro
-
-macro setnl? dest*
-	x86.setcc_instruction 9Dh,dest
-end macro
-
-macro setge? dest*
-	x86.setcc_instruction 9Dh,dest
-end macro
-
-macro setng? dest*
-	x86.setcc_instruction 9Eh,dest
-end macro
-
-macro setle? dest*
-	x86.setcc_instruction 9Eh,dest
-end macro
-
-macro setg? dest*
-	x86.setcc_instruction 9Fh,dest
-end macro
-
-macro setnle? dest*
-	x86.setcc_instruction 9Fh,dest
-end macro
-
-macro x86.conditional_move ext,dest,src
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
-	local size
-	if @dest.size <> 0 & @src.size <> 0 & @dest.size <> @src.size
-		err 'operand sizes do not match'
-	else
-		size = @dest.size or @src.size
-	end if
-	if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
-		x86.select_operand_prefix @src,@dest.size
-		x86.store_instruction <0Fh,ext>,@src,@dest.rm
-	else
-		err 'invalid combination of operands'
-	end if
-end macro
-
-macro cmovo? dest*,src*
-	x86.conditional_move 40h,dest,src
-end macro
-
-macro cmovno? dest*,src*
-	x86.conditional_move 41h,dest,src
-end macro
-
-macro cmovb? dest*,src*
-	x86.conditional_move 42h,dest,src
-end macro
-
-macro cmovc? dest*,src*
-	x86.conditional_move 42h,dest,src
-end macro
-
-macro cmovnae? dest*,src*
-	x86.conditional_move 42h,dest,src
-end macro
-
-macro cmovae? dest*,src*
-	x86.conditional_move 43h,dest,src
-end macro
-
-macro cmovnb? dest*,src*
-	x86.conditional_move 43h,dest,src
-end macro
-
-macro cmovnc? dest*,src*
-	x86.conditional_move 43h,dest,src
-end macro
-
-macro cmove? dest*,src*
-	x86.conditional_move 44h,dest,src
-end macro
-
-macro cmovz? dest*,src*
-	x86.conditional_move 44h,dest,src
-end macro
-
-macro cmovne? dest*,src*
-	x86.conditional_move 45h,dest,src
-end macro
-
-macro cmovnz? dest*,src*
-	x86.conditional_move 45h,dest,src
-end macro
-
-macro cmovbe? dest*,src*
-	x86.conditional_move 46h,dest,src
-end macro
-
-macro cmovna? dest*,src*
-	x86.conditional_move 46h,dest,src
-end macro
-
-macro cmova? dest*,src*
-	x86.conditional_move 47h,dest,src
-end macro
-
-macro cmovnbe? dest*,src*
-	x86.conditional_move 47h,dest,src
-end macro
-
-macro cmovs? dest*,src*
-	x86.conditional_move 48h,dest,src
-end macro
-
-macro cmovns? dest*,src*
-	x86.conditional_move 49h,dest,src
-end macro
-
-macro cmovp? dest*,src*
-	x86.conditional_move 4Ah,dest,src
-end macro
-
-macro cmovpe? dest*,src*
-	x86.conditional_move 4Ah,dest,src
-end macro
-
-macro cmovnp? dest*,src*
-	x86.conditional_move 4Bh,dest,src
-end macro
-
-macro cmovpo? dest*,src*
-	x86.conditional_move 4Bh,dest,src
-end macro
-
-macro cmovl? dest*,src*
-	x86.conditional_move 4Ch,dest,src
-end macro
-
-macro cmovnge? dest*,src*
-	x86.conditional_move 4Ch,dest,src
-end macro
-
-macro cmovge? dest*,src*
-	x86.conditional_move 4Dh,dest,src
-end macro
-
-macro cmovnl? dest*,src*
-	x86.conditional_move 4Dh,dest,src
-end macro
-
-macro cmovle? dest*,src*
-	x86.conditional_move 4Eh,dest,src
-end macro
-
-macro cmovng? dest*,src*
-	x86.conditional_move 4Eh,dest,src
-end macro
-
-macro cmovg? dest*,src*
-	x86.conditional_move 4Fh,dest,src
-end macro
-
-macro cmovnle? dest*,src*
-	x86.conditional_move 4Fh,dest,src
-end macro
+end iterate
 
 macro swapgs?
 	if x86.mode = 64

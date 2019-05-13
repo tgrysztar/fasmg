@@ -2074,137 +2074,22 @@ macro arpl? dest*,src*
 	end if
 end macro
 
-macro x86.setcc_instruction ext,dest
-	x86.parse_operand @dest,dest
-	if @dest.size > 1
-		err 'invalid operand size'
-	end if
-	if @dest.type = 'reg' | @dest.type = 'mem'
-		x86.store_instruction <0Fh,ext>,@dest,0
-	else
-		err 'invalid operand'
-	end if
-end macro
+iterate <cond,code>, o,0, no,1, c,2, b,2, nae,2, nc,3, nb,3, ae,3, z,4, e,4, nz,5, ne,5, na,6, be,6, a,7, nbe,7, \
+		     s,8, ns,9, p,0Ah, pe,0Ah, np,0Bh, po,0Bh, l,0Ch, nge,0Ch, nl,0Dh, ge,0Dh, ng,0Eh, le,0Eh, g,0Fh, nle,0Fh
 
-macro seto? dest*
-	x86.setcc_instruction 90h,dest
-end macro
+	macro set#cond? dest*
+		x86.parse_operand @dest,dest
+		if @dest.size > 1
+			err 'invalid operand size'
+		end if
+		if @dest.type = 'reg' | @dest.type = 'mem'
+			x86.store_instruction <0Fh,90h+code>,@dest,0
+		else
+			err 'invalid operand'
+		end if
+	end macro
 
-macro setno? dest*
-	x86.setcc_instruction 91h,dest
-end macro
-
-macro setc? dest*
-	x86.setcc_instruction 92h,dest
-end macro
-
-macro setb? dest*
-	x86.setcc_instruction 92h,dest
-end macro
-
-macro setnae? dest*
-	x86.setcc_instruction 92h,dest
-end macro
-
-macro setnc? dest*
-	x86.setcc_instruction 93h,dest
-end macro
-
-macro setnb? dest*
-	x86.setcc_instruction 93h,dest
-end macro
-
-macro setae? dest*
-	x86.setcc_instruction 93h,dest
-end macro
-
-macro setz? dest*
-	x86.setcc_instruction 94h,dest
-end macro
-
-macro sete? dest*
-	x86.setcc_instruction 94h,dest
-end macro
-
-macro setnz? dest*
-	x86.setcc_instruction 95h,dest
-end macro
-
-macro setne? dest*
-	x86.setcc_instruction 95h,dest
-end macro
-
-macro setna? dest*
-	x86.setcc_instruction 96h,dest
-end macro
-
-macro setbe? dest*
-	x86.setcc_instruction 96h,dest
-end macro
-
-macro seta? dest*
-	x86.setcc_instruction 97h,dest
-end macro
-
-macro setnbe? dest*
-	x86.setcc_instruction 97h,dest
-end macro
-
-macro sets? dest*
-	x86.setcc_instruction 98h,dest
-end macro
-
-macro setns? dest*
-	x86.setcc_instruction 99h,dest
-end macro
-
-macro setp? dest*
-	x86.setcc_instruction 9Ah,dest
-end macro
-
-macro setpe? dest*
-	x86.setcc_instruction 9Ah,dest
-end macro
-
-macro setnp? dest*
-	x86.setcc_instruction 9Bh,dest
-end macro
-
-macro setpo? dest*
-	x86.setcc_instruction 9Bh,dest
-end macro
-
-macro setl? dest*
-	x86.setcc_instruction 9Ch,dest
-end macro
-
-macro setnge? dest*
-	x86.setcc_instruction 9Ch,dest
-end macro
-
-macro setnl? dest*
-	x86.setcc_instruction 9Dh,dest
-end macro
-
-macro setge? dest*
-	x86.setcc_instruction 9Dh,dest
-end macro
-
-macro setng? dest*
-	x86.setcc_instruction 9Eh,dest
-end macro
-
-macro setle? dest*
-	x86.setcc_instruction 9Eh,dest
-end macro
-
-macro setg? dest*
-	x86.setcc_instruction 9Fh,dest
-end macro
-
-macro setnle? dest*
-	x86.setcc_instruction 9Fh,dest
-end macro
+end iterate
 
 iterate <instr,ext,postbyte>, lldt,0,2, ltr,0,3, verr,0,4, verw,0,5, lmsw,1,6
 	macro instr? dest*
