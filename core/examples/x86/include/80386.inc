@@ -595,7 +595,7 @@ macro mov? dest*,src*
 			err 'invalid operand size'
 		end if
 	else if @src.type = 'sreg' & @dest.type = 'mem'
-		if defined size & size = 2
+		if defined size & ~ size and not 2
 			x86.store_instruction 8Ch,@dest,@src.rm
 		else
 			err 'invalid operand size'
