@@ -1456,7 +1456,7 @@ iterate <instr,ext>, movzx,0B6h, movsx,0BEh
 			if @src.size = 2
 				x86.select_operand_prefix @src,@dest.size
 				x86.store_instruction <0Fh,ext+1>,@src,@dest.rm
-			else if @src.size = 1
+			else if @src.size = 1 | (@src.size = 0 & @dest.size = 2)
 				x86.select_operand_prefix @src,@dest.size
 				x86.store_instruction <0Fh,ext>,@src,@dest.rm
 			else if @src.size <> 0
