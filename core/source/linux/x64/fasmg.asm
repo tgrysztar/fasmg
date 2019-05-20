@@ -440,7 +440,6 @@ segment readable executable
 	xor	al,al
 	repne	scasb
 	not	ecx
-	dec	ecx
 	push	rsi rcx
 	call	malloc
 	pop	rcx rsi
