@@ -319,6 +319,21 @@ macro proc? statement&
 
 		macro locals?
 			virtual at localbase@proc+current
+			iterate dword, dword,qword
+				macro dword? value
+					if value relativeto 0
+						emit dword: value
+					else
+						initlocal
+						local pointer
+						pointer := $
+						end virtual
+						mov dword [pointer],value
+						virtual at pointer+4
+						current = $ - (localbase@proc)
+					end if
+				end macro
+			end iterate
 			macro ? line&
 				line
 				if $ > $@
@@ -328,7 +343,7 @@ macro proc? statement&
 		end macro
 
 		macro endl?
-			purge ?
+			purge ?, dword?,qword?
 			initlocal
 			end virtual
 		end macro
