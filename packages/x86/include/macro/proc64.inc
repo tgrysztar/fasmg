@@ -444,6 +444,8 @@ macro proc? statement&
 						?varname dbx type, ?
 					else match varname[count], arg
 						?varname rq count
+					else match varname type, arg
+						?varname type
 					else
 						?arg dq ?
 					end match
