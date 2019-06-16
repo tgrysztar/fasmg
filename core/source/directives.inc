@@ -459,10 +459,10 @@ define_label:
 	mov	eax,[local_namespace]
 	test	eax,eax
 	jz	current_label_ok
-	test	[eax+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
-	jz	current_label_ok
 	cmp	edx,[eax+SymbolTree_Root.current_label]
 	jne	current_label_ok
+	test	[eax+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
+	jz	current_label_ok
       current_label_confirmed:
 	mov	edi,[edx+SymbolTree_Foliage.root]
 	test	[edi+SymbolTree_Root.attributes],SYMTREE_LOCAL
@@ -3489,9 +3489,17 @@ use_struc:
 	mov	eax,[label_branch]
 	mov	[ebx+SymbolTree_Root.current_label],eax
 	cmp	[label_solid],0
-	setnz	al
-	shl	al,bsf NAMESPACE_CURRENT_LABEL_TO_CONFIRM
-	or	[ebx+SymbolTree_Root.flags],al
+	jne	struc_label_to_confirm
+	mov	edx,[local_namespace]
+	test	edx,edx
+	jz	struc_label_ok
+	cmp	eax,[edx+SymbolTree_Root.current_label]
+	jne	struc_label_ok
+	test	[edx+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
+	jz	struc_label_ok
+      struc_label_to_confirm:
+	or	[ebx+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
+      struc_label_ok:
 	cmp	byte [esi],'('
 	jne	prepare_macro_parameters
 	inc	esi
