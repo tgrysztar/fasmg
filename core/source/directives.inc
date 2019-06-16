@@ -453,9 +453,17 @@ define_label:
 	or	[edx+ValueDefinition.flags],VAL_SHIFTABLE
 	retn
     update_current_label:
-	cmp	[label_solid],0
-	je	current_label_ok
 	mov	edx,[label_branch]
+	cmp	[label_solid],0
+	jne	current_label_confirmed
+	mov	eax,[local_namespace]
+	test	eax,eax
+	jz	current_label_ok
+	test	[eax+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
+	jz	current_label_ok
+	cmp	edx,[eax+SymbolTree_Root.current_label]
+	jne	current_label_ok
+      current_label_confirmed:
 	mov	edi,[edx+SymbolTree_Foliage.root]
 	test	[edi+SymbolTree_Root.attributes],SYMTREE_LOCAL
 	jnz	current_label_ok
@@ -463,6 +471,7 @@ define_label:
 	mov	[edi+SymbolTree_Root.current_label],edx
       current_label_ok:
 	retn
+
 define_numeric_symbol:
 	test	[assembly_mode],AMODE_SKIP
 	jnz	assembly_line
@@ -3479,6 +3488,10 @@ use_struc:
 	mov	ebx,[new_local_namespace]
 	mov	eax,[label_branch]
 	mov	[ebx+SymbolTree_Root.current_label],eax
+	cmp	[label_solid],0
+	setnz	al
+	shl	al,bsf NAMESPACE_CURRENT_LABEL_TO_CONFIRM
+	or	[ebx+SymbolTree_Root.flags],al
 	cmp	byte [esi],'('
 	jne	prepare_macro_parameters
 	inc	esi
