@@ -49,6 +49,19 @@ macro stdcall?: proc*,args&
 				push eax
 			else match first=,rest, arg
 				stdcall?.push_string arg
+			else match size [var], arg
+				if size = 4
+					push arg
+				else
+					if size = 1
+						mov al, arg
+					else if size = 2
+						mov ax, arg
+					else
+						mov eax, arg
+					end if
+					push eax
+				end if
 			else match [var], arg
 				push dword arg
 			else
@@ -106,6 +119,19 @@ macro ccall?: proc*,args&
 				push eax
 			else match first=,rest, arg
 				stdcall?.push_string arg
+			else match size [var], arg
+				if size = 4
+					push arg
+				else
+					if size = 1
+						mov al, arg
+					else if size = 2
+						mov ax, arg
+					else
+						mov eax, arg
+					end if
+					push eax
+				end if
 			else match [var], arg
 				push dword arg
 			else
