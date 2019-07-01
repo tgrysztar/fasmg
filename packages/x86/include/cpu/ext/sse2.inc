@@ -546,9 +546,12 @@ if ~ defined SSE2
 		x86.parse_operand @dest,dest
 		x86.parse_operand @src,src
 		if @dest.type = 'mem' & @src.type = 'reg'
-			if (@dest.size or @src.size) <> 4
+			if @dest.size and not @src.size
+				err 'operand sizes do not match'
+			else if @src.size <> 4 & @src.size <> 8
 				err 'invalid operand size'
 			end if
+			x86.select_operand_prefix @dest,@src.size
 			x86.store_instruction <0Fh,0C3h>,@dest,@src.rm
 		else
 			err 'invalid combination of operands'
