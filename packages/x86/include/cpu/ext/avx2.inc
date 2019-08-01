@@ -1,8 +1,7 @@
 
-if ~ defined AVX2
+if ~ definite AVX2
 
-	restore AVX2	; this ensures that symbol cannot be forward-referenced
-	define AVX2 1
+	AVX2 := 1
 
 	include 'avx.inc'
 

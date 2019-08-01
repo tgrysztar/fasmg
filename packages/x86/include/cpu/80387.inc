@@ -1,8 +1,7 @@
 
-if ~ defined i80387
+if ~ definite i80387
 
-	restore i80387	; this ensures that symbol cannot be forward-referenced
-	define i80387 1
+	i80387 := 1
 
 	include '80287.inc'
 

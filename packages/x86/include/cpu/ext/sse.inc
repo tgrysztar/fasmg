@@ -1,8 +1,7 @@
 
-if ~ defined SSE
+if ~ definite SSE
 
-	restore SSE	; this ensures that symbol cannot be forward-referenced
-	define SSE 1
+	SSE := 1
 
 	include 'mmx.inc'
 

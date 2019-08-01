@@ -1,8 +1,7 @@
 
-if ~ defined SSE3
+if ~ definite SSE3
 
-	restore SSE3	; this ensures that symbol cannot be forward-referenced
-	define SSE3 1
+	SSE3 := 1
 
 	include 'sse2.inc'
 

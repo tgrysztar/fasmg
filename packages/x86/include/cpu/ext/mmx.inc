@@ -1,8 +1,7 @@
 
-if ~ defined MMX
+if ~ definite MMX
 
-	restore MMX	; this ensures that symbol cannot be forward-referenced
-	define MMX 1
+	MMX := 1
 
 	element MMX.reg
 

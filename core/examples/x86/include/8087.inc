@@ -1,10 +1,9 @@
 
-if ~ defined i8087
+if ~ definite i8087
 
-	restore i8087	; this ensures that symbol cannot be forward-referenced
-	define i8087
+	i8087 := 1
 
-	define x87 1
+	define x87
 
 	element st?
 

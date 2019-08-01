@@ -1,8 +1,7 @@
 
-if ~ defined SSE2
+if ~ definite SSE2
 
-	restore SSE2	; this ensures that symbol cannot be forward-referenced
-	define SSE2 1
+	SSE2 := 1
 
 	include 'sse.inc'
 

@@ -1,11 +1,9 @@
 
-if ~ defined AVX
+if ~ definite AVX
 
-	restore AVX	; this ensures that symbol cannot be forward-referenced
-	define AVX 1
+	AVX := 1
 
 	include 'sse4.2.inc'
-	include 'aes.inc'
 	include 'xsave.inc'
 
 	element AVX.reg
@@ -322,30 +320,6 @@ if ~ defined AVX
 	macro vshufps? dest*,src*,src2*,aux*
 		AVX.basic_instruction_imm8 VEX_0F_W0,0C6h,0,dest,src,src2,aux
 	end macro
-
-	iterate <instr,opcode>, aesenc,0DCh, aesenclast,0DDh, aesdec,0DEh, aesdeclast,0DFh
-
-		macro v#instr? dest*,src*,src2*
-			AVX.basic_instruction VEX_66_0F38_W0,opcode,16,dest,src,src2
-		end macro
-
-	end iterate
-
-	iterate <instr,opcode>, aesimc,0DBh
-
-		macro v#instr? dest*,src*
-			AVX.single_source_instruction VEX_66_0F38_W0,opcode,16,dest,src
-		end macro
-
-	end iterate
-
-	iterate <instr,opcode>, aeskeygenassist,0DFh
-
-		macro v#instr? dest*,src*,imm*
-			AVX.single_source_instruction_imm8 VEX_66_0F3A_W0,opcode,16,dest,src,imm
-		end macro
-
-	end iterate
 
 	iterate <instr,opcode>, blendps,0Ch, blendpd,0Dh
 

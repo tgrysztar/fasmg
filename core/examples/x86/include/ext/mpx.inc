@@ -1,8 +1,7 @@
 
-if ~ defined MPX
+if ~ definite MPX
 
-	restore MPX   ; this ensures that symbol cannot be forward-referenced
-	define MPX 1
+	MPX := 1
 
 	element MPX.bnd
 
