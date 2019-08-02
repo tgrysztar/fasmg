@@ -1,5 +1,9 @@
 
-include 'avx512.inc'
+if ~ definite AVX_512
+
+	include 'avx512f.inc'
+
+end if
 
 iterate <instr,unit,vex_mpw,opcode>, vexp2ps,4,VEX_66_0F38_W0,0C8h, vexp2pd,4,VEX_66_0F38_W1,0C8h, \
 				     vrcp28ps,4,VEX_66_0F38_W0,0CAh, vrcp28pd,8,VEX_66_0F38_W1,0CAh, vrsqrt28ps,4,VEX_66_0F38_W0,0CCh, vrsqrt28pd,8,VEX_66_0F38_W1,0CCh

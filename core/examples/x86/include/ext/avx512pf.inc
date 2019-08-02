@@ -1,5 +1,9 @@
 
-include 'avx512.inc'
+if ~ definite AVX_512
+
+	include 'avx512f.inc'
+
+end if
 
 iterate <instr,postbyte>, gatherpf0,1 ,gatherpf1,2 ,scatterpf0,5, scatterpf1,6
 
