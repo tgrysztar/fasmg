@@ -104,11 +104,11 @@ end iterate
 iterate <instr,opcode>, and,54h, andn,55h, or,56h, xor,57h
 
 	macro v#instr#pd? dest*,src*,src2*&
-		AVX_512.basic_instruction_bcst VEX_66_0F_W0,EVEX_W1,opcode,8,dest,src,src2
+		AVX_512.basic_instruction_bcst VEX_66_0F_W0,EVEX_W1+EVEX_VL,opcode,8,dest,src,src2
 	end macro
 
 	macro v#instr#ps? dest*,src*,src2*&
-		AVX_512.basic_instruction_bcst VEX_0F_W0,EVEX_AS_VEX,opcode,4,dest,src,src2
+		AVX_512.basic_instruction_bcst VEX_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode,4,dest,src,src2
 	end macro
 
 end iterate
@@ -123,7 +123,7 @@ iterate <instr,opcode>, vbroadcastf32x2,19h, vbroadcasti32x2,59h
 				err 'invalid operand size'
 			end if
 			@src.memsize = 8
-			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_REQUIRED,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -142,7 +142,7 @@ iterate <instr,vex_mpw,opcode,msize>, vbroadcastf32x8,VEX_66_0F38_W0,1Bh,32, vbr
 				err 'invalid operand size'
 			end if
 			@src.memsize = msize
-			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -150,24 +150,24 @@ iterate <instr,vex_mpw,opcode,msize>, vbroadcastf32x8,VEX_66_0F38_W0,1Bh,32, vbr
 
 end iterate
 
-iterate <instr,vex_mpw,evex_f,opcode>, vcvtpd2qq,VEX_66_0F_W1,EVEX_REQUIRED,7Bh, vcvtpd2uqq,VEX_66_0F_W1,EVEX_REQUIRED,79h, \
-				       vcvtqq2pd,VEX_F3_0F_W1,EVEX_REQUIRED,0E6h, vcvtuqq2pd,VEX_F3_0F_W1,EVEX_REQUIRED,7Ah
+iterate <instr,vex_mpw,opcode>, vcvtpd2qq,VEX_66_0F_W1,7Bh, vcvtpd2uqq,VEX_66_0F_W1,79h, \
+				vcvtqq2pd,VEX_F3_0F_W1,0E6h, vcvtuqq2pd,VEX_F3_0F_W1,7Ah
 
 	macro instr? dest*,src*&
-		AVX_512.single_source_instruction_bcst_er vex_mpw,evex_f,opcode,8,dest,src
+		AVX_512.single_source_instruction_bcst_er vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,8,dest,src
 	end macro
 
 end iterate
 
-iterate <instr,vex_mpw,evex_f,opcode>, vcvttpd2qq,VEX_66_0F_W1,EVEX_REQUIRED,7Ah, vcvttpd2uqq,VEX_66_0F_W1,EVEX_REQUIRED,78h
+iterate <instr,vex_mpw,opcode>, vcvttpd2qq,VEX_66_0F_W1,7Ah, vcvttpd2uqq,VEX_66_0F_W1,78h
 
 	macro instr? dest*,src*&
-		AVX_512.single_source_instruction_bcst_sae vex_mpw,evex_f,opcode,8,dest,src
+		AVX_512.single_source_instruction_bcst_sae vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,8,dest,src
 	end macro
 
 end iterate
 
-iterate <instr,vex_mpw,evex_f,opcode>, vcvtps2qq,VEX_66_0F_W0,EVEX_REQUIRED,7Bh, vcvtps2uqq,VEX_66_0F_W0,EVEX_REQUIRED,79h
+iterate <instr,vex_mpw,opcode>, vcvtps2qq,VEX_66_0F_W0,7Bh, vcvtps2uqq,VEX_66_0F_W0,79h
 
 	macro instr? dest*,src_er*&
 		AVX_512.parse_operand_k1z @dest,dest
@@ -184,7 +184,7 @@ iterate <instr,vex_mpw,evex_f,opcode>, vcvtps2qq,VEX_66_0F_W0,EVEX_REQUIRED,7Bh,
 			if @src.memsize = 0
 				@src.memsize = @dest.size shr 1
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -192,7 +192,7 @@ iterate <instr,vex_mpw,evex_f,opcode>, vcvtps2qq,VEX_66_0F_W0,EVEX_REQUIRED,7Bh,
 
 end iterate
 
-iterate <instr,vex_mpw,evex_f,opcode>, vcvtqq2ps,VEX_0F_W1,EVEX_REQUIRED,5Bh, vcvtuqq2ps,VEX_F2_0F_W1,EVEX_REQUIRED,7Ah
+iterate <instr,vex_mpw,opcode>, vcvtqq2ps,VEX_0F_W1,5Bh, vcvtuqq2ps,VEX_F2_0F_W1,7Ah
 
 	macro instr? dest*,src_er*&
 		AVX_512.parse_operand_k1z @dest,dest
@@ -213,7 +213,7 @@ iterate <instr,vex_mpw,evex_f,opcode>, vcvtqq2ps,VEX_0F_W1,EVEX_REQUIRED,5Bh, vc
 			if (@src.size shr 1 - 1) and not 15 + 16 <> @dest.size | @src.size > 64
 				err 'invalid operand size'
 			end if
-			AVX_512.store_instruction @src.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -221,7 +221,7 @@ iterate <instr,vex_mpw,evex_f,opcode>, vcvtqq2ps,VEX_0F_W1,EVEX_REQUIRED,5Bh, vc
 
 end iterate
 
-iterate <instr,vex_mpw,evex_f,opcode>, vcvttps2qq,VEX_66_0F_W0,EVEX_REQUIRED,7Ah, vcvttps2uqq,VEX_66_0F_W0,EVEX_REQUIRED,78h
+iterate <instr,vex_mpw,opcode>, vcvttps2qq,VEX_66_0F_W0,7Ah, vcvttps2uqq,VEX_66_0F_W0,78h
 
 	macro instr? dest*,src_sae*&
 		AVX_512.parse_operand_k1z @dest,dest
@@ -238,7 +238,7 @@ iterate <instr,vex_mpw,evex_f,opcode>, vcvttps2qq,VEX_66_0F_W0,EVEX_REQUIRED,7Ah
 			if @src.memsize = 0
 				@src.memsize = @dest.size shr 1
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -258,7 +258,7 @@ iterate <instr,vex_mpw,opcode,msize>, vextractf32x8,VEX_66_0F3A_W0,1Bh,32, vextr
 				err 'invalid operand size'
 			end if
 			@dest.memsize = msize
-			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@dest,@dest.mask,@src.rm,,1,@aux.imm
+			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm,,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -279,7 +279,7 @@ iterate <instr,vex_mpw,opcode,msize>, vinsertf32x8,VEX_66_0F3A_W0,1Ah,32, vinser
 				err 'invalid operand size'
 			end if
 			@src2.memsize = msize
-			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -299,7 +299,7 @@ iterate <instr,unit,vex_mpw>, vfpclasspd,8,VEX_66_0F3A_W1, vfpclassps,4,VEX_66_0
 			else if (@src.size <> 16 & @src.size <> 32 & @src.size <> 64) | @aux.size and not 1
 				err 'invalid operand size'
 			end if
-			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,66h,@src,@dest.mask,@dest.rm,,1,@aux.imm
+			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,66h,@src,@dest.mask,@dest.rm,,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -395,7 +395,7 @@ macro vpinsrq? dest*,src*,src2*,aux*
 end macro
 
 macro vpmullq? dest*,src*,src2*
-	AVX_512.basic_instruction_bcst VEX_66_0F38_W1,EVEX_REQUIRED,40h,8,dest,src,src2
+	AVX_512.basic_instruction_bcst VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,40h,8,dest,src,src2
 end macro
 
 iterate <instr,vex_mpw,opcode>, vpmovm2d,VEX_F3_0F38_W0,38h, vpmovm2q,VEX_F3_0F38_W1,38h
@@ -404,7 +404,7 @@ iterate <instr,vex_mpw,opcode>, vpmovm2d,VEX_F3_0F38_W0,38h, vpmovm2q,VEX_F3_0F3
 		AVX_512.parse_operand @dest,dest
 		AVX_512.parse_operand @src,src
 		if @dest.type = 'mmreg' & @src.type = 'maskreg'
-			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED,opcode,@src,0,@dest.rm
+			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,0,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -418,7 +418,7 @@ iterate <instr,vex_mpw,opcode>, vpmovd2m,VEX_F3_0F38_W0,39h, vpmovq2m,VEX_F3_0F3
 		AVX_512.parse_operand @dest,dest
 		AVX_512.parse_operand @src,src
 		if @dest.type = 'maskreg' & @src.type = 'mmreg'
-			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src,0,@dest.rm
+			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,0,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -429,11 +429,11 @@ end iterate
 iterate <instr,opcode>, range,50h
 
 	macro v#instr#pd? dest*,src*,src2*,aux*&
-		AVX_512.basic_instruction_bcst_sae_imm8 VEX_66_0F3A_W1,EVEX_REQUIRED,opcode,8,dest,src,src2,aux
+		AVX_512.basic_instruction_bcst_sae_imm8 VEX_66_0F3A_W1,EVEX_REQUIRED+EVEX_VL,opcode,8,dest,src,src2,aux
 	end macro
 
 	macro v#instr#ps? dest*,src*,src2*,aux*&
-		AVX_512.basic_instruction_bcst_sae_imm8 VEX_66_0F3A_W0,EVEX_REQUIRED,opcode,4,dest,src,src2,aux
+		AVX_512.basic_instruction_bcst_sae_imm8 VEX_66_0F3A_W0,EVEX_REQUIRED+EVEX_VL,opcode,4,dest,src,src2,aux
 	end macro
 
 	macro v#instr#sd? dest*,src*,src2*,aux*&
@@ -447,11 +447,11 @@ iterate <instr,opcode>, range,50h
 end iterate
 
 macro vreducepd? dest*,src*,aux*&
-	AVX_512.single_source_instruction_bcst_sae_imm8 VEX_66_0F3A_W1,EVEX_REQUIRED,56h,8,dest,src,aux
+	AVX_512.single_source_instruction_bcst_sae_imm8 VEX_66_0F3A_W1,EVEX_REQUIRED+EVEX_VL,56h,8,dest,src,aux
 end macro
 
 macro vreduceps? dest*,src*,aux*&
-	AVX_512.single_source_instruction_bcst_sae_imm8 VEX_66_0F3A_W0,EVEX_REQUIRED,56h,4,dest,src,aux
+	AVX_512.single_source_instruction_bcst_sae_imm8 VEX_66_0F3A_W0,EVEX_REQUIRED+EVEX_VL,56h,4,dest,src,aux
 end macro
 
 macro vreducesd? dest*,src*,src2*,aux*&

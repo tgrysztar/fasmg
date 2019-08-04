@@ -1,4 +1,5 @@
 
+
 if ~ definite AVX_512
 
 	include 'avx512f.inc'
@@ -104,7 +105,7 @@ iterate <instr,vex_mpw>, kunpckwd,VEX_0F_W0, kunpckdq,VEX_0F_W1
 
 end iterate
 
-iterate <instr,vex_mpw,evex_f,opcode_rm,opcode_mr>, vmovdqu8,VEX_F2_0F_W0,EVEX_REQUIRED,6Fh,7Fh, vmovdqu16,VEX_F2_0F_W1,EVEX_REQUIRED,6Fh,7Fh
+iterate <instr,vex_mpw,evex_f,opcode_rm,opcode_mr>, vmovdqu8,VEX_F2_0F_W0,EVEX_REQUIRED+EVEX_VL,6Fh,7Fh, vmovdqu16,VEX_F2_0F_W1,EVEX_REQUIRED+EVEX_VL,6Fh,7Fh
 
 	macro instr? dest*,src*
 		AVX_512.parse_operand_k1z @dest,dest
@@ -129,7 +130,7 @@ end iterate
 iterate <instr,opcode>, vpabsb,1Ch, vpabsw,1Dh
 
 	macro instr? dest*,src*
-		AVX_512.single_source_instruction VEX_66_0F38_W0,EVEX_AS_VEX,opcode,0,dest,src
+		AVX_512.single_source_instruction VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,0,dest,src
 	end macro
 
 end iterate
@@ -140,7 +141,7 @@ iterate <instr,opcode>, vpacksswb,63h, vpackuswb,67h, vpaddb,0FCh, vpaddw,0FDh, 
 			vpunpckhbw,68h, vpunpckhwd,69h, vpunpcklbw,60h, vpunpcklwd,61h
 
 	macro instr? dest*,src*,src2*
-		AVX_512.basic_instruction VEX_66_0F_W0,EVEX_AS_VEX,opcode,0,dest,src,src2
+		AVX_512.basic_instruction VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode,0,dest,src,src2
 	end macro
 
 end iterate
@@ -148,7 +149,7 @@ end iterate
 iterate <instr,opcode>, vpackssdw,6Bh
 
 	macro instr? dest*,src*,src2*
-		AVX_512.basic_instruction_bcst VEX_66_0F_W0,EVEX_AS_VEX,opcode,4,dest,src,src2
+		AVX_512.basic_instruction_bcst VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode,4,dest,src,src2
 	end macro
 
 end iterate
@@ -156,7 +157,7 @@ end iterate
 iterate <instr,opcode>, vpackusdw,2Bh
 
 	macro instr? dest*,src*,src2*
-		AVX_512.basic_instruction_bcst VEX_66_0F38_W0,EVEX_AS_VEX,opcode,4,dest,src,src2
+		AVX_512.basic_instruction_bcst VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,4,dest,src,src2
 	end macro
 
 end iterate
@@ -164,7 +165,7 @@ end iterate
 iterate <instr,opcode>, vpalignr,0Fh
 
 	macro instr? dest*,src*,src2*,imm*
-		AVX_512.basic_instruction_imm8 VEX_66_0F3A_W0,EVEX_AS_VEX,opcode,0,dest,src,src2,imm
+		AVX_512.basic_instruction_imm8 VEX_66_0F3A_W0,EVEX_AS_VEX+EVEX_VL,opcode,0,dest,src,src2,imm
 	end macro
 
 end iterate
@@ -172,7 +173,7 @@ end iterate
 iterate <instr,opcode>, vpmaddubsw,4, vpmaxsb,3Ch, vpmaxuw,3Eh, vpminsb,38h, vpminuw,3Ah, vpmulhrsw,0Bh, vpshufb,0
 
 	macro instr? dest*,src*,src2*
-		AVX_512.basic_instruction VEX_66_0F38_W0,EVEX_AS_VEX,opcode,0,dest,src,src2
+		AVX_512.basic_instruction VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,0,dest,src,src2
 	end macro
 
 end iterate
@@ -187,7 +188,7 @@ iterate <instr,opcode>, vpcmpeqb,74h, pcmpeqw,75h, vpcmpgtb,64h, vpcmpgtw,65h
 			if @src2.size and not @src.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @src.size,VEX_66_0F_W0,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction @src.size,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm
 		else if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 			if @src.size <> @dest.size | @src2.size and not @dest.size
 				err 'operand sizes do not match'
@@ -265,7 +266,7 @@ iterate <instr,opcode,msize>, vpmovsxbw,20h,8, vpmovzxbw,30h,8
 			if (@src.type = 'mmreg' & @src.size <> (@src.memsize-1) and not 15 + 16) | (@src.type = 'mem' & @src.size and not @src.memsize)
 				err 'invalid operand size'
 			end if
-			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -285,7 +286,7 @@ iterate <instr,vex_mpw>, vpshufhw,VEX_F3_0F_W0, vpshuflw,VEX_F2_0F_W0
 			else if @src.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_AS_VEX,70h,@src,@dest.mask,@dest.rm,,1,@aux.imm
+			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_AS_VEX+EVEX_VL,70h,@src,@dest.mask,@dest.rm,,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -306,9 +307,9 @@ iterate <instr,postbyte>, vpslldq,7, vpsrldq,3
 				err 'operand sizes do not match'
 			end if
 			if @src.type = 'mem'
-				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_REQUIRED,73h,@src,0,postbyte,@dest.rm,1,@aux.imm
+				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,73h,@src,0,postbyte,@dest.rm,1,@aux.imm
 			else
-				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX,73h,@src,0,postbyte,@dest.rm,1,@aux.imm
+				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,73h,@src,0,postbyte,@dest.rm,1,@aux.imm
 			end if
 		else
 			err 'invalid combination of operands'
@@ -330,7 +331,7 @@ iterate <instr,opcode_rrm,opcode,postbyte>, vpsllw,0F1h,71h,6, vpsraw,0E1h,71h,4
 			else if @src.size <> @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX,opcode_rrm,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode_rrm,@src2,@dest.mask,@dest.rm,@src.rm
 		else if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem') & @src2.type = 'imm'
 			if @src2.size and not 1
 				err 'invalid operand size'
@@ -338,9 +339,9 @@ iterate <instr,opcode_rrm,opcode,postbyte>, vpsllw,0F1h,71h,6, vpsraw,0E1h,71h,4
 				err 'operand sizes do not match'
 			end if
 			if @src.type = 'mem'
-				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_REQUIRED,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
+				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
 			else
-				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
+				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
 			end if
 		else
 			err 'invalid combination of operands'
@@ -352,7 +353,7 @@ end iterate
 iterate <instr,vex_mpw,opcode>, vdbpsadbw,VEX_66_0F3A_W0,42h
 
 	macro instr? dest*,src*,src2*,aux*&
-		AVX_512.basic_instruction_imm8 VEX_66_0F3A_W0,EVEX_REQUIRED,opcode,0,dest,src,src2,aux
+		AVX_512.basic_instruction_imm8 vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,0,dest,src,src2,aux
 	end macro
 
 end iterate
@@ -360,7 +361,7 @@ end iterate
 iterate <instr,vex_mpw,opcode>, vpblendmb,VEX_66_0F38_W0,66h, vpblendmw,VEX_66_0F38_W1,66h
 
 	macro instr? dest*,src*,src2*&
-		AVX_512.basic_instruction VEX_66_0F38_W0,EVEX_REQUIRED,opcode,0,dest,src,src2
+		AVX_512.basic_instruction vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,0,dest,src,src2
 	end macro
 
 end iterate
@@ -375,16 +376,16 @@ iterate <instr,opcode,opcode_g,msize>, vpbroadcastb,78h,7Ah,1, vpbroadcastw,79h,
 				err 'invalid operand size'
 			end if
 			@src.memsize = msize
-			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
 		else if @dest.type = 'mmreg' & @src.type = 'reg'
 			if @src.size <> msize & (@src.size <> 4 | msize = 8)
 				err 'invalid operand size'
 			end if
 			@src.memsize = msize
 			if msize = 8
-				AVX_512.store_instruction @dest.size,VEX_66_0F38_W1,EVEX_REQUIRED,opcode_g,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction @dest.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode_g,@src,@dest.mask,@dest.rm
 			else
-				AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_REQUIRED,opcode_g,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode_g,@src,@dest.mask,@dest.rm
 			end if
 		else
 			err 'invalid combination of operands'
@@ -404,7 +405,7 @@ iterate <instr,vex_mpw,opcode>, vpcmpb,VEX_66_0F3A_W0,3Fh, vpcmpub,VEX_66_0F3A_W
 			if @src2.size and not @src.size | @aux.size and not 1
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -415,7 +416,7 @@ end iterate
 iterate <instr,vex_mpw,opcode>, vpermw,VEX_66_0F38_W1,8Dh, vpermi2w,VEX_66_0F38_W1,75h, vpermt2w,VEX_66_0F38_W1,7Dh
 
 	macro instr? dest*,src*,src2*
-		AVX_512.basic_instruction vex_mpw,EVEX_REQUIRED,opcode,0,dest,src,src2
+		AVX_512.basic_instruction vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,0,dest,src,src2
 	end macro
 
 end iterate
@@ -426,7 +427,7 @@ iterate <instr,vex_mpw,opcode>, vpmovb2m,VEX_F3_0F38_W0,29h, vpmovw2m,VEX_F3_0F3
 		AVX_512.parse_operand @dest,dest
 		AVX_512.parse_operand @src,src
 		if @dest.type = 'maskreg' & @src.type = 'mmreg'
-			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src,0,@dest.rm
+			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,0,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -440,7 +441,7 @@ iterate <instr,vex_mpw,opcode>, vpmovm2b,VEX_F3_0F38_W0,28h, vpmovm2w,VEX_F3_0F3
 		AVX_512.parse_operand @dest,dest
 		AVX_512.parse_operand @src,src
 		if @dest.type = 'mmreg' & @src.type = 'maskreg'
-			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED,opcode,@src,0,@dest.rm
+			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,0,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -458,7 +459,7 @@ iterate <instr,ratio,opcode>, vpmovuswb,2,10h, vpmovswb,2,20h, vpmovwb,2,30h
 			if (@dest.type = 'mmreg' & @dest.size <> (@dest.memsize-1) and not 15 + 16) | (@dest.type = 'mem' & @dest.size and not @dest.memsize)
 				err 'invalid operand size'
 			end if
-			AVX_512.store_instruction @src.size,VEX_F3_0F38_W0,EVEX_REQUIRED,opcode,@dest,@dest.mask,@src.rm
+			AVX_512.store_instruction @src.size,VEX_F3_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -469,7 +470,7 @@ end iterate
 iterate <instr,opcode>, vpsllvw,12h, vpsrlvw,10h, vpsravw,11h
 
 	macro instr? dest*,src*,src2*
-		AVX_512.basic_instruction VEX_66_0F38_W1,EVEX_REQUIRED,opcode,0,dest,src,src2
+		AVX_512.basic_instruction VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode,0,dest,src,src2
 	end macro
 
 end iterate
@@ -484,7 +485,7 @@ iterate <instr,vex_mpw,opcode>, vptestnmb,VEX_F3_0F38_W0,26h, vptestnmw,VEX_F3_0
 			if @src2.size and not @src.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
