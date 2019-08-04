@@ -211,12 +211,13 @@ if ~ definite AVX_512
 			rm_operand.evex = rm_operand.evex or (rm_operand.rounding shl 21)
 		else if vsize = 64
 			rm_operand.evex = rm_operand.evex or (1 shl 22)
-		else if vsize = 32
-			rm_operand.evex = rm_operand.evex or (1 shl 21)
-		end if
-
-		if AVX512VL = 0 & rm_operand.evex_flags and EVEX_VL & rm_operand.evex and (1 shl 22) = 0
-			rm_operand.evex_flags = rm_operand.evex_flags or EVEX_FORBIDDEN
+		else
+			if rm_operand.evex_flags and EVEX_VL & AVX512VL = 0
+				rm_operand.evex_flags = rm_operand.evex_flags or EVEX_FORBIDDEN
+			end if
+			if vsize = 32
+				rm_operand.evex = rm_operand.evex or (1 shl 21)
+			end if
 		end if
 
 		if rm_operand.rm and 10000b | (rm_operand.mod <> 11b & rm_operand.mode > 16 & rm_operand.rm = 4 & rm_operand.index and 1000b)
