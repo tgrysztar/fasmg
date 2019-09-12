@@ -497,6 +497,7 @@ segment readable writeable
 
   align 16
 
+  malloc_hint dd 480000h
   malloc_ffirst dd 0
   malloc_flast dd 0
   malloc_fbrk dd 0

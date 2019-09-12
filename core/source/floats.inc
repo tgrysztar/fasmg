@@ -956,6 +956,7 @@ fit_float:
 	sub	ebx,eax
 	add	eax,3FFFh
 	js	extended_precision_denormal
+	jz	extended_precision_denormal
 	cmp	eax,7FFFh
 	jae	float_out_of_range
 	mov	[edi+8],ax
@@ -981,8 +982,9 @@ fit_float:
 	or	[edi+8],ax
 	retn
       extended_precision_denormal:
+	and	word [edi+8],0
 	neg	eax
-	mov	ecx,64
+	mov	ecx,63
 	sub	ecx,eax
 	jc	float_out_of_range
 	xor	eax,eax
@@ -1005,6 +1007,8 @@ fit_float:
 	jmp	extended_precision_ok
       extended_precision_denormal_carry:
 	adc	[edi+4],edx
+	jns	extended_precision_ok
+	inc	byte [edi+8]
 	jmp	extended_precision_ok
     quadruple_precision:
 	call	get_float_exponent

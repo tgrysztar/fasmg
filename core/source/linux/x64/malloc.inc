@@ -89,37 +89,29 @@ malloc_growable:
     ; in:
     ;  r14d = requested size
     ; out:
-    ;  eax - allocated block, equal to previous value of [malloc_lbrk]
+    ;  eax - allocated block, equal to previous value of [malloc_lbrk] as long as it was non-zero
     ;  ecx = allocated size
     ;  edi = what was in r12d
     ;  esi = what was in r13d
     ;  on error jumps to out_of_memory (does not return)
     ; preserves: rbx
     ; note: for internal use only
-	cmp	dword [malloc_lbrk],0
-	jne	malloc_lbrk_valid
-	mov	eax,12			; sys_brk
-	xor	edi,edi
-	syscall
-	mov	ecx,eax
-	cmp	rcx,rax
-	jne	out_of_memory
-	mov	[malloc_fbrk],eax
-	mov	[malloc_lbrk],eax
-      malloc_lbrk_valid:
 	lea	ecx,[4+r14d+MALLOC_SYSTEM_MASK]
 	mov	edi,[malloc_lbrk]
+	test	edi,edi
+	jz	malloc_mmap
 	and	ecx,not MALLOC_SYSTEM_MASK
 	add	edi,ecx
 	jc	out_of_memory
 	mov	eax,12			; sys_brk
 	syscall
 	mov	edx,eax
-	lea	ecx,[4+r14d+MALLOC_MINIMUM_MASK]
 	sub	edx,[malloc_lbrk]
 	jz	out_of_memory
-	and	ecx,not MALLOC_MINIMUM_MASK
 	xchg	[malloc_lbrk],eax
+      malloc_brk_use:
+	lea	ecx,[4+r14d+MALLOC_MINIMUM_MASK]
+	and	ecx,not MALLOC_MINIMUM_MASK
 	mov	[eax],ecx		; the size of block to return
 	sub	edx,ecx
 	jz	malloc_brk_return
@@ -148,6 +140,46 @@ malloc_growable:
 	mov	edi,r12d
 	mov	esi,r13d
 	ret
+      malloc_mmap:
+	add	ecx,4
+	and	ecx,not MALLOC_SYSTEM_MASK
+	xor	r9d,r9d
+	or	r8,-1
+	mov	r10d,62h		; MAP_PRIVATE + MAP_ANONYMOUS + MAP_32BIT
+	mov	edx,3			; PROT_READ + PROT_WRITE
+	mov	esi,ecx
+	xor	edi,edi
+	mov	eax,9			; sys_mmap
+	syscall
+	cmp	eax,-1
+	je	malloc_mmap_with_hint
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	malloc_mmap_unusable
+	add	ecx,esi
+	jnc	malloc_mmap_use
+      malloc_mmap_unusable:
+	mov	rdi,rax
+	mov	eax,11			; sys_munmap
+	syscall
+      malloc_mmap_with_hint:
+	mov	r10d,22h		; MAP_PRIVATE + MAP_ANONYMOUS
+	mov	edx,3			; PROT_READ + PROT_WRITE
+	mov	edi,[malloc_hint]
+	mov	eax,9			; sys_mmap
+	syscall
+	cmp	eax,-1
+	je	out_of_memory
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	out_of_memory
+	add	ecx,esi
+	jc	out_of_memory
+      malloc_mmap_use:
+	lea	edx,[esi-4]
+	and	dword [ecx-4],0 	; dummy non-freelist block
+	mov	[malloc_hint],ecx
+	jmp	malloc_brk_use
     unlink_from_freelist:
     ; in: edx - block in freelist to unlink
     ; preserves: rbx, rdx, rsi, rdi, r12, r13, r14
@@ -346,6 +378,18 @@ realloc:
     realloc_already_satisfied:
 	mov	ecx,edx
 	ret
+
+minit:
+	mov	eax,12			; sys_brk
+	xor	edi,edi
+	syscall
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	minit_done
+	mov	[malloc_fbrk],eax
+	mov	[malloc_lbrk],eax
+    minit_done:
+	retn
 
 if used mcheck
 

@@ -29,6 +29,7 @@ system_init:
 	mov	eax,201 		; sys_time
 	mov	edi,timestamp
 	syscall
+	call	minit
 	retn
 
 system_shutdown:
