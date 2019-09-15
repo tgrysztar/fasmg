@@ -877,6 +877,11 @@ macro salc?
 	db 0D6h
 end macro
 
+macro lock? instr&
+	db 0F0h
+	instr
+end macro
+
 macro repnz? instr&
 	db 0F2h
 	instr
