@@ -1,6 +1,6 @@
 
-; This simple example reads the analog signal from ADC and outputs it
-; inversed (relative to the maximum voltage) through DAC.
+; This simple example reads data from external device through P2
+; and outputs it inverted through P1.
 
 include 'hex.inc'
 include '8051.inc'
