@@ -1922,6 +1922,8 @@ are accessed within a macroinstruction, they keep the same value they had for th
 calling line. If there are several levels of macroinstructions calling each 
 other, these symbols have the same value everywhere, corresponding to the line
 that called the outermost macroinstruction.
+  The "__source__" is another built-in symbol, with value being a string containing
+the name of the main source file.
   The "outscope" directive is available while any macroinstruction is processed,
 and it modifies the command that follows in the same line. If the command causes
 any parameters to be defined, they are created not in the context of currently

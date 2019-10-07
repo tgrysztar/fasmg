@@ -1433,6 +1433,15 @@ calculate_parsed_expression:
 	call	reserve_workspace
 	push	edi
 	call	get_file_source_entry
+	jmp	push_file_name_value
+    main_file_name_value:
+	mov	edx,calculation_workspace
+	mov	ecx,2*sizeof.ExpressionTerm
+	call	reserve_workspace
+	push	edi
+	mov	ebx,[source_context]
+	lea	ebx,[ebx+sizeof.SourceContext]
+      push_file_name_value:
 	mov	esi,[ebx+SourceEntry.name]
 	xor	ecx,ecx
 	cmp	[ebx+SourceEntry.type],SOURCE_FILE
