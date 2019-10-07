@@ -551,6 +551,10 @@ to this class may be recognized only when the first identifier of the command
 is not an instruction - in such case the first identifier becomes a label to
 the instruction defined by the second one. If we treat "=" as a special kind
 of identifer, it may serve as an example of labeled instruction.
+  The assembler contains built-in symbols of all classes. Their names are
+always case-insensitive and they may be redefined, but it is not possible to
+remove them. When all the values of such symbol are removed with a command
+like "restore", the built-in value persists.
   The rules concerning namespace apply equally to the symbols of all classes,
 for example symbol of instruction class belonging to the child namespace of
 latest label can be executed by preceding its name with dot. It should be
@@ -558,10 +562,18 @@ noted, however, that when a namespace is specified through its parent symbol,
 it is always a symbol belonging to the expression class. It is not possible to
 refer to a child namespace of an instruction, only to the namespace belonging
 to the expression class symbol with the same name.
-  The assembler contains built-in symbols of all classes. Their names are
-always case-insensitive and they may be redefined, but it is not possible to
-remove them. When all the values of such symbol are removed with a command
-like "restore", the built-in value persists.
+
+        xor?.mask? := 10101010b
+        a = XOR.MASK    ; symbol in the namespace of built-in case-insensitive "XOR"
+
+        label?.test? := 0
+        a = LABEL.TEST  ; undefined unless "LABEL" is defined
+
+Here the namespace containing "test" belongs to an expression-class symbol,
+not to the existing instruction "label". When there is no expression-class symbol 
+that would fit the "LABEL" specifier, the namespace chosen is the one that would
+belong to the case-sensitive symbol of such name. The "test" is therefore not found,
+because it has been defined in another namespace - the one of case-insensitive "label".
 
 
 6. Generating data
@@ -1905,7 +1917,11 @@ is the "binary", but additional ones may be defined in form of macroinstructions
 the point in time when the assembly was started.
   The "__file__" is a built-in symbol whose value is a string containing
 the name of currently processed source file. The accompanying "__line__" symbol
-provides the number of currently processed line in that file.
+provides the number of currently processed line in that file. When these symbols
+are accessed within a macroinstruction, they keep the same value they had for the
+calling line. If there are several levels of macroinstructions calling each 
+other, these symbols have the same value everywhere, corresponding to the line
+that called the outermost macroinstruction.
   The "outscope" directive is available while any macroinstruction is processed,
 and it modifies the command that follows in the same line. If the command causes
 any parameters to be defined, they are created not in the context of currently

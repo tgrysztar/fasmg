@@ -288,11 +288,8 @@ section '.idata' import data readable writeable
 
   import user,\
 	 DialogBoxParam,'DialogBoxParamA',\
-	 CheckRadioButton,'CheckRadioButton',\
 	 GetDlgItemText,'GetDlgItemTextA',\
 	 SetDlgItemText,'SetDlgItemTextA',\
-	 IsDlgButtonChecked,'IsDlgButtonChecked',\
-	 MessageBox,'MessageBoxA',\
 	 EndDialog,'EndDialog'
 
   import fasmg,\
