@@ -37,19 +37,24 @@ macro HEX.seg address:0
 end macro
 
 macro HEX.endseg
-	local code,address,size,bytes
+	local code,address,high,size,bytes
 	code:: address = $$
 	       size = $-$$
 	end virtual
+	high = 0
 	while size
+		if address shr 16 <> high
+			high = address shr 16
+			HEX.line 2,0,4,high bswap 2
+		end if
 		if size>10h
 			load bytes:10h from code:address
-			HEX.line 10h,address,0,bytes
+			HEX.line 10h,address and 0FFFFh,0,bytes
 			address = address + 10h
 			size = size - 10h
 		else
 			load bytes:size from code:address
-			HEX.line size,address,0,bytes
+			HEX.line size,address and 0FFFFh,0,bytes
 			break
 		end if
 	end while
