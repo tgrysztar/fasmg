@@ -546,6 +546,12 @@ of built-in symbols belonging to the instruction class.
 same name, for example it is possible to define the instruction named "shl",
 while there is also an operator with the same name - but an operator belongs
 to the expression class.
+  It is even possible for a single line to contains the same identifier 
+meaning different things depending on its position:
+
+        ?restore = 1
+        restore restore ; remove the value of the expression-class symbol
+
   The third class of symbols are the labeled instructions. A symbol belonging
 to this class may be recognized only when the first identifier of the command
 is not an instruction - in such case the first identifier becomes a label to
@@ -567,7 +573,7 @@ to the expression class symbol with the same name.
         a = XOR.MASK    ; symbol in the namespace of built-in case-insensitive "XOR"
 
         label?.test? := 0
-        a = LABEL.TEST  ; undefined unless "LABEL" is defined
+        a = LABEL.TEST  ; undefined unless "label?" is defined
 
 Here the namespace containing "test" belongs to an expression-class symbol,
 not to the existing instruction "label". When there is no expression-class symbol 
