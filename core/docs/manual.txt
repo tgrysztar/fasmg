@@ -546,7 +546,7 @@ of built-in symbols belonging to the instruction class.
 same name, for example it is possible to define the instruction named "shl",
 while there is also an operator with the same name - but an operator belongs
 to the expression class.
-  It is even possible for a single line to contains the same identifier 
+  It is even possible for a single line to contain the same identifier 
 meaning different things depending on its position:
 
         ?restore = 1
