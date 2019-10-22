@@ -235,12 +235,10 @@ macro prologuedef procname,flag,parmbytes,localbytes,reglist
 	loc = (localbytes+15) and (not 15)
 	parmbase@proc equ rbp+16
 	localbase@proc equ rbp-loc
-	if parmbytes | localbytes
-		push rbp
-		mov rbp,rsp
-		if loc+fill
-			sub rsp,loc+fill
-		end if
+	push rbp
+	mov rbp,rsp
+	if loc+fill
+		sub rsp,loc+fill
 	end if
 	match any, reglist
 		iterate reg, reglist
