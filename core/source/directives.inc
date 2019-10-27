@@ -3794,7 +3794,7 @@ local_directive:
 	jmp	local_directive
 outscope_directive:
 	test	[assembly_mode],AMODE_DEFINITION
-	jnz	ignored_directive
+	jnz	define_outscope
 	test	[assembly_mode],AMODE_SKIP
 	jnz	assemble_prefixed_instruction
 	mov	ebx,[parameter_namespace]
@@ -3814,6 +3814,15 @@ outscope_directive:
 	mov	eax,[embedded_context]
 	mov	[line_context],eax
 	jmp	assemble_instruction
+    define_outscope:
+	mov	ebx,[source_context]
+	mov	eax,[ebx+SourceContext.number_of_entries]
+	dec	eax
+	imul	eax,sizeof.SourceEntry
+	lea	ebx,[ebx+sizeof.SourceContext+eax]
+	cmp	[ebx+SourceEntry.type],SOURCE_MACRO
+	je	assemble_prefixed_instruction
+	jmp	ignored_directive
 
 define_data:
 	and	[label_leaf],0
