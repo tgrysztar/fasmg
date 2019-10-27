@@ -1,5 +1,5 @@
 
-; Control directive IRPV that iterates through all the tokens of given text,
+; Control directive IRPS that iterates through all the tokens of given text,
 ; similarly to its namesake in fasm 1.
 
 ; Example of use:
