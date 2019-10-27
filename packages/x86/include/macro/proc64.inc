@@ -261,9 +261,7 @@ macro epiloguedef procname,flag,parmbytes,localbytes,reglist
 			pop reg
 		end iterate
 	end match
-	if parmbytes | localbytes
-		leave
-	end if
+	leave
 	retn
 end macro
 
