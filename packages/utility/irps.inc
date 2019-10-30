@@ -7,7 +7,7 @@
 ;		display `s,13,10	; there should be five iterations
 ;	end irps
 
-macro irps_as_irpv parameter*, text&
+macro irps_as_irpv? parameter*, text&
 	local buffer,symbol  
 
 	define buffer text   
