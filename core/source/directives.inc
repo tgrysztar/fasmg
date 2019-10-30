@@ -3820,6 +3820,9 @@ outscope_directive:
 	dec	eax
 	imul	eax,sizeof.SourceEntry
 	lea	ebx,[ebx+sizeof.SourceContext+eax]
+	mov	eax,[parameter_namespace]
+	cmp	eax,[ebx+SourceEntry.local_namespace]
+	jne	ignored_directive
 	cmp	[ebx+SourceEntry.type],SOURCE_MACRO
 	je	assemble_prefixed_instruction
 	jmp	ignored_directive

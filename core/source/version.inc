@@ -1,1 +1,1 @@
-VERSION equ "ipza7"
+VERSION equ "iq25m"
