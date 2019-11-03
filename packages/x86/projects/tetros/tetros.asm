@@ -1,16 +1,17 @@
 
-; TetrOS
-; version 1.01 (05-09-2004)
-; coded by Tomasz Grysztar ("Privalov")
+; TetrOS version 1.02
+; by Tomasz Grysztar
+
+; Requires VGA and 80386 CPU or higher.
+; Version 1.01 was submitted in 2004 for a 512-byte OS contest.
 
 ; For your playing pleasure, it's a boot-sector Tetris game.
-; The quick help on keys:
+; Keys:
 ;   Left - move left
 ;   Right - move right
 ;   Up - rotate
 ;   Down - drop
 ;   Esc - new game at any time
-; Requires VGA and 386 or higher processor.
 
 include 'cpu/80386.inc'
 include 'macro/@@.inc'
@@ -29,40 +30,45 @@ virtual at bp
   current dw ?
   current_column db ?
   current_row dw ?
-  last_tick dw ?
-  delay dw ?
-  random dw ?
+  next dw ?
   score dw ?
+  last_tick dw ?
+  random dw ?
 end virtual
 
 label well at 9000h
 label pics at well-2*64
 
-	cli
 	xor	ax,ax
+	mov	sp,8000h
 	mov	ss,ax
 	mov	ds,ax
 	mov	es,ax
-	mov	sp,0FFFEh
-	sti
 	push	ax
 	push	start
 	retf
 
 start:
+	mov	bp,sp
+
 	mov	al,13h
 	int	10h
+
 	mov	di,3*4
 	mov	ax,int_3
 	stosw
 	xor	ax,ax
 	stosw
-
-	mov	bp,8000h
+	lea	di,[next]
+	stosw	; [next]
+	stosw	; [score]
+	mov	ax,[clock]
+	stosw	; [last_tick]
+	stosw	; [random]
 
 	mov	di,pics
 	mov	cx,64
-	inc	ax
+	mov	al,1	; remove this instruction to get randomized background
 	rep	stosb
 	mov	ah,15
 	mov	dx,7
@@ -72,30 +78,21 @@ start:
 	mov	al,ah
 	mov	cl,6
 	rep	stosb
-	mov	al,8
+	mov	ax,0708h
 	stosb
-	mov	ah,7
 	dec	dx
 	jnz	@b
 	mov	cl,8
 	rep	stosb
 
-	mov	ax,[clock]
-	mov	[last_tick],ax
-	mov	[random],ax
-	mov	byte [current_row+1],well shr 8
-
-	xor	ax,ax
-	mov	[score],ax
-	dec	ax
+	or	ax,-1
 	stosw
 	stosw
 	stosw
-	mov	cl,ROWS
-    new_piece:
+	mov	cl,ROWS+4
 	mov	ax,1100000000000011b
 	rep	stosw
-      @@:
+new_piece:
 	mov	bx,[random]
 	mov	ax,257
 	mul	bx
@@ -104,18 +101,20 @@ start:
 	div	cx
 	mov	[random],dx
 	and	bx,7
-	cmp	bx,7
-	je	@b
+	jz	new_piece
 	shl	bx,1
-	mov	ax,[pieces+bx]
-	mov	[current],ax
-	mov	word [current_column],6 + ((3+ROWS-4)*2) shl 8
-	xor	ch,ch
-	mov	ax,test_piece
-	int3
-	mov	al,draw_piece and 0FFh
-	int3
-	or	ch,ch
+	mov	ax,[pieces+bx-2]
+	xchg	ax,[next]
+	or	ax,ax
+	jz	new_piece
+	lea	di,[current]
+	stosw	; [current]
+	mov	al,6
+	stosb	; [current_column]
+	mov	ax,well + (3+ROWS-4)*2
+	stosw	; [current_row]
+	mov	si,no_move
+	call	first_move
 	jz	update_screen
 	xor	bp,bp
 
@@ -137,17 +136,14 @@ process_key:
 	cmp	al,4Dh-1
 	je	action
 	cmp	al,50h-1
-	je	drop_down
-	jmp	main_loop
+	jne	main_loop
+
+drop_down:
+	call	do_move_down
+	jz	drop_down
 
 action:
 	call	do_move
-	jmp	update_screen
-
-drop_down:
-	mov	si,down
-	call	do_move
-	jz	drop_down
 
 update_screen:
 	mov	bx,7
@@ -155,7 +151,7 @@ update_screen:
 	mov	ah,2
 	int	10h
 	mov	cl,12
-      @@:
+      print_score:
 	mov	ax,[score]
 	shr	ax,cl
 	and	al,0Fh
@@ -165,7 +161,7 @@ update_screen:
 	mov	ah,0Eh
 	int	10h
 	sub	cl,4
-	jnc	@b
+	jnc	print_score
 	push	es
 	push	0A000h
 	pop	es
@@ -174,29 +170,20 @@ update_screen:
       draw_well:
 	lodsw
 	push	si
+	mov	dl,12
 	xchg	bx,ax
 	shr	bx,2
-	mov	dl,12
-      draw_row:
-	shr	bx,1
-	salc
-	and	ax,64
-	mov	si,pics
-	add	si,ax
-	mov	al,8
-      copy_line:
-	mov	cx,8
-	rep	movsb
-	add	di,320-8
-	dec	ax
-	jnz	copy_line
-	sub	di,320*8-8
-	dec	dx
-	jnz	draw_row
-	sub	di,320*8+12*8
+	call	draw_row
 	pop	si
 	cmp	si,well+(3+ROWS)*2
 	jb	draw_well
+	mov	di,320*100+250
+	mov	bx,[next]
+      draw_preview:
+	mov	dl,4
+	call	draw_row
+	cmp	di,320*68
+	ja	draw_preview
 	pop	es
 
 main_loop:
@@ -208,36 +195,56 @@ main_loop:
 	cmp	al,DELAY
 	jb	main_loop
 	add	[last_tick],ax
-	mov	si,down
-	call	do_move
+	call	do_move_down
 	jz	update_screen
-    lay_piece:
 	mov	dx,1
 	mov	si,well+3*2
 	mov	di,si
-	mov	cx,ROWS
       check_row:
 	lodsw
-	cmp	ax,1111111111111111b
-	je	remove_row
+	inc	ax
+	jz	remove_row
+	dec	ax
 	stosw
-	dec	cx
 	jmp	check_next_row
       remove_row:
 	shl	dx,1
       check_next_row:
-	cmp	si,well+(3+ROWS)*2
+	cmp	di,well+(3+ROWS)*2
 	jb	check_row
 	add	[score],dx
 	jmp	new_piece
 
+draw_row:
+	push	di
+      blit_row:
+	shr	bx,1
+	mov	si,pics
+	jnc	blit_block
+	add	si,64
+      blit_block:
+	mov	cx,8
+	rep	movsb
+	add	di,320-8
+	test	si,111111b
+	jnz	blit_block
+	sub	di,320*8-8
+	dec	dx
+	jnz	blit_row
+	pop	di
+	sub	di,320*8
+	ret
+
+do_move_down:
+	mov	si,down
 do_move:
 	mov	ax,clear_piece
 	int3
+first_move:
 	push	dword [current]
 	call	si
 	xor	ch,ch
-	mov	al,test_piece and 0FFh
+	mov	ax,test_piece
 	int3
 	mov	al,draw_piece and 0FFh
 	pop	edx
@@ -248,6 +255,7 @@ do_move:
 	int3
       no_move:
 	ret
+
 down:
 	sub	byte [current_row],2
 	ret
@@ -296,11 +304,10 @@ clear_piece:
 test_piece:
 	test	[di],dx
 	jz	@f
-	or	ch,1
-      @@:
-	ret
+	inc	ch
 draw_piece:
 	or	[di],dx
+      @@:
 	ret
 
 pieces dw 0010001000100010b
