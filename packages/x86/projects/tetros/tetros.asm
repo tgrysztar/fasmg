@@ -1,4 +1,4 @@
-; TetrOS version 1.03
+; TetrOS version 1.04
 ; by Tomasz Grysztar
 
 ; Requires VGA and 80386 CPU or higher.
@@ -20,7 +20,6 @@ org 7C00h
 
 ROWS = 23
 COLUMNS = 12
-DELAY = 4
 
 virtual at 46Ch
   clock dw ?
@@ -68,7 +67,7 @@ start:
 
 	mov	di,pics
 	mov	cx,64
-	mov	al,1	; remove this instruction to get randomized background
+       ; mov	 al,1
 	rep	stosb
 	mov	ah,15
 	mov	dx,7
@@ -187,14 +186,16 @@ update_screen:
 	pop	es
 
 main_loop:
-	mov	ah,1
+	mov	ax,01FFh
 	int	16h
 	jnz	process_key
-	mov	ax,[clock]
-	sub	ax,[last_tick]
-	cmp	al,DELAY
-	jb	main_loop
-	add	[last_tick],ax
+	xor	al,byte [score+1]
+	and	al,11b
+	mov	cx,[clock]
+	sub	cx,[last_tick]
+	cmp	cl,al
+	jbe	main_loop
+	add	[last_tick],cx
 	call	do_move_down
 	jz	update_screen
 	movzx	dx,byte [current_row]
