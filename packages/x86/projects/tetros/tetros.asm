@@ -1,4 +1,4 @@
-; TetrOS version 1.02
+; TetrOS version 1.03
 ; by Tomasz Grysztar
 
 ; Requires VGA and 80386 CPU or higher.
@@ -197,7 +197,8 @@ main_loop:
 	add	[last_tick],ax
 	call	do_move_down
 	jz	update_screen
-	mov	dx,1
+	movzx	dx,byte [current_row]
+	shr	dx,2
 	mov	si,well+3*2
 	mov	di,si
       check_row:
@@ -238,7 +239,7 @@ draw_row:
 do_move_down:
 	mov	si,down
 do_move:
-	mov	ax,clear_piece
+	mov	ax,toggle_piece
 	int3
 first_move:
 	push	dword [current]
@@ -246,7 +247,7 @@ first_move:
 	xor	ch,ch
 	mov	ax,test_piece
 	int3
-	mov	al,draw_piece and 0FFh
+	mov	al,toggle_piece and 0FFh
 	pop	edx
 	or	ch,ch
 	jz	@f
@@ -296,18 +297,14 @@ int_3:
 	jnz	on_piece_row
 	iret
 
-clear_piece:
-	not	dx
-	and	[di],dx
-	ret
 test_piece:
 	test	[di],dx
 	jz	@f
 	inc	ch
      @@:
 	ret
-draw_piece:
-	or	[di],dx
+toggle_piece:
+	xor	[di],dx
 	ret
 
 pieces dw 0010001000100010b
