@@ -1,4 +1,3 @@
-
 ; TetrOS version 1.02
 ; by Tomasz Grysztar
 
@@ -116,26 +115,26 @@ new_piece:
 	mov	si,no_move
 	call	first_move
 	jz	update_screen
-	xor	bp,bp
+	inc	bp
 
 process_key:
 	xor	ah,ah
 	int	16h
 	mov	al,ah
-	dec	al
+	dec	ah
 	jz	start
-	or	bp,bp
-	jz	process_key
+	test	bp,bp
+	jnp	process_key
 	mov	si,rotate
-	cmp	al,48h-1
+	cmp	al,48h
 	je	action
 	mov	si,left
-	cmp	al,4Bh-1
+	cmp	al,4Bh
 	je	action
 	mov	si,right
-	cmp	al,4Dh-1
+	cmp	al,4Dh
 	je	action
-	cmp	al,50h-1
+	cmp	al,50h
 	jne	main_loop
 
 drop_down:
@@ -255,7 +254,6 @@ first_move:
 	int3
       no_move:
 	ret
-
 down:
 	sub	byte [current_row],2
 	ret
@@ -305,9 +303,10 @@ test_piece:
 	test	[di],dx
 	jz	@f
 	inc	ch
+     @@:
+	ret
 draw_piece:
 	or	[di],dx
-      @@:
 	ret
 
 pieces dw 0010001000100010b
