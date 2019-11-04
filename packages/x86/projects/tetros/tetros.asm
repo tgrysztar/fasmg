@@ -116,7 +116,7 @@ new_piece:
 	mov	si,no_move
 	call	first_move
 	jz	update_screen
-	inc	bp
+	inc	bp	; game over
 
 process_key:
 	xor	ah,ah
