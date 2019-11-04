@@ -239,17 +239,16 @@ draw_row:
 do_move_down:
 	mov	si,down
 do_move:
-	mov	ax,toggle_piece
+	mov	al,1
 	int3
 first_move:
 	push	dword [current]
 	call	si
-	xor	ch,ch
-	mov	ax,test_piece
+	xor	ax,ax
 	int3
-	mov	al,toggle_piece and 0FFh
+	inc	ax
 	pop	edx
-	or	ch,ch
+	test	ah,ah
 	jz	@f
 	mov	dword [current],edx
       @@:
@@ -290,22 +289,19 @@ int_3:
 	add	cl,4
 	shl	edx,cl
 	shr	edx,4
-	call	ax
+	test	al,al
+	jz	@f
+	xor	[di],dx
+      @@:
+	test	[di],dx
+	jz	@f
+	inc	ah
+      @@:
 	add	bh,4
 	scasw
 	dec	bl
 	jnz	on_piece_row
 	iret
-
-test_piece:
-	test	[di],dx
-	jz	@f
-	inc	ch
-     @@:
-	ret
-toggle_piece:
-	xor	[di],dx
-	ret
 
 pieces dw 0010001000100010b
        dw 0010011000100000b
