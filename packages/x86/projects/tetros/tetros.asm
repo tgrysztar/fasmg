@@ -19,6 +19,7 @@ format binary as 'img'
 org 7C00h
 
 ROWS = 23
+COLUMNS = 12
 DELAY = 4
 
 virtual at 46Ch
@@ -89,7 +90,7 @@ start:
 	stosw
 	stosw
 	mov	cl,ROWS+4
-	mov	ax,1100000000000011b
+	mov	ax,11b + (-1) shl (COLUMNS+2)
 	rep	stosw
 new_piece:
 	mov	bx,[random]
@@ -108,7 +109,7 @@ new_piece:
 	jz	new_piece
 	lea	di,[current]
 	stosw	; [current]
-	mov	al,6
+	mov	al,COLUMNS/2
 	stosb	; [current_column]
 	mov	ax,well + (3+ROWS-4)*2
 	stosw	; [current_row]
@@ -165,11 +166,11 @@ update_screen:
 	push	0A000h
 	pop	es
 	mov	si,well+3*2
-	mov	di,320*184+112
+	mov	di,320*184+160-(COLUMNS*8)/2
       draw_well:
 	lodsw
 	push	si
-	mov	dl,12
+	mov	dl,COLUMNS
 	xchg	bx,ax
 	shr	bx,2
 	call	draw_row
