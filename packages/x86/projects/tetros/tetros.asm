@@ -89,7 +89,7 @@ start:
 	stosw
 	stosw
 	mov	cl,ROWS+4
-	mov	ax,11b + (-1) shl (COLUMNS+2)
+	mov	ax,not ( (1 shl COLUMNS - 1) shl ((16-COLUMNS)/2) )
 	rep	stosw
 new_piece:
 	mov	bx,[random]
@@ -108,7 +108,7 @@ new_piece:
 	jz	new_piece
 	lea	di,[current]
 	stosw	; [current]
-	mov	al,COLUMNS/2
+	mov	al,6
 	stosb	; [current_column]
 	mov	ax,well + (3+ROWS-4)*2
 	stosw	; [current_row]
@@ -171,7 +171,7 @@ update_screen:
 	push	si
 	mov	dl,COLUMNS
 	xchg	bx,ax
-	shr	bx,2
+	shr	bx,(16-COLUMNS)/2
 	call	draw_row
 	pop	si
 	cmp	si,well+(3+ROWS)*2
