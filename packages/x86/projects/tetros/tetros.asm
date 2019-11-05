@@ -20,6 +20,7 @@ org 7C00h
 
 ROWS = 23
 COLUMNS = 12
+BACKGROUND = 0 ; background color, 0 for randomized
 
 virtual at 46Ch
   clock dw ?
@@ -67,9 +68,12 @@ start:
 
 	mov	di,pics
 	mov	cx,64
-       ; mov	 al,1
-	rep	stosb
+if BACKGROUND
+	mov	ax,0F00h + BACKGROUND
+else
 	mov	ah,15
+end if
+	rep	stosb
 	mov	dx,7
       @@:
 	mov	al,15
