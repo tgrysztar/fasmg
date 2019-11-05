@@ -110,7 +110,7 @@ new_piece:
 	stosw	; [current]
 	mov	al,6
 	stosb	; [current_column]
-	mov	ax,well + (3+ROWS-4)*2
+	mov	ax,well+(3+ROWS-4)*2
 	stosw	; [current_row]
 	mov	si,no_move
 	call	first_move
