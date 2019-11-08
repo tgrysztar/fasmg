@@ -1,3 +1,69 @@
+; Challenger
+; Esoteric language inspired by Befunge and x86.
+; Designed and implemented by Tomasz Grysztar in 2009.
+; This code is public domain.
+;
+; The main similarity to Befunge is the instruction flow on a two-dimensional
+; plane of characters, while a slight semblance of x86 is that this language
+; is register-based.
+;
+; There are no input and output instructions - the character plane is similar
+; to memory in x86 system, any portion can be used to present an output,
+; analogously to something like a video memory. The intepreter displays
+; the contents of the plane in real time.
+;
+; Each memory cell is a 32-bit signed value, presented as Unicode character.
+; The program is loaded from UTF-8 text file and put somewhere on the plane.
+;
+; There are three pointers operated by the Challenger machine:
+; instruction pointer (IP), data pointer (DP) and stack pointer (SP).
+; The pointer not only determines the character cell on the plane, but also
+; the direction of movement. They all begin in the left upper corner of
+; the program, with direction to the right.
+;
+; Apart from the pointers, the machine has just one register, accumulator (A),
+; which is used to perform the arithmetic operations and condition testing.
+;
+; The basic instruction set:
+;  >	Set IP direction to "right"
+;  <	Set IP direction to "left"
+;  ^	Set IP direction to "up"
+;  v	Set IP direction to "down"
+;  |	Set IP direction to "down" if A=0, "up" otherwise
+;  _	Set IP direction to "right" if A=0, "left" otherwise
+;  #	Make IP skip the next cell ("trampoline")
+;  .	Move DP one cell forward
+;  :	Move DP forward by the number of cells specified in A
+;  )	Rotate DP direction clockwise
+;  (	Rotate DP direction counterclockwise
+;  =	Set DP to be the same as IP
+;  \	Exchange A with the cell at DP
+;  +	Add the value of the cell at DP to A
+;  -	Subtract the value of the cell at DP from A
+;  *	Multiply A by the value of the cell at DP
+;  /	Divide A by the value of the cell at DP
+;  %	Calculate A modulo the value of the cell at DP
+;  `	Replace the value in A with its sign flag (so if A<0, set A=1; set A=0 otherwise)
+;  "	Load immediate value (the character that follows this instruction) to A
+;  0-9	Load corresponding value in range 0-9 into A
+;  A-F	Load corresponding value in range 10-15 into A (hexadecimal digits)
+;  x	Generate an exception to stop program flow ("trap")
+;
+; The additional instructions of the Framed Challenger variant:
+;  !	Move SP backwards one cell, and write A at this new position ("push" instruction)
+;  ?	Read A from cell at SP and move SP forward one cell ("pop" instruction)
+;  ,	Move SP one cell forward
+;  ;	Move SP forward by the number of cells specified in A
+;  ]	Rotate SP direction clockwise
+;  [	Rotate SP direction counterclockwise
+;  @	Set SP to be the same as IP
+;  &	Exchange SP with DP
+;
+; Both the 0 and 32 (space) are NOP instructions.
+; The uninitialized parts of plane are filled with 0 values.
+; The initial value of accumulator is 0.
+; The interpreter displays the pointers with a tiny arrows: IP is green, DP is red, SP is yellow.
+; The instruction pointer wraps when it reaches the end of the initialized part of the plane.
 
 format PE GUI 4.0
 entry start
@@ -1420,7 +1486,7 @@ proc ControllerDialogProc uses ebx esi edi, hwnd,msg,wparam,lparam
 	call	free_memory
 	call	initialize_machine
 	jmp	machine_reinitialized
-    load.:
+    ?load:
 	mov	[ofn.lStructSize],sizeof.OPENFILENAME
 	mov	eax,[hwnd]
 	mov	[ofn.hwndOwner],eax
@@ -1438,7 +1504,7 @@ proc ControllerDialogProc uses ebx esi edi, hwnd,msg,wparam,lparam
 	mov	[ofn.Flags],OFN_EXPLORER+OFN_FILEMUSTEXIST
 	mov	[ofn.lpstrTitle],NULL
 	invoke	GetOpenFileName,addr ofn
-	test	 eax,eax
+	test	eax,eax
 	jz	processed
 	call	free_memory
 	call	initialize_machine
