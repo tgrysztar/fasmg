@@ -175,8 +175,10 @@ start:
 
   startup_failed:
 	invoke	MessageBox,NULL,_startup_failed,_plane_title,MB_ICONERROR+MB_OK
+	invoke	ExitProcess,-1
   out_of_memory:
 	invoke	MessageBox,NULL,_out_of_memory,_plane_title,MB_ICONERROR+MB_OK
+	invoke	ExitProcess,-2
   end_loop:
 	invoke	ExitProcess,[msg.wParam]
 
