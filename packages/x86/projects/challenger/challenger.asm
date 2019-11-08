@@ -68,7 +68,7 @@
 format PE GUI 4.0
 entry start
 
-include 'win32wx.inc'
+include 'win32wx.inc'	; switch to 'win32ax.inc' for Windows 9x
 
 VERSION_STRING equ '1.01'
 
@@ -1527,6 +1527,13 @@ proc ControllerDialogProc uses ebx esi edi, hwnd,msg,wparam,lparam
 	add	esi,edi
 	lea	eax,[ecx*2]
 	invoke	MultiByteToWideChar,CP_UTF8,0,edi,ecx,esi,eax
+	test	eax,eax
+	jnz	file_converted
+	mov	ecx,esi
+	sub	ecx,edi
+	lea	eax,[ecx*2]
+	invoke	MultiByteToWideChar,CP_ACP,0,edi,ecx,esi,eax
+      file_converted:
 	push	MEM_RELEASE
 	push	0
 	push	edi	; for VirtualFree
