@@ -68,7 +68,7 @@
 format PE GUI 4.0
 entry start
 
-include 'win32w.inc'
+include 'win32wx.inc'
 
 VERSION_STRING equ '1.01'
 
@@ -1390,7 +1390,7 @@ proc ControllerDialogProc uses ebx esi edi, hwnd,msg,wparam,lparam
 	cmp	eax,WM_CLOSE
 	je	wmclose
 	xor	eax,eax
-	jmp	finish
+	jmp	return
   wminitdialog:
 	invoke	SetDlgItemText,[hwnd],ID_STATUS,_waiting
 	invoke	SetDlgItemInt,[hwnd],ID_ACCUMULATOR,[accumulator],TRUE
@@ -1406,7 +1406,7 @@ proc ControllerDialogProc uses ebx esi edi, hwnd,msg,wparam,lparam
 	cmp	eax,BN_CLICKED shl 16 + ID_RESET
 	je	reset
 	cmp	eax,BN_CLICKED shl 16 + ID_LOAD
-	je	load
+	je	?load
 	cmp	eax,BN_CLICKED shl 16 + ID_STEP
 	je	step
 	cmp	eax,BN_CLICKED shl 16 + ID_RUN
@@ -1589,7 +1589,7 @@ proc ControllerDialogProc uses ebx esi edi, hwnd,msg,wparam,lparam
 	invoke	DestroyWindow,[hwnd_plane]
   processed:
 	mov	eax,1
-  finish:
+  return:
 	ret
 endp
 
