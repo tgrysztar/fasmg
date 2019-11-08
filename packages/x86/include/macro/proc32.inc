@@ -3,6 +3,14 @@ define stdcall?
 
 macro stdcall?.push_string value&
 	local continue
+	if sizeof.TCHAR = 2
+		local alignment
+		virtual at $+5
+			align 2
+			alignment = $-$$
+		end virtual
+		db alignment dup 90h
+	end if
 	call continue
 	TCHAR value,0
 	continue:

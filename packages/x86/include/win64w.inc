@@ -15,6 +15,8 @@ macro TCHAR args:?&
 	du args
 end macro
 
+sizeof.TCHAR = 2
+
 include 'format/format.inc'
 
 include 'encoding/utf8.inc'

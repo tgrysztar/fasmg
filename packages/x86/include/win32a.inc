@@ -15,6 +15,8 @@ macro TCHAR args:?&
 	db args
 end macro
 
+sizeof.TCHAR = 1
+
 include 'format/format.inc'
 
 include 'encoding/utf8.inc'

@@ -48,6 +48,9 @@ end macro
 macro fastcall?.inline_string var
 	local data,continue
 	jmp continue
+	if sizeof.TCHAR = 2
+		align 2,90h
+	end if
 	match value, var
 		data TCHAR value,0
 	end match
