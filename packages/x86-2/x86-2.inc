@@ -445,18 +445,18 @@ macro x86.encode_direct_address ns
 			ns.base = 5
 			ns.index = 4
 			ns.scale = 1
-			if ns.mode = 64
-				ns.displacement_size = 8
-			else if ns.mode = 32 & ns.displacement relativeto 0
-				if ns.displacement >= 100000000h | ns.displacement < -100000000h
+			if ns.mode = 32
+				if ~ ns.displacement relativeto 0 | ns.displacement >= 100000000h | ns.displacement < -100000000h
 					err 'address out of range'
 				end if
 				ns.displacement = ns.displacement and 0FFFFFFFFh
-			end if
-			if ~ ns.displacement relativeto 0 | ns.displacement < 80000000h | ns.displacement >= 100000000h
+			else if ~ ns.displacement relativeto 0 | ns.displacement < 0 | ns.displacement >= 100000000h
 				ns.mode = 64
 			else
 				ns.mode = 32
+			end if
+			if ns.mode = 64
+				ns.displacement_size = 8
 			end if
 		else
 			err 'invalid size of address value'
@@ -879,7 +879,8 @@ macro mov? args&
 		else
 			x86.size = x86.@1.size or x86.@2.size
 		end if
-		if x86.@2.type = 'reg' & x86.@1.type = 'mem' & x86.@2.rm = 0 & x86.@1.address_registers eq 0 & ~ x86.@1.auto_relative
+		if x86.@2.type = 'reg' & x86.@1.type = 'mem' & x86.@2.rm = 0 & x86.@1.address_registers eq 0 & \
+		   ~ x86.@1.auto_relative & ( x86.@1.displacement_size <> 8 | ~ x86.@1.displacement relativeto 0 | x86.@1.displacement and 0FFFFFFFF80000000h <> 0FFFFFFFF80000000h)
 			if x86.mode = 64
 				if x86.@1.segment_prefix & x86.@1.segment_prefix >= 64h
 					db x86.@1.segment_prefix
@@ -911,7 +912,8 @@ macro mov? args&
 			else
 				dq x86.@1.address
 			end if
-		else if x86.@2.type = 'mem' & x86.@1.type = 'reg' & x86.@1.rm = 0 & x86.@2.address_registers eq 0 & ~ x86.@2.auto_relative
+		else if x86.@2.type = 'mem' & x86.@1.type = 'reg' & x86.@1.rm = 0 & x86.@2.address_registers eq 0 & \
+		     ~ x86.@2.auto_relative & ( x86.@2.displacement_size <> 8 | ~ x86.@2.displacement relativeto 0 | x86.@2.displacement and 0FFFFFFFF80000000h <> 0FFFFFFFF80000000h)
 			if x86.mode = 64
 				if x86.@2.segment_prefix & x86.@2.segment_prefix >= 64h
 					db x86.@2.segment_prefix
