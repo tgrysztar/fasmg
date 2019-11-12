@@ -1,1 +1,1 @@
-VERSION equ "iq28r"
+VERSION equ "iqi5k"

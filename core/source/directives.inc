@@ -2004,7 +2004,10 @@ variable_iterator_block:
 	add	ebx,4
 	mov	[ebx],eax
 	mov	edx,assembly_workspace
-	jmp	reserve_workspace
+	sub	ebx,[edx+Workspace.memory_start]
+	call	reserve_workspace
+	add	ebx,[assembly_workspace.memory_start]
+	retn
       proxy_value_in_sequence:
 	mov	esi,eax
 	mov	ecx,(1+sizeof.RecognitionContext)*2+1
