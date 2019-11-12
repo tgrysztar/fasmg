@@ -264,18 +264,18 @@ macro x86.encode_direct_address ns
 	ns.mod = 0
 	if x86.mode = 64
 		ns.displacement_size = 4
-		if ns.mode = 0
+		if ns.mode = 0 & ns.segment_prefix < 64h
 			ns.mode = 64
 			ns.rm = 5
 			ns.auto_relative = 1
-		else if ns.mode > 16
+		else if ns.mode <> 16
 			ns.rm = 4
 			ns.base = 5
 			ns.index = 4
 			ns.scale = 1
 			if ns.mode = 64
 				ns.displacement_size = 8
-			else if ns.displacement relativeto 0
+			else if ns.mode = 32 & ns.displacement relativeto 0
 				if ns.displacement >= 100000000h | ns.displacement < -100000000h
 					err 'address out of range'
 				end if
@@ -289,7 +289,7 @@ macro x86.encode_direct_address ns
 		else
 			err 'invalid size of address value'
 		end if
-	else
+	 else
 		if ns.mode = 0
 			ns.mode = x86.mode
 			if ns.mode = 16 & ns.displacement relativeto 0 & ns.displacement >= 10000h
