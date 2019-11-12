@@ -450,10 +450,11 @@ macro x86.encode_direct_address ns
 					err 'address out of range'
 				end if
 				ns.displacement = ns.displacement and 0FFFFFFFFh
-			else if ~ ns.displacement relativeto 0 | ns.displacement < 0 | ns.displacement >= 100000000h
-				ns.mode = 64
-			else
+			end if
+			if ns.displacement relativeto 0 & ns.displacement > 7FFFFFFFh & ns.displacement < 100000000h
 				ns.mode = 32
+			else
+				ns.mode = 64
 			end if
 			if ns.mode = 64
 				ns.displacement_size = 8
@@ -881,6 +882,9 @@ macro mov? args&
 		end if
 		if x86.@2.type = 'reg' & x86.@1.type = 'mem' & x86.@2.rm = 0 & x86.@1.address_registers eq 0 & \
 		   ~ x86.@1.auto_relative & ( x86.@1.displacement_size <> 8 | ~ x86.@1.displacement relativeto 0 | x86.@1.displacement and 0FFFFFFFF80000000h <> 0FFFFFFFF80000000h)
+			if x86.@1.displacement_size = 8 & x86.@1.displacement relativeto 0 & x86.@1.displacement >= 0 & x86.@1.displacement < 100000000h
+				x86.@1.displacement_size = 4
+			end if
 			if x86.mode = 64
 				if x86.@1.segment_prefix & x86.@1.segment_prefix >= 64h
 					db x86.@1.segment_prefix
@@ -914,6 +918,9 @@ macro mov? args&
 			end if
 		else if x86.@2.type = 'mem' & x86.@1.type = 'reg' & x86.@1.rm = 0 & x86.@2.address_registers eq 0 & \
 		     ~ x86.@2.auto_relative & ( x86.@2.displacement_size <> 8 | ~ x86.@2.displacement relativeto 0 | x86.@2.displacement and 0FFFFFFFF80000000h <> 0FFFFFFFF80000000h)
+			if x86.@2.displacement_size = 8 & x86.@2.displacement relativeto 0 & x86.@2.displacement >= 0 & x86.@2.displacement < 100000000h
+				x86.@2.displacement_size = 4
+			end if
 			if x86.mode = 64
 				if x86.@2.segment_prefix & x86.@2.segment_prefix >= 64h
 					db x86.@2.segment_prefix
