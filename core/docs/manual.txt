@@ -291,9 +291,9 @@ in the context of the previous example the "base..." (or "base.#..") would
 refer to the unnamed parent of the namespace where the "other" symbol resides,
 and it would be the same symbol as identified by simple ".." inside the
 namespace of the "base" symbol.
-  Any identifier can be prepended with a "?" character and such modifier gives
-an added effect only when it is used in a context where identifier could mean
-something different than a label or variable to be defined. This modifier then
+  Any identifier can be prepended with a "?" character and such modifier has
+an effect when it is used in a context where identifier could mean something
+different than a label or variable to be defined. This modifier then 
 suppresses any other interpretation. For example, identifier starting with "?"
 is not going to be treated as an instruction, even if it is the first symbol
 on the line. This can be used to define a variable that shares a name with
@@ -301,6 +301,10 @@ an existing command:
 
         ?namespace = 0
 
+If such modified identifier is used in a place where it is evaluated and not
+defined, it still refers to the same symbol it would refer to in a definition.
+Therefore, unless identifier also ends with a dot, it always refers to a symbol
+in the current namespace.
   A number can be used in a role of a name inside an identifier, but not when
 it is placed at the beginning, because then it is considered a literal value.
 This restriction also may be bypassed by prepending an identifier with "?".
