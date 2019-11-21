@@ -22,7 +22,7 @@ struct MEMORY_REGION
 	size dd ?
 ends
 
-section '.text' code readable executable
+section '.text' code executable
 
   include 'system.inc'
 
@@ -211,7 +211,7 @@ section '.rdata' data readable
 
   version_string db VERSION,0
 
-section '.idata' import data readable writeable
+section '.idata' import data readable
 
   library kernel32,'KERNEL32.DLL'
 

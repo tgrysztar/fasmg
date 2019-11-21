@@ -303,7 +303,7 @@ an existing command:
 
 If such modified identifier is used in a place where it is evaluated and not
 defined, it still refers to the same symbol it would refer to in a definition.
-Therefore, unless identifier also ends with a dot, it always refers to a symbol
+Therefore, unless identifier also uses a dot, it always refers to a symbol
 in the current namespace.
   A number can be used in a role of a name inside an identifier, but not when
 it is placed at the beginning, because then it is considered a literal value.

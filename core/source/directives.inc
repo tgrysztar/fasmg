@@ -606,6 +606,7 @@ define_symbolic_variable:
     symbolic_variable:
 	mov	edi,[assembly_workspace.memory_start]
 	and	[previous_symbol_end],0
+	and	[context_boundary],0
     expand_symbols:
 	cmp	[raw_value],0
 	jne	copy_raw_symbols
@@ -662,6 +663,7 @@ define_symbolic_variable:
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd
+	mov	[context_boundary],edi
 	mov	esi,eax
     copy_symbolic_value:
 	pop	ecx
@@ -710,6 +712,7 @@ define_symbolic_variable:
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd
+	mov	[context_boundary],edi
       symbol_context_stored:
 	mov	esi,[symbol_start]
     copy_symbol_tokens:
@@ -732,6 +735,8 @@ define_symbolic_variable:
 	jmp	assembly_line
     store_token:
 	lodsb
+	cmp	al,40h
+	je	store_recognition_context_token
 	stosb
 	cmp	al,1Ah
 	je	store_token_with_data
@@ -741,8 +746,6 @@ define_symbolic_variable:
 	je	store_token_with_data
 	cmp	al,30h
 	je	store_internal_token
-	cmp	al,40h
-	je	store_recognition_context
 	retn
       store_token_with_data:
 	movsd
@@ -753,6 +756,13 @@ define_symbolic_variable:
 	mov	ecx,eax
 	rep	movsb
 	retn
+    store_recognition_context_token:
+	cmp	edi,[context_boundary]
+	je	reuse_recognition_context
+	stosb
+	jmp	store_recognition_context
+    reuse_recognition_context:
+	sub	edi,sizeof.RecognitionContext
     store_recognition_context:
 	test	esi,esi
 	jz	store_current_context
@@ -761,6 +771,7 @@ define_symbolic_variable:
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd
+	mov	[context_boundary],edi
 	retn
       context_reset_token:
 	add	esi,sizeof.RecognitionContext
@@ -773,11 +784,13 @@ define_symbolic_variable:
 	jecxz	context_with_no_structure_label
 	mov	[edi+RecognitionContext.current_label],ecx
 	add	edi,sizeof.RecognitionContext
+	mov	[context_boundary],edi
 	retn
       context_with_no_structure_label:
 	mov	eax,[eax+SymbolTree_Root.current_label]
 	mov	[edi+RecognitionContext.current_label],eax
 	add	edi,sizeof.RecognitionContext
+	mov	[context_boundary],edi
 	retn
 
 restore_variables:
@@ -3741,6 +3754,7 @@ use_struc:
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd
+	mov	[context_boundary],edi
 	mov	esi,eax
 	jmp	copy_parameter_contents
       parameter_with_current_context:

@@ -204,6 +204,7 @@ sequence_header_cursor dd ?
 sequence_header_length dd ?
 expression_sequence_cursor dd ?
 expression_sequence_end dd ?
+context_boundary dd ?
 
 pattern_start dd ?
 pattern_end dd ?

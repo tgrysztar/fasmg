@@ -12,12 +12,12 @@ end match
 _ equ }
 
 
-	format	PE large console 4.0
+	format	PE large NX console 4.0
 	entry	start
 
 include '../version.inc'
 
-section '.text' code readable executable
+section '.text' code executable
 
   start:
 
@@ -450,7 +450,7 @@ section '.text' code readable executable
   include '../output.inc'
   include '../console.inc'
 
-section '.data' data readable writeable
+section '.rdata' data readable
 
   _logo db 'flat assembler  version g.',VERSION,13,10,0
 
@@ -503,7 +503,7 @@ section '.bss' readable writeable
   verbosity_level dd ?
   no_logo db ?
 
-section '.idata' import data readable writeable
+section '.idata' import data readable
 
   library kernel32,'KERNEL32.DLL'
 
