@@ -606,7 +606,6 @@ define_symbolic_variable:
     symbolic_variable:
 	mov	edi,[assembly_workspace.memory_start]
 	and	[previous_symbol_end],0
-	and	[context_boundary],0
     expand_symbols:
 	cmp	[raw_value],0
 	jne	copy_raw_symbols
@@ -663,7 +662,6 @@ define_symbolic_variable:
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd
-	mov	[context_boundary],edi
 	mov	esi,eax
     copy_symbolic_value:
 	pop	ecx
@@ -693,6 +691,7 @@ define_symbolic_variable:
 	sub	ecx,esi
 	mov	edx,assembly_workspace
 	call	reserve_workspace
+	and	[context_boundary],0
 	jmp	copy_symbol_tokens
     copy_symbol_with_recognition_context:
 	mov	ecx,ebx
