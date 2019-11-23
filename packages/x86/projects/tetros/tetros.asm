@@ -1,4 +1,4 @@
-; TetrOS version 1.04a
+; TetrOS version 1.05
 ; by Tomasz Grysztar
 
 ; Requires VGA and 80386 CPU or higher.
@@ -91,6 +91,7 @@ end if
 	mov	cl,ROWS+4
 	mov	ax,not ( (1 shl COLUMNS - 1) shl ((16-COLUMNS)/2) )
 	rep	stosw
+
 new_piece:
 	mov	bx,[random]
 	mov	ax,257
@@ -120,21 +121,21 @@ new_piece:
 process_key:
 	xor	ah,ah
 	int	16h
-	mov	al,ah
 	dec	ah
 	jz	start
 	test	bp,bp
 	jnp	process_key
+	mov	al,ah
 	mov	si,rotate
-	cmp	al,48h
+	cmp	al,48h-1
 	je	action
 	mov	si,left
-	cmp	al,4Bh
+	cmp	al,4Bh-1
 	je	action
 	mov	si,right
-	cmp	al,4Dh
+	cmp	al,4Dh-1
 	je	action
-	cmp	al,50h
+	cmp	al,50h-1
 	jne	main_loop
 
 drop_down:
@@ -145,22 +146,24 @@ action:
 	call	do_move
 
 update_screen:
-	mov	bx,7
+	mov	bx,15
 	mov	dx,12h
 	mov	ah,2
 	int	10h
-	mov	cl,12
+	mov	cl,84h
       print_score:
 	mov	ax,[score]
-	shr	ax,cl
+	rol	ax,cl
 	and	al,0Fh
 	cmp	al,10
 	sbb	al,69h
 	das
 	mov	ah,0Eh
 	int	10h
-	sub	cl,4
-	jnc	print_score
+	add	cl,84h
+	jns	print_score
+	xor	bl,15 xor 7
+	jnp	print_score
 	push	es
 	push	0A000h
 	pop	es
