@@ -1,4 +1,4 @@
-; TetrOS version 1.04
+; TetrOS version 1.04a
 ; by Tomasz Grysztar
 
 ; Requires VGA and 80386 CPU or higher.
@@ -51,17 +51,13 @@ label pics at well-2*64
 start:
 	mov	bp,sp
 
-	mov	al,13h
-	int	10h
-
-	mov	di,3*4
-	mov	ax,int_3
-	stosw
-	xor	ax,ax
-	stosw
 	lea	di,[next]
 	stosw	; [next]
 	stosw	; [score]
+
+	mov	al,13h
+	int	10h
+
 	mov	ax,[clock]
 	stosw	; [last_tick]
 	stosw	; [random]
@@ -245,21 +241,19 @@ do_move_down:
 	mov	si,down
 do_move:
 	mov	al,1
-	int3
+	call	on_piece
 first_move:
 	push	dword [current]
 	call	si
 	xor	ax,ax
-	int3
+	call	on_piece
 	inc	ax
 	pop	edx
 	test	ah,ah
 	jz	@f
 	mov	dword [current],edx
       @@:
-	int3
-      no_move:
-	ret
+	jmp	on_piece
 down:
 	sub	byte [current_row],2
 	ret
@@ -268,6 +262,7 @@ left:
 	ret
 right:
 	inc	[current_column]
+no_move:
 	ret
 rotate:
 	mov	cx,3
@@ -282,7 +277,8 @@ rotate:
 	mov	[current],dx
 	ret
 
-int_3:
+on_piece:
+	pushf
 	mov	di,[current_row]
 	mov	bx,4
       on_piece_row:
@@ -306,7 +302,8 @@ int_3:
 	scasw
 	dec	bl
 	jnz	on_piece_row
-	iret
+	popf
+	ret
 
 pieces dw 0010001000100010b
        dw 0010011000100000b
