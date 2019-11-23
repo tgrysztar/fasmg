@@ -314,7 +314,7 @@ convert_number_back:
 	mov	edi,[value_workspace.memory_start]
 	add	edi,[value_position]
 	mov	ecx,[edx]
-	inc	ecx
+	add	ecx,2
 	shl	ecx,2
 	mov	esi,edx
 	mov	edx,value_workspace
