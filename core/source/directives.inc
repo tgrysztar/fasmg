@@ -1878,7 +1878,7 @@ variable_iterator_block:
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	ignored_directive
 	test	[assembly_mode],AMODE_SKIP
-	jnz	inactive_variable_iterator_block
+	jnz	skipped_variable_iterator_block
 	call	move_to_next_symbol
 	jc	invalid_iterator
 	call	identify_parameter_symbol
@@ -2080,8 +2080,9 @@ variable_iterator_block:
     invalid_variable_iterator:
 	mov	edx,_invalid_argument
 	call	register_error
-    inactive_variable_iterator_block:
+    skipped_variable_iterator_block:
 	xor	esi,esi
+    inactive_variable_iterator_block:
 	mov	dh,CTRL_IRPV
 	jmp	inactive_breakable_block
 

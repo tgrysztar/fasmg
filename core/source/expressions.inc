@@ -320,7 +320,7 @@ convert_number_back:
 	mov	edx,value_workspace
 	call	reserve_workspace
 	lodsd
-	lea	ebx,[edi+4+eax*4]
+	lea	ebx,[edi+4+(eax+1)*4]
 	mov	edx,edi
 	mov	ecx,eax
 	shr	ecx,2
