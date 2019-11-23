@@ -51,13 +51,13 @@ label pics at well-2*64
 start:
 	mov	bp,sp
 
-	lea	di,[next]
-	stosw	; [next]
-	stosw	; [score]
-
 	mov	al,13h
 	int	10h
 
+	xor	ax,ax
+	lea	di,[next]
+	stosw	; [next]
+	stosw	; [score]
 	mov	ax,[clock]
 	stosw	; [last_tick]
 	stosw	; [random]
