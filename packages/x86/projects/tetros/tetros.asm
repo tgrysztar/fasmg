@@ -49,10 +49,11 @@ label pics at well-2*64
 	retf
 
 start:
-	mov	bp,sp
-
 	mov	al,13h
 	int	10h
+
+restart:
+	mov	bp,sp
 
 	xor	ax,ax
 	lea	di,[next]
@@ -121,21 +122,21 @@ new_piece:
 process_key:
 	xor	ah,ah
 	int	16h
+	mov	al,ah
 	dec	ah
-	jz	start
+	jz	restart
 	test	bp,bp
 	jnp	process_key
-	mov	al,ah
 	mov	si,rotate
-	cmp	al,48h-1
+	cmp	al,48h
 	je	action
 	mov	si,left
-	cmp	al,4Bh-1
+	cmp	al,4Bh
 	je	action
 	mov	si,right
-	cmp	al,4Dh-1
+	cmp	al,4Dh
 	je	action
-	cmp	al,50h-1
+	cmp	al,50h
 	jne	main_loop
 
 drop_down:
