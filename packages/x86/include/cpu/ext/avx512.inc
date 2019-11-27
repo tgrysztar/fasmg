@@ -6,5 +6,5 @@ include 'avx512vl.inc'
 include 'avx512bw.inc'
 include 'avx512dq.inc'
 
-include 'ifma.inc'
-include 'vbmi.inc'
+include 'avx512_ifma.inc'
+include 'avx512_vbmi.inc'
