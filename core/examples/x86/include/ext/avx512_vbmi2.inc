@@ -34,7 +34,7 @@ iterate <instr,unit,vex_mpw,opcode>, vpshldvd,4,VEX_66_0F38_W0,71h, vpshldvq,8,V
 				     vpshrdvd,4,VEX_66_0F38_W0,73h, vpshrdvq,8,VEX_66_0F38_W1,73h
 
 	macro instr? dest*,src*,src2*
-		AVX_512.basic_instruction_bcst vex_mpw,EVEX_AS_VEX+EVEX_VL,opcode,unit,dest,src,src2
+		AVX_512.basic_instruction_bcst vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,unit,dest,src,src2
 	end macro
 
 end iterate
