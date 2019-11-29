@@ -12,6 +12,12 @@ section '.text' code readable executable
 
   start:
 
+	and	[DDraw],0
+	and	[DDSPrimary],0
+	and	[DDSBack],0
+	and	[DDPalette],0
+	and	[DDSPicture],0
+
 	invoke	GetModuleHandleA,NULL
 	mov	[hinstance],eax
 
@@ -173,6 +179,28 @@ open_error:
 startup_error:
 	invoke	MessageBoxA,[hwnd],_startup_error,_error,MB_OK+MB_ICONERROR
 end_loop:
+
+	cmp	[DDSPicture],0
+	je	picture_released
+	cominvk DDSPicture,Release
+    picture_released:
+	cmp	[DDPalette],0
+	je	palette_released
+	cominvk DDPalette,Release
+    palette_released:
+	cmp	[DDSBack],0
+	je	back_surface_released
+	cominvk DDSPrimary,DeleteAttachedSurface,0,DDSBack
+    back_surface_released:
+	cmp	[DDSPrimary],0
+	je	primary_surface_released
+	cominvk DDSPrimary,Release
+    primary_surface_released:
+	cmp	[DDraw],0
+	je	ddraw_released
+	cominvk DDraw,Release
+    ddraw_released:
+
 	invoke	ExitProcess,[msg.wParam]
 
 include 'gif87a.inc'
@@ -202,7 +230,6 @@ proc WindowProc uses ebx esi edi, hwnd,wmsg,wparam,lparam
 	jne	finish
     wmdestroy:
 	cominvk DDraw,RestoreDisplayMode
-	cominvk DDraw,Release
 	invoke	PostQuitMessage,0
 	xor	eax,eax
 	jmp	finish
