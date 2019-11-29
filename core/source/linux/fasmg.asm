@@ -43,13 +43,15 @@ segment readable executable
 	call	system_init
 
 	call	get_arguments
-	jc	display_usage_information
+	mov	bl,al
 	cmp	[no_logo],0
-	jne	arguments_ok
+	jne	logo_ok
 	mov	esi,_logo
 	xor	ecx,ecx
 	call	display_string
-      arguments_ok:
+      logo_ok:
+	test	bl,bl
+	jnz	display_usage_information
 
 	xor	al,al
 	mov	ecx,[verbosity_level]
@@ -289,7 +291,7 @@ segment readable executable
 	cmp	byte [esi],0
 	je	next_argument
     error_in_arguments:
-	stc
+	or	al,-1
 	ret
     set_verbose_mode:
 	cmp	byte [esi],0
@@ -348,7 +350,7 @@ segment readable executable
 	jnz	get_argument
 	cmp	[source_path],0
 	je	error_in_arguments
-	clc
+	xor	al,al
 	ret
     get_option_value:
 	xor	eax,eax

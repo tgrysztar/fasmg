@@ -24,13 +24,15 @@ section '.text' code executable
 	call	system_init
 
 	call	get_arguments
-	jc	display_usage_information
+	mov	bl,al
 	cmp	[no_logo],0
-	jne	arguments_ok
+	jne	logo_ok
 	mov	esi,_logo
 	xor	ecx,ecx
 	call	display_string
-      arguments_ok:
+      logo_ok:
+	test	bl,bl
+	jnz	display_usage_information
 
 	xor	al,al
 	mov	ecx,[verbosity_level]
@@ -183,10 +185,6 @@ section '.text' code executable
 
   display_usage_information:
 
-	mov	esi,_logo
-	xor	ecx,ecx
-	call	display_string
-
 	mov	esi,_usage
 	xor	ecx,ecx
 	call	display_string
@@ -250,7 +248,7 @@ section '.text' code executable
 	cmp	[output_path],0
 	je	get_output_path
     error_in_arguments:
-	stc
+	or	al,-1
 	retn
     get_source_path:
 	mov	[source_path],edi
@@ -263,7 +261,6 @@ section '.text' code executable
 	je	error_in_arguments
 	xor	al,al
 	stosb
-	clc
 	retn
     get_option:
 	inc	esi

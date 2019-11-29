@@ -399,14 +399,15 @@ if used mcheck
 	test	esi,esi
 	jz	mcheck_ok
       mcheck_walk:
+	cmp	esi,[malloc_lbrk]
+	je	mcheck_ok
+	ja	mcheck_break
 	mov	eax,[esi]
 	and	eax,not 1
 	test	eax,eax
 	jz	mcheck_break
 	add	esi,eax
-	cmp	esi,[malloc_lbrk]
-	je	mcheck_ok
-	jb	mcheck_walk
+	jmp	mcheck_walk
       mcheck_break:
 	jmp	internal_error
       mcheck_ok:
