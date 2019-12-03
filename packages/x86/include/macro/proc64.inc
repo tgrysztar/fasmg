@@ -1,4 +1,4 @@
-define fastcall?
+define fastcall? fastcall
 
 fastcall.r1 equ rcx
 fastcall.rd1 equ ecx

@@ -1,5 +1,5 @@
 
-define stdcall?
+define stdcall? stdcall
 
 macro stdcall?.push_string value&
 	local continue
