@@ -30,17 +30,25 @@ virtual at bp
   current dw ?
   current_column db ?
   current_row dw ?
+  filler db ?
   next dw ?
   score dw ?
   last_tick dw ?
   random dw ?
+  pics_wrt_bp:
 end virtual
 
-label well at 9000h
+label well at 8000h
 label pics at well-2*64
+label origin at pics-(pics_wrt_bp-bp)
+
+ORIGIN_PARITY = origin
+while ORIGIN_PARITY and not 1
+	ORIGIN_PARITY = (ORIGIN_PARITY shr 1) xor (ORIGIN_PARITY and 1)
+end while
 
 	xor	ax,ax
-	mov	sp,8000h
+	mov	sp,origin
 	mov	ss,ax
 	mov	ds,ax
 	mov	es,ax
@@ -63,7 +71,6 @@ restart:
 	stosw	; [last_tick]
 	stosw	; [random]
 
-	mov	di,pics
 	mov	cx,64
 if BACKGROUND
 	mov	ax,0F00h + BACKGROUND
@@ -126,7 +133,11 @@ process_key:
 	dec	ah
 	jz	restart
 	test	bp,bp
+if ORIGIN_PARITY
 	jnp	process_key
+else
+	jp	process_key
+end if
 	mov	si,rotate
 	cmp	al,48h
 	je	action
@@ -190,9 +201,10 @@ update_screen:
 	pop	es
 
 main_loop:
-	mov	ax,01FFh
+	mov	ah,1
 	int	16h
 	jnz	process_key
+	mov	al,-1
 	xor	al,byte [score+1]
 	and	al,11b
 	mov	cx,[clock]
