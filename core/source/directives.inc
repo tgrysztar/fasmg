@@ -287,6 +287,42 @@ identify_parameter_symbol:
       parameter_symbol_identified:
 	retn
 
+get_parameter_value:
+; in:
+;  esi = pointer into preprocessed line or current embedded value
+;  edi - LineExcerpt to be filled with information about cut piece of line
+;  [breakpoint_token] = initial byte of symbol that - if encountered - should immediately end the value
+; out:
+;  esi = pointer advanced past the cut piece
+;  al = initial byte of symbol at pointer, zero when no more symbols there
+; preserves: ebx, edi
+	call	move_to_next_symbol
+	jc	get_plain_value
+	cmp	byte [esi],'<'
+	je	get_enclosed_value
+      get_plain_value:
+	mov	dl,','
+	xor	dh,dh
+	call	cut_piece_of_line
+	retn
+      get_enclosed_value:
+	inc	esi
+	mov	dl,'>'
+	mov	dh,'<'
+	call	cut_piece_of_line
+	cmp	al,'>'
+	jne	missing_enclosing
+	inc	esi
+	call	move_to_next_symbol
+	jnc	parameter_value_ok
+	xor	al,al
+      parameter_value_ok:
+	retn
+      missing_enclosing:
+	mov	edx,_missing_closing_chevron
+	call	register_error
+	retn
+
 ; instruction handler
 ; in:
 ;  esi = pointer into preprocessed line
@@ -1842,33 +1878,6 @@ iterator_block:
 	xor	esi,esi
 	mov	dh,CTRL_IRP
 	jmp	inactive_breakable_block
-    get_parameter_value:
-	call	move_to_next_symbol
-	jc	get_plain_value
-	cmp	byte [esi],'<'
-	je	get_enclosed_value
-      get_plain_value:
-	mov	dl,','
-	xor	dh,dh
-	call	cut_piece_of_line
-	retn
-      get_enclosed_value:
-	inc	esi
-	mov	dl,'>'
-	mov	dh,'<'
-	call	cut_piece_of_line
-	cmp	al,'>'
-	jne	missing_enclosing
-	inc	esi
-	call	move_to_next_symbol
-	jnc	parameter_value_ok
-	xor	al,al
-      parameter_value_ok:
-	retn
-      missing_enclosing:
-	mov	edx,_missing_closing_chevron
-	call	register_error
-	retn
 
 end_iterator_block:
 	mov	dh,CTRL_IRP
@@ -2772,8 +2781,6 @@ match_block:
 	je	skip_token_with_data
 	cmp	al,27h
 	je	skip_token_with_data
-	cmp	al,02h
-	je	skip_internal_token
 	cmp	al,30h
 	je	skip_internal_token
 	cmp	al,40h
@@ -2833,8 +2840,6 @@ match_block:
 	je	copy_token_with_data
 	cmp	al,27h
 	je	copy_token_with_data
-	cmp	al,02h
-	je	copy_internal_token
 	cmp	al,30h
 	je	copy_internal_token
 	retn
