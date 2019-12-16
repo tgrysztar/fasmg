@@ -246,6 +246,7 @@ literal_fractional_part db ?
 
 last_token db ?
 breakpoint_token db ?
+pending_whitespace db ?
 current_constituent db ?
 kept_value_in_workspace db ?
 leave_opening_parentheses db ?

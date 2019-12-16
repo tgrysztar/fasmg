@@ -1857,6 +1857,9 @@ cut_piece_of_line:
 	cmp	al,[breakpoint_token]
 	jne	cut_token
 	retn
+    nested_piece:
+	inc	[number_of_enclosings]
+	jmp	cut_token
     close_nested_piece:
 	dec	[number_of_enclosings]
 	jz	end_of_piece
@@ -1869,8 +1872,6 @@ cut_piece_of_line:
 	je	cut_token_with_data
 	cmp	al,30h
 	je	cut_internal_token
-	cmp	al,40h
-	je	cut_context_token
 	inc	esi
     cut_next_token:
 	mov	[edi+LineExcerpt.data_end],esi
@@ -1882,9 +1883,6 @@ cut_piece_of_line:
 	mov	ecx,[embedded_context]
 	mov	[edi+LineExcerpt.leftover_context],ecx
 	retn
-    nested_piece:
-	inc	[number_of_enclosings]
-	jmp	cut_token
     cut_token_with_data:
 	add	esi,1+4
 	jmp	cut_next_token
@@ -1893,9 +1891,173 @@ cut_piece_of_line:
 	lodsd
 	add	esi,eax
 	jmp	cut_next_token
-    cut_context_token:
-	add	esi,1+sizeof.RecognitionContext
-	jmp	cut_next_token
+
+extract_piece_of_line:
+; in:
+;  esi = pointer into preprocessed line (not an embedded value)
+;  edi - buffer for token sequence, must be large enough to hold all the remaining tokens in line and an additional context token
+;  dl = initial byte of symbol that should end the cut value, zero to cut up to the end of line
+;  dh = initial byte of symbol that would open the nested piece, zero for no nesting
+;  [breakpoint_token] = initial byte of symbol that should unconditionally end the cut value if it is met
+; out:
+;  esi = pointer advanced past the processed piece
+;  edi - end of the extracted sequence of tokens in provided buffer
+;  al = initial byte of symbol at pointer, zero when no more symbols there
+;  [context_boundary] = equal to edi if the extracted sequence ends with a context token
+; preserves: ebx, edx
+; note:
+;  when [breakpoint_token] has the same value as either dl or dh, it has no effect
+;  whitespace is optimized and may be reordered with context tokens
+	mov	[number_of_enclosings],1
+	and	[context_boundary],0
+	mov	[pending_whitespace],0
+	call	move_to_next_symbol
+	jc	no_piece_to_extract
+	mov	al,40h
+	stosb
+	mov	eax,[embedded_context]
+	test	eax,eax
+	jz	extract_current_context
+	xchg	esi,eax
+	assert	sizeof.RecognitionContext and 11b = 0
+	mov	ecx,sizeof.RecognitionContext shr 2
+	rep	movsd
+	mov	esi,eax
+	mov	[context_boundary],edi
+	jmp	extract_piece
+    extract_current_context:
+	call	store_current_context
+    extract_piece:
+	lodsb
+	cmp	al,dh
+	je	nested_piece_to_extract
+	cmp	al,dl
+	je	close_extracted_nested_piece
+	cmp	al,[breakpoint_token]
+	je	extraction_breakpoint
+    extract_token:
+	cmp	al,40h
+	je	extract_context_token
+	cmp	al,20h
+	je	extract_whitespace
+	cmp	[pending_whitespace],0
+	je	extract_non_whitespace_token
+	mov	byte [edi],20h
+	mov	[pending_whitespace],0
+	inc	edi
+    extract_non_whitespace_token:
+	stosb
+	cmp	al,1Ah
+	je	extract_token_with_data
+	cmp	al,22h
+	je	extract_token_with_data
+	cmp	al,27h
+	je	extract_token_with_data
+	cmp	al,30h
+	je	extract_internal_token
+    extract_next_token:
+	cmp	esi,[line_end]
+	jne	extract_piece
+	xor	al,al
+	cmp	edi,[context_boundary]
+	je	drop_final_context
+	retn
+    nested_piece_to_extract:
+	inc	[number_of_enclosings]
+	jmp	extract_token
+    close_extracted_nested_piece:
+	dec	[number_of_enclosings]
+	jnz	extract_token
+    extraction_breakpoint:
+	dec	esi
+	cmp	edi,[context_boundary]
+	je	drop_final_context
+	retn
+    drop_final_context:
+	sub	edi,1+sizeof.RecognitionContext
+	retn
+    no_piece_to_extract:
+	xor	al,al
+	retn
+    extract_whitespace:
+	mov	[pending_whitespace],al
+	jmp	extract_next_token
+    extract_token_with_data:
+	movsd
+	jmp	extract_next_token
+    extract_internal_token:
+	lodsd
+	stosd
+	mov	ecx,eax
+	rep	movsb
+	jmp	extract_next_token
+    extract_context_token:
+	mov	[embedded_context],esi
+	cmp	dword [esi],0
+	jne	embedded_context_for_extraction_ok
+	and	[embedded_context],0
+    embedded_context_for_extraction_ok:
+	call	make_recognition_context_token
+	jmp	extract_next_token
+
+make_recognition_context_token:
+; in:
+;  al = 40h
+;  esi - RecognitionContext (contents of the context token)
+;  edi - buffer for the context token
+;  [context_boundary] = equal to edi if it is at the end of another context token
+; out:
+;  esi - past the processed RecognitionContext
+;  edi - past the extracted context token
+;  [context_boundary] - past the extracted context token
+; preserves: ebx, edx
+	cmp	edi,[context_boundary]
+	je	reuse_recognition_context
+	stosb
+	jmp	store_recognition_context
+    reuse_recognition_context:
+	sub	edi,sizeof.RecognitionContext
+    store_recognition_context:
+    ; in:
+    ;  esi - RecognitionContext to read (may have base namespace zeroed to indicate current context)
+    ;  edi - RecognitionContext to fill
+    ; out:
+    ;  esi - past the processed RecognitionContext
+    ;  edi - past the filled RecognitionContext
+    ;  [context_boundary] - past the filled RecognitionContext
+    ; preserves: ebx, edx
+	cmp	[esi+RecognitionContext.base_namespace],0
+	je	capture_context_reset
+	assert	sizeof.RecognitionContext and 11b = 0
+	mov	ecx,sizeof.RecognitionContext shr 2
+	rep	movsd
+	mov	[context_boundary],edi
+	retn
+      capture_context_reset:
+	add	esi,sizeof.RecognitionContext
+    store_current_context:
+    ; in:
+    ;  edi - RecognitionContext to fill
+    ; out:
+    ;  edi - past the filled RecognitionContext
+    ;  [context_boundary] - past the filled RecognitionContext
+    ; preserves: ebx, edx
+	mov	eax,[current_namespace]
+	mov	[edi+RecognitionContext.base_namespace],eax
+	mov	ecx,[local_namespace]
+	jecxz	context_with_no_structure_label
+	mov	ecx,[ecx+SymbolTree_Root.current_label]
+	jecxz	context_with_no_structure_label
+	mov	[edi+RecognitionContext.current_label],ecx
+	add	edi,sizeof.RecognitionContext
+	mov	[context_boundary],edi
+	retn
+      context_with_no_structure_label:
+	mov	eax,[eax+SymbolTree_Root.current_label]
+	mov	[edi+RecognitionContext.current_label],eax
+	add	edi,sizeof.RecognitionContext
+	mov	[context_boundary],edi
+	retn
 
 compare_symbolic_values:
 ; in:

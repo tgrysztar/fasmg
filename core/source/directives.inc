@@ -287,7 +287,7 @@ identify_parameter_symbol:
       parameter_symbol_identified:
 	retn
 
-get_parameter_value:
+cut_parameter_value:
 ; in:
 ;  esi = pointer into preprocessed line or current embedded value
 ;  edi - LineExcerpt to be filled with information about cut piece of line
@@ -297,15 +297,15 @@ get_parameter_value:
 ;  al = initial byte of symbol at pointer, zero when no more symbols there
 ; preserves: ebx, edi
 	call	move_to_next_symbol
-	jc	get_plain_value
+	jc	cut_plain_value
 	cmp	byte [esi],'<'
-	je	get_enclosed_value
-      get_plain_value:
+	je	cut_enclosed_value
+      cut_plain_value:
 	mov	dl,','
 	xor	dh,dh
 	call	cut_piece_of_line
 	retn
-      get_enclosed_value:
+      cut_enclosed_value:
 	inc	esi
 	mov	dl,'>'
 	mov	dh,'<'
@@ -314,13 +314,46 @@ get_parameter_value:
 	jne	missing_enclosing
 	inc	esi
 	call	move_to_next_symbol
-	jnc	parameter_value_ok
+	jnc	parameter_value_cut
 	xor	al,al
-      parameter_value_ok:
+      parameter_value_cut:
 	retn
       missing_enclosing:
 	mov	edx,_missing_closing_chevron
 	call	register_error
+	retn
+
+extract_parameter_value:
+; in:
+;  esi = pointer into preprocessed line (not an embedded value)
+;  edi - buffer for token sequence, must be large enough to hold all the remaining tokens in line and an additional context token
+;  [breakpoint_token] = initial byte of symbol that - if encountered - should immediately end the value
+; out:
+;  esi = pointer advanced past the processed piece
+;  edi - end of the extracted sequence of tokens in provided buffer
+;  al = initial byte of symbol at pointer, zero when no more symbols there
+; preserves: ebx
+	call	move_to_next_symbol
+	jc	extract_plain_value
+	cmp	byte [esi],'<'
+	je	extract_enclosed_value
+      extract_plain_value:
+	mov	dl,','
+	xor	dh,dh
+	call	extract_piece_of_line
+	retn
+      extract_enclosed_value:
+	inc	esi
+	mov	dl,'>'
+	mov	dh,'<'
+	call	extract_piece_of_line
+	cmp	al,'>'
+	jne	missing_enclosing
+	inc	esi
+	call	move_to_next_symbol
+	jnc	parameter_value_extracted
+	xor	al,al
+      parameter_value_extracted:
 	retn
 
 ; instruction handler
@@ -740,7 +773,12 @@ define_symbolic_variable:
 	cmp	[raw_value],0
 	je	use_recognition_context
 	mov	esi,[embedded_context]
+	test	esi,esi
+	jz	use_current_context
 	call	store_recognition_context
+	jmp	symbol_context_stored
+      use_current_context:
+	call	store_current_context
 	jmp	symbol_context_stored
       use_recognition_context:
 	mov	esi,recognition_context
@@ -771,7 +809,7 @@ define_symbolic_variable:
     store_token:
 	lodsb
 	cmp	al,40h
-	je	store_recognition_context_token
+	je	make_recognition_context_token
 	stosb
 	cmp	al,1Ah
 	je	store_token_with_data
@@ -790,42 +828,6 @@ define_symbolic_variable:
 	stosd
 	mov	ecx,eax
 	rep	movsb
-	retn
-    store_recognition_context_token:
-	cmp	edi,[context_boundary]
-	je	reuse_recognition_context
-	stosb
-	jmp	store_recognition_context
-    reuse_recognition_context:
-	sub	edi,sizeof.RecognitionContext
-    store_recognition_context:
-	test	esi,esi
-	jz	store_current_context
-	cmp	[esi+RecognitionContext.base_namespace],0
-	je	context_reset_token
-	assert	sizeof.RecognitionContext and 11b = 0
-	mov	ecx,sizeof.RecognitionContext shr 2
-	rep	movsd
-	mov	[context_boundary],edi
-	retn
-      context_reset_token:
-	add	esi,sizeof.RecognitionContext
-      store_current_context:
-	mov	eax,[current_namespace]
-	mov	[edi+RecognitionContext.base_namespace],eax
-	mov	ecx,[local_namespace]
-	jecxz	context_with_no_structure_label
-	mov	ecx,[ecx+SymbolTree_Root.current_label]
-	jecxz	context_with_no_structure_label
-	mov	[edi+RecognitionContext.current_label],ecx
-	add	edi,sizeof.RecognitionContext
-	mov	[context_boundary],edi
-	retn
-      context_with_no_structure_label:
-	mov	eax,[eax+SymbolTree_Root.current_label]
-	mov	[edi+RecognitionContext.current_label],eax
-	add	edi,sizeof.RecognitionContext
-	mov	[context_boundary],edi
 	retn
 
 restore_variables:
@@ -1687,7 +1689,7 @@ iterator_block:
 	jmp	parameter_declaration_done
       parameter_with_default_value:
 	inc	esi
-	call	get_parameter_value
+	call	cut_parameter_value
       parameter_declaration_done:
 	add	edi,sizeof.LineExcerpt
 	mov	ah,[breakpoint_token]
@@ -1714,7 +1716,7 @@ iterator_block:
 	mov	edx,expression_workspace
 	mov	ecx,sizeof.LineExcerpt
 	call	reserve_workspace
-	call	get_parameter_value
+	call	cut_parameter_value
 	add	edi,sizeof.LineExcerpt
 	inc	[number_of_values]
 	mov	ecx,[value_index]
@@ -3538,20 +3540,26 @@ use_struc:
 	mov	eax,[line_context]
 	mov	[embedded_context],eax
 	mov	esi,[line_start]
-	mov	eax,[label_instruction_start]
-	mov	[line_end],eax
-	mov	edi,[expression_workspace.memory_start]
+	mov	ecx,[label_instruction_start]
+	mov	[line_end],ecx
+	sub	ecx,esi
+	add	ecx,(1+sizeof.RecognitionContext)*2
+	mov	edx,assembly_workspace
+	mov	edi,[edx+Workspace.memory_start]
+	call	reserve_workspace
 	xor	edx,edx
 	mov	[breakpoint_token],dl
-	call	cut_piece_of_line
+	call	extract_piece_of_line
+	call	store_context_reset_token
 	pop	[embedded_context]
 	pop	[line_end]
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	call	update_value_definition
-	mov	esi,[edi+LineExcerpt.data_start]
-	mov	ecx,[edi+LineExcerpt.data_end]
+	mov	[value_type],VALTYPE_SYMBOLIC
+	mov	esi,[assembly_workspace.memory_start]
+	mov	ecx,edi
 	sub	ecx,esi
-	call	assign_parameter_value
+	call	assign_value
 	pop	esi
 	call	move_to_next_symbol
 	jc	invalid_argument
@@ -3652,6 +3660,12 @@ use_struc:
 	call	warp_to_next_symbol
        ; cmp	 [number_of_line_embeddings],0
        ; jne	 internal_error
+	mov	edx,assembly_workspace
+	mov	edi,[edx+Workspace.memory_start]
+	mov	ecx,[line_end]
+	sub	ecx,esi
+	add	ecx,1+sizeof.RecognitionContext
+	call	reserve_workspace
 	xor	eax,eax
 	mov	[breakpoint_token],al
 	mov	[parameter_index],eax
@@ -3666,43 +3680,35 @@ use_struc:
 	jz	macro_parameters_ready
 	inc	esi
       get_macro_parameter:
-	mov	edi,[expression_workspace.memory_start]
+	mov	edi,[assembly_workspace.memory_start]
 	cmp	[macro_greedy],0
 	je	standard_parameter_value
 	cmp	eax,1
 	ja	standard_parameter_value
 	xor	edx,edx
-	call	cut_piece_of_line
-	jmp	parameter_value_extracted
+	call	extract_piece_of_line
+	jmp	parameter_value_ready
       standard_parameter_value:
-	call	get_parameter_value
-      parameter_value_extracted:
+	call	extract_parameter_value
+      parameter_value_ready:
 	mov	eax,[parameter_index]
 	shl	eax,2
 	add	eax,[assembly_stack_base]
 	mov	ebx,[eax]
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	call	update_value_definition
-	mov	eax,[edi+LineExcerpt.data_start]
-	mov	ecx,[edi+LineExcerpt.data_end]
-	sub	ecx,eax
-	jnz	parameter_value_ready
-      empty_parameter_value:
-	mov	edi,[parameter_index]
-	inc	edi
-	assert	sizeof.LineExcerpt = 1 shl 4
-	shl	edi,4
-	add	edi,[expression_workspace.memory_start]
-	mov	eax,[edi+LineExcerpt.data_start]
-	test	eax,eax
-	jz	missing_argument
-	mov	ecx,[edi+LineExcerpt.data_end]
-	sub	ecx,eax
-      parameter_value_ready:
+	mov	[value_type],VALTYPE_SYMBOLIC
+	cmp	edi,[assembly_workspace.memory_start]
+	je	empty_parameter_value
+	call	store_context_reset_token
 	push	esi
-	mov	esi,eax
-	call	assign_parameter_value
+	mov	esi,[assembly_workspace.memory_start]
+	mov	ecx,edi
+	sub	ecx,esi
+    assign_parameter_value:
+	call	assign_value
 	pop	esi
+    parameter_value_assigned:
 	inc	[parameter_index]
 	call	move_to_next_symbol
 	jc	macro_parameter_definition
@@ -3740,10 +3746,21 @@ use_struc:
 	test	[assembly_mode],AMODE_DEFINITION
 	jz	assembly_line
 	jmp	add_line_to_macro
-    assign_parameter_value:
-	mov	[value_type],VALTYPE_SYMBOLIC
+    empty_parameter_value:
+	mov	edi,[parameter_index]
+	inc	edi
+	assert	sizeof.LineExcerpt = 1 shl 4
+	shl	edi,4
+	add	edi,[expression_workspace.memory_start]
+	mov	eax,[edi+LineExcerpt.data_start]
+	test	eax,eax
+	jz	missing_argument
+	mov	ecx,[edi+LineExcerpt.data_end]
+	sub	ecx,eax
+	push	esi
+	mov	esi,eax
 	test	ecx,ecx
-	jz	assign_value
+	jz	assign_parameter_value
 	push	ebx edx
 	mov	ebx,edi
 	mov	edi,[assembly_workspace.memory_start]
@@ -3768,17 +3785,26 @@ use_struc:
 	call	store_token
 	cmp	esi,[ebx+LineExcerpt.data_end]
 	jne	copy_parameter_contents
-	mov	al,40h
-	stosb
-	xor	eax,eax
-	assert	sizeof.RecognitionContext and 11b = 0
-	mov	ecx,sizeof.RecognitionContext shr 2
-	rep	stosd
+	call	store_context_reset_token
 	pop	edx ebx
 	mov	esi,[assembly_workspace.memory_start]
 	mov	ecx,edi
 	sub	ecx,esi
-	jmp	assign_value
+	jmp	assign_parameter_value
+    store_context_reset_token:
+	cmp	edi,[context_boundary]
+	je	context_reset_in_reused_token
+	mov	al,40h
+	stosb
+      store_context_reset:
+	xor	eax,eax
+	assert	sizeof.RecognitionContext and 11b = 0
+	mov	ecx,sizeof.RecognitionContext shr 2
+	rep	stosd
+	retn
+      context_reset_in_reused_token:
+	sub	edi,sizeof.RecognitionContext
+	jmp	store_context_reset
 
 local_directive:
 	test	[assembly_mode],AMODE_SKIP
