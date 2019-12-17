@@ -42,7 +42,7 @@ label well at 8000h
 label pics at well-2*64
 label origin at pics-(pics_wrt_bp-bp)
 
-ORIGIN_PARITY = origin
+ORIGIN_PARITY = origin and 0FFh
 while ORIGIN_PARITY and not 1
 	ORIGIN_PARITY = (ORIGIN_PARITY shr 1) xor (ORIGIN_PARITY and 1)
 end while
@@ -134,9 +134,9 @@ process_key:
 	jz	restart
 	test	bp,bp
 if ORIGIN_PARITY
-	jnp	process_key
-else
 	jp	process_key
+else
+	jnp	process_key
 end if
 	mov	si,rotate
 	cmp	al,48h
