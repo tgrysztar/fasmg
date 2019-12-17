@@ -1907,12 +1907,11 @@ extract_piece_of_line:
 ; preserves: ebx, edx
 ; note:
 ;  when [breakpoint_token] has the same value as either dl or dh, it has no effect
-;  whitespace is optimized and may be reordered with context tokens
-	mov	[number_of_enclosings],1
 	and	[context_boundary],0
-	mov	[pending_whitespace],0
 	call	move_to_next_symbol
 	jc	no_piece_to_extract
+	mov	[number_of_enclosings],1
+	mov	[whitespace_boundary],edi
 	mov	al,40h
 	stosb
 	mov	eax,[embedded_context]
@@ -1940,12 +1939,7 @@ extract_piece_of_line:
 	je	extract_context_token
 	cmp	al,20h
 	je	extract_whitespace
-	cmp	[pending_whitespace],0
-	je	extract_non_whitespace_token
-	mov	byte [edi],20h
-	mov	[pending_whitespace],0
-	inc	edi
-    extract_non_whitespace_token:
+	and	[whitespace_boundary],0
 	stosb
 	cmp	al,1Ah
 	je	extract_token_with_data
@@ -1959,8 +1953,8 @@ extract_piece_of_line:
 	cmp	esi,[line_end]
 	jne	extract_piece
 	xor	al,al
-	cmp	edi,[context_boundary]
-	je	drop_final_context
+	cmp	[whitespace_boundary],0
+	jne	drop_final_whitespace
 	retn
     nested_piece_to_extract:
 	inc	[number_of_enclosings]
@@ -1970,17 +1964,21 @@ extract_piece_of_line:
 	jnz	extract_token
     extraction_breakpoint:
 	dec	esi
-	cmp	edi,[context_boundary]
-	je	drop_final_context
+	cmp	[whitespace_boundary],0
+	jne	drop_final_whitespace
 	retn
-    drop_final_context:
-	sub	edi,1+sizeof.RecognitionContext
+    drop_final_whitespace:
+	mov	edi,[whitespace_boundary]
 	retn
     no_piece_to_extract:
 	xor	al,al
 	retn
     extract_whitespace:
-	mov	[pending_whitespace],al
+	cmp	[whitespace_boundary],0
+	jne	whitespace_boundary_ok
+	mov	[whitespace_boundary],edi
+    whitespace_boundary_ok:
+	stosb
 	jmp	extract_next_token
     extract_token_with_data:
 	movsd
@@ -1992,6 +1990,10 @@ extract_piece_of_line:
 	rep	movsb
 	jmp	extract_next_token
     extract_context_token:
+	cmp	[whitespace_boundary],0
+	jne	context_whitespace_boundary_ok
+	mov	[whitespace_boundary],edi
+    context_whitespace_boundary_ok:
 	mov	[embedded_context],esi
 	cmp	dword [esi],0
 	jne	embedded_context_for_extraction_ok

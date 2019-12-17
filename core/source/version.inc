@@ -1,1 +1,1 @@
-VERSION equ "irt77"
+VERSION equ "irtui"

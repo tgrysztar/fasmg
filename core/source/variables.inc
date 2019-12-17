@@ -205,6 +205,7 @@ sequence_header_length dd ?
 expression_sequence_cursor dd ?
 expression_sequence_end dd ?
 context_boundary dd ?
+whitespace_boundary dd ?
 
 pattern_start dd ?
 pattern_end dd ?
@@ -246,7 +247,6 @@ literal_fractional_part db ?
 
 last_token db ?
 breakpoint_token db ?
-pending_whitespace db ?
 current_constituent db ?
 kept_value_in_workspace db ?
 leave_opening_parentheses db ?
