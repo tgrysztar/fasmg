@@ -821,7 +821,15 @@ update_value_definition:
 	jz	dynamic_value_definition_ready
 	or	[next_pass_needed],1
     dynamic_value_definition_ready:
+	cmp	[edx+ValueDefinition.reference_count],1
+	ja	dynamic_value_in_use
 	retn
+    dynamic_value_in_use:
+	mov	eax,[edx+ValueDefinition.previous]
+	mov	[ebx+SymbolTree_Leaf.definition],eax
+	mov	eax,edx
+	xchg	eax,[ebx+SymbolTree_Leaf.retired_definition]
+	mov	[edx+ValueDefinition.previous],eax
 create_value_definition:
 ; in:
 ;  ebx - SymbolTree_Leaf
