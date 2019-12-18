@@ -827,6 +827,7 @@ update_value_definition:
     dynamic_value_in_use:
 	mov	eax,[edx+ValueDefinition.previous]
 	mov	[ebx+SymbolTree_Leaf.definition],eax
+	dec	[edx+ValueDefinition.reference_count]
 	mov	eax,edx
 	xchg	eax,[ebx+SymbolTree_Leaf.retired_definition]
 	mov	[edx+ValueDefinition.previous],eax

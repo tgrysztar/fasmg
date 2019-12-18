@@ -3664,7 +3664,7 @@ use_struc:
 	mov	edi,[edx+Workspace.memory_start]
 	mov	ecx,[line_end]
 	sub	ecx,esi
-	add	ecx,1+sizeof.RecognitionContext
+	add	ecx,(1+sizeof.RecognitionContext)*2
 	call	reserve_workspace
 	xor	eax,eax
 	mov	[breakpoint_token],al
