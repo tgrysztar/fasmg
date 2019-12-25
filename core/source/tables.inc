@@ -561,5 +561,8 @@ singular_value dd 1
 	       db 1
 	       dd 0
 
+subtraction_operator dd EXPR_OPERATOR,calculate_sub
+		     dd 0
+
 area_metadata dd 2
 	      db '::'

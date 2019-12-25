@@ -351,19 +351,7 @@ check_if_not_greater:
 	jc	signum_error
 	call	calculate_parsed_expression
 	jc	signum_error
-	mov	ebx,edi
-	mov	edi,esi
-	mov	edx,expression_workspace
-	mov	ecx,12
-	call	reserve_workspace
-	mov	esi,edi
-	mov	eax,EXPR_OPERATOR
-	stosd
-	mov	eax,calculate_sub
-	stosd
-	xor	eax,eax
-	stosd
-	mov	edi,ebx
+	mov	esi,subtraction_operator
 	call	calculate_parsed_expression
 	call	pop_terms
 	mov	eax,edi
@@ -457,17 +445,7 @@ check_if_relative:
 	xchg	edi,edx
 	cmp	[edx+sizeof.ExpressionTerm+ExpressionTerm.attributes],0
 	je	check_difference_terms
-	mov	edi,esi
-	mov	edx,expression_workspace
-	mov	ecx,12
-	call	reserve_workspace
-	mov	esi,edi
-	mov	eax,EXPR_OPERATOR
-	stosd
-	mov	eax,calculate_sub
-	stosd
-	xor	eax,eax
-	stosd
+	mov	esi,subtraction_operator
 	mov	edi,ebx
 	call	calculate_parsed_expression
 	call	pop_terms
@@ -528,17 +506,7 @@ check_if_value_equal:
 	cmp	ecx,[edx]
 	jne	evaluated_false
       compare_values_numerically:
-	mov	edi,esi
-	mov	edx,expression_workspace
-	mov	ecx,12
-	call	reserve_workspace
-	mov	esi,edi
-	mov	eax,EXPR_OPERATOR
-	stosd
-	mov	eax,calculate_sub
-	stosd
-	xor	eax,eax
-	stosd
+	mov	esi,subtraction_operator
 	mov	edi,ebx
 	call	calculate_parsed_expression
 	call	pop_terms
