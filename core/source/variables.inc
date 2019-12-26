@@ -149,8 +149,6 @@ condition_stack_base dd ?
 condition_stack_end dd ?
 initial_parentheses dd ?
 comparator dd ?
-preceding_argument_length dd ?
-succeeding_argument_length dd ?
 
 assembly_stack_base dd ?
 assembly_stack_end dd ?

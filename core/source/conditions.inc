@@ -177,6 +177,9 @@ parse_logical_value:
 ; in:
 ;  esi = pointer into preprocessed line or the last embedded line
 ; out:
+;  [comparator] - evaluating routine
+;  [expression_workspace.memory_start] - parsed argument sequences
+;  [expression_end] - end of the parsed argument sequences
 ;  esi = pointer advanced past the parsed value
 ;  al = special character that follows parsed value, zero if no more symbols in line
 ;  ecx = number of parentheses opened before the value that did not get closed
@@ -184,8 +187,6 @@ parse_logical_value:
 	mov	edi,[expression_workspace.memory_start]
 	xor	eax,eax
 	mov	[comparator],eax
-	mov	[preceding_argument_length],eax
-	mov	[succeeding_argument_length],eax
 	or	[leave_opening_parentheses],1
 	call	parse_expression
 	mov	[initial_parentheses],ecx
@@ -263,9 +264,6 @@ parse_logical_value:
     set_comparator:
 	mov	edi,[expression_end]
 	mov	[comparator],eax
-	mov	ecx,edi
-	sub	ecx,[expression_workspace.memory_start]
-	mov	[preceding_argument_length],ecx
 	and	[leave_opening_parentheses],0
 	call	parse_expression
 	mov	[expression_end],edi
@@ -274,15 +272,11 @@ parse_logical_value:
     end_of_line:
 	xor	al,al
     end_of_logical_value:
-	mov	edx,[preceding_argument_length]
-	mov	ebx,[expression_workspace.memory_start]
-	mov	ecx,[expression_end]
-	sub	ecx,ebx
-	sub	ecx,edx
-	mov	[succeeding_argument_length],ecx
 	mov	ecx,[initial_parentheses]
-	test	edx,edx
+	cmp	[comparator],0
 	jnz	logical_value_not_empty
+	mov	[comparator],check_if_not_zero
+	mov	ebx,[expression_workspace.memory_start]
 	cmp	dword [ebx],0
 	jne	logical_value_not_empty
 	stc
@@ -292,15 +286,15 @@ parse_logical_value:
 	retn
 
 evaluate_logical_value:
+; in:
+;  [comparator] - evaluating routine
+;  [expression_workspace.memory_start] - parsed argument sequences
 ; out: al = logical value
 ; note: evaluates value prepared by previous call to parse_logical_value
 ; preserves: esi
 	push	esi
 	mov	esi,[expression_workspace.memory_start]
-	mov	eax,[comparator]
-	test	eax,eax
-	jz	check_if_not_zero
-	jmp	eax
+	jmp	[comparator]
     evaluated_false:
 	pop	esi
 	xor	al,al
@@ -397,9 +391,6 @@ check_if_not_greater:
 	retn
 
 check_if_not_zero:
-	mov	eax,[preceding_argument_length]
-	test	eax,eax
-	jnz	invalid_logical_value
 	mov	edi,[calculation_workspace.memory_start]
 	call	calculate_parsed_expression
 	jc	evaluated_false
