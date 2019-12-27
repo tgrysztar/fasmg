@@ -1101,6 +1101,9 @@ calculate_parsed_expression:
 ;  esi = pointer moved past the processed sequence
 ;  edi - top of the updated stack
 	mov	[expression_end],esi
+	mov	eax,edi
+	sub	eax,[calculation_workspace.memory_start]
+	mov	[calculation_position],eax
 	cmp	dword [esi],0
 	je	invalid_expression
     calculation_loop:
@@ -1561,8 +1564,12 @@ calculate_parsed_expression:
 	call	register_volatile_error
 	pop	edi
     unknown_result:
-	call	pop_terms
-	jnc	unknown_result_terms_ready
+	mov	eax,edi
+	mov	edi,[calculation_position]
+	add	edi,[calculation_workspace.memory_start]
+	cmp	edi,eax
+	jb	unknown_result_terms_ready
+	mov	edi,eax
 	mov	edx,calculation_workspace
 	mov	ecx,2*sizeof.ExpressionTerm
 	call	reserve_workspace

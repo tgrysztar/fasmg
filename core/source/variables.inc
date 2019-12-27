@@ -128,6 +128,7 @@ operator_stack dd ?
 operator_stack_position dd ?
 operator_stack_base dd ?
 operator_stack_end dd ?
+calculation_position dd ?
 source_term dd ?
 destination_term dd ?
 temporary_terms dd ?
