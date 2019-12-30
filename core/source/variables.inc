@@ -243,6 +243,7 @@ value_type db ?
 waiting_for_digit db ?
 literal_exponent_sign db ?
 literal_fractional_part db ?
+float_literal_status db ?
 
 last_token db ?
 breakpoint_token db ?

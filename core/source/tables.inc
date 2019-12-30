@@ -403,6 +403,9 @@ symbols:
   db 2,'%t',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_FUNCTION,VAL_INTERNAL,0
   dd current_time_value
 
+  db 8,'__time__',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_FUNCTION,VAL_INTERNAL,0
+  dd current_time_value
+
   db 10,'__source__',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_FUNCTION,VAL_INTERNAL,0
   dd main_file_name_value
 

@@ -28,7 +28,7 @@ Table of contents
 11. Repeating blocks of instructions
 12. Matching parameters
 13. Output areas
-14. Other instructions
+14. Source and output control
 
 
 0. Executing the assembler
@@ -1439,6 +1439,19 @@ the value is a positive number, the parameter is replaced with its decimal
 representation (similarly how the "%" parameter is processed), otherwise
 the parameter is replaced with an identifier of a proxy symbol holding the
 value from stack.
+  The "outscope" directive is available while any macroinstruction is processed,
+and it modifies the command that follows in the same line. If the command causes
+any parameters to be defined, they are created not in the context of currently
+processed macroinstruction but in the context of the source text that called it.
+
+        macro irpv?! statement&
+                display 'IRPV wrapper'
+                outscope irpv statement
+        end macro
+
+This allows not only to safely wrap some control directives in macroinstructions,
+but also to create additional customized language constructions that define
+parameters for a block of text.
 
 
 12. Matching parameters
@@ -1863,7 +1876,7 @@ new area.
 a "virtual" block, they can only separate areas that go into the output file.
 
 
-14. Other instructions
+14. Source and output control
 
 The "include" instruction reads the source text from another file and
 processes it before proceeding further in the current source. Its argument
@@ -1910,11 +1923,11 @@ arguments as the "display" directive.
                 err 'segment too large'
         end if
 
-  The "format" directive allows to set up options concerning the output.
-The only available choice is "format binary" followed by the "as" keyword
-and the string defining an extension for the output file. Unless a name
-of the output file is specified from the command line, it is constructed
-from the path to the main source file by dropping the extension and
+  The "format" directive allows to set up additional options concerning
+the main output. Currently the only available choice is "format binary" followed
+by the "as" keyword and a string defining an extension for the output file.
+Unless a name of the output file is specified from the command line, it is
+constructed from the path to the main source file by dropping the extension and
 attaching a new extension if such is defined.
 
         format binary as 'com'
@@ -1923,8 +1936,8 @@ attaching a new extension if such is defined.
 it to find an instruction in the child namespace of case-insensitive symbol
 named "format". The only built-in instruction that resides in that namespace
 is the "binary", but additional ones may be defined in form of macroinstructions.
-  The built-in symbol "%t" has the constant value of the timestamp marking
-the point in time when the assembly was started.
+  The built-in symbol "__time__" (with legacy synonym "%t") has the constant value
+of the timestamp marking the point in time when the assembly was started.
   The "__file__" is a built-in symbol whose value is a string containing
 the name of currently processed source file. The accompanying "__line__" symbol
 provides the number of currently processed line in that file. When these symbols
@@ -1934,19 +1947,6 @@ other, these symbols have the same value everywhere, corresponding to the line
 that called the outermost macroinstruction.
   The "__source__" is another built-in symbol, with value being a string containing
 the name of the main source file.
-  The "outscope" directive is available while any macroinstruction is processed,
-and it modifies the command that follows in the same line. If the command causes
-any parameters to be defined, they are created not in the context of currently
-processed macroinstruction but in the context of the source text that called it.
-
-        macro match?! statement&
-                display 'match wrapper'
-                outscope match statement
-        end macro
-
-This allows not only to safely wrap some control directives in macroinstructions,
-but also to create additional customized language constructions that define
-parameters for a block of text.
   The "retaincomments" directive switches the assembler to treat a semicolon as
 a regular token and therefore not strip comments from lines before processing.
 This allows to use semicolons in places like MATCH pattern.

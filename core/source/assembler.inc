@@ -2903,6 +2903,7 @@ get_literal:
 	mov	[literal_exponent_sign],al
 	mov	[literal_fractional_part],al
 	mov	[waiting_for_digit],al
+	mov	[float_literal_status],al
 	push	esi ecx
 	mov	ebx,edx
 	call	start_decimal_converter
@@ -2915,10 +2916,12 @@ get_literal:
 	cmp	al,'_'
 	je	skip_float_digit
 	cmp	al,'9'
-	ja	invalid_float_digit
+	ja	float_nondigit
 	sub	al,'0'
 	jz	float_digit_zero
-	jc	invalid_float_digit
+	jc	float_nondigit
+	test	[float_literal_status],1
+	jnz	reject_float_digit
 	inc	[decimal_places]
 	push	esi ecx
 	xor	ecx,ecx
@@ -2930,6 +2933,8 @@ get_literal:
 	loop	get_float_digit
 	jmp	float_digits_ok
       float_digit_zero:
+	test	[float_literal_status],1
+	jnz	reject_float_digit
 	inc	[decimal_places]
 	inc	[zero_digits]
 	and	[waiting_for_digit],0
@@ -2950,7 +2955,9 @@ get_literal:
 	jnz	no_more_tokens_in_float
 	mov	al,[literal_fractional_part]
 	or	al,[literal_exponent_sign]
-	jnz	no_more_tokens_in_float
+	jz	decimal_point_allowed
+	or	[float_literal_status],-1
+    decimal_point_allowed:
 	or	[literal_fractional_part],1
 	or	[waiting_for_digit],1
 	and	[decimal_places],0
@@ -2967,6 +2974,8 @@ get_literal:
     no_more_tokens_in_float:
 	cmp	[waiting_for_digit],0
 	jne	invalid_float_value
+	cmp	[float_literal_status],-1
+	je	invalid_float_value
 	call	finish_decimal_conversion
 	push	esi ecx
 	mov	esi,edi
@@ -3021,12 +3030,12 @@ get_literal:
 	mov	al,1
 	xchg	al,[literal_exponent_sign]
 	test	al,al
-	jnz	invalid_literal_float
+	jnz	reject_exponent_digit
 	or	[waiting_for_digit],1
 	loop	get_exponent_digit
 	pop	ecx esi
 	call	move_to_adjacent_symbol
-	jc	invalid_literal_exponent
+	jc	invalid_float_value
 	cmp	al,1Ah
 	je	next_digits_section
 	cmp	al,30h
@@ -3034,7 +3043,7 @@ get_literal:
 	cmp	al,'+'
 	je	get_following_digits
 	cmp	al,'-'
-	jne	invalid_literal_exponent
+	jne	invalid_float_value
 	neg	[literal_exponent_sign]
 	jmp	get_following_digits
     get_exponent_digit:
@@ -3045,64 +3054,42 @@ get_literal:
 	cmp	al,'_'
 	je	skip_exponent_digit
 	sub	al,'0'
-	jc	invalid_float_digit
+	jc	reject_exponent_digit
 	cmp	al,10
-	jae	invalid_float_digit
+	jae	reject_exponent_digit
+	test	[float_literal_status],1
+	jnz	reject_exponent_digit
 	mov	edx,[literal_exponent]
 	imul	edx,10
-	jo	invalid_literal_float
+	jo	reject_exponent_digit
 	cmp	[literal_exponent_sign],0
 	jnl	exponent_digit_ok
 	neg	eax
       exponent_digit_ok:
 	add	edx,eax
-	jo	invalid_literal_float
+	jo	reject_exponent_digit
 	mov	[literal_exponent],edx
 	and	[waiting_for_digit],0
       skip_exponent_digit:
 	loop	get_exponent_digit
 	jmp	float_digits_ok
-    invalid_float_digit:
+      reject_exponent_digit:
+	or	[float_literal_status],-1
+	jmp	skip_exponent_digit
+    float_nondigit:
 	cmp	[waiting_for_digit],0
-	jne	invalid_literal_float
+	jne	reject_float_digit
 	movzx	eax,byte [esi-1]
 	mov	al,[characters+eax]
 	cmp	al,'e'
 	je	get_literal_exponent
 	cmp	al,'f'
-	jne	invalid_literal_float
-	dec	ecx
-	jnz	invalid_literal_float
-	pop	ecx esi
-	or	edx,-1
-	jmp	check_for_redundant_segments
-    invalid_literal_float:
-	pop	ecx esi
-    invalid_literal_exponent:
-	xor	edx,edx
-    check_for_redundant_segments:
-	call	move_to_next_symbol
-	jc	no_redundant_segments
-	cmp	al,'#'
-	jne	no_redundant_segments
-	call	check_concatenation
-	jc	no_redundant_segments
-	cmp	al,1Ah
-	je	skip_redundant_segment
-	cmp	al,30h
-	jne	no_redundant_segments
-	add	esi,[esi+1]
-      skip_redundant_segment:
-	add	esi,1+4
-	jmp	check_for_redundant_segments
-    no_redundant_segments:
-	test	edx,edx
-	jnz	no_more_tokens_in_float
-	mov	al,[literal_fractional_part]
-	or	al,[literal_exponent_sign]
-	jnz	invalid_float_value
-	mov	al,30h
-	retn
+	jne	reject_float_digit
+	or	[float_literal_status],1
+	jmp	skip_float_digit
+      reject_float_digit:
+	or	[float_literal_status],-1
+	jmp	skip_float_digit
     move_to_adjacent_symbol:
 	call	move_to_next_symbol
 	jc	adjacent_symbol_ok
@@ -3131,42 +3118,87 @@ skip_literal:
 	inc	esi
 	call	move_to_next_symbol
 	retn
-    skip_literal_number:
+    skip_literal_string:
 	add	esi,5
+	call	move_to_next_symbol
+	retn
+    skip_literal_number:
+	xor	dh,dh
+	inc	esi
+	lodsd
+	mov	dl,[eax+4]
+	cmp	dl,'0'
+	jb	skip_number_segments
+	cmp	dl,'9'
+	ja	skip_number_segments
+	or	dh,1
+    check_for_possible_exponent:
+	mov	ecx,[eax]
+	mov	dl,[eax+4+ecx-1]
+	cmp	dl,'e'
+	je	possible_exponent
+	cmp	dl,'E'
+	jne	skip_number_segments
+    possible_exponent:
+	or	dh,2
+	jmp	skip_number_segments
+    skip_internal_number:
+	inc	esi
+	lodsd
+	add	esi,eax
+	mov	dh,1
     skip_number_segments:
 	xor	ecx,ecx
 	call	move_to_next_symbol
 	jc	literal_symbol_skipped
 	cmp	al,'#'
-	jne	literal_symbol_skipped
-    check_literal_concatenation:
-	call	check_concatenation
+	je	check_literal_concatenation
+	test	ecx,ecx
+	jnz	literal_symbol_skipped
+	cmp	al,'.'
+	jne	check_for_exponent
+    skip_decimal_point:
+	inc	esi
+	xor	ecx,ecx
+	call	move_to_next_symbol
 	jc	literal_symbol_skipped
+	cmp	al,'#'
+	je	check_literal_concatenation
+	test	ecx,ecx
+	jnz	literal_symbol_skipped
+    skip_attached_segment:
+	cmp	al,'.'
+	je	skip_decimal_point
 	cmp	al,30h
 	je	skip_attached_internal_number
 	cmp	al,1Ah
-	jne	literal_symbol_skipped
+	jne	check_for_exponent
     skip_attached_number:
-	add	esi,5
+	inc	esi
+	lodsd
+	test	dh,1
+	jnz	check_for_possible_exponent
 	jmp	skip_number_segments
     skip_attached_internal_number:
 	inc	esi
 	lodsd
 	add	esi,eax
+	and	dh,not 2
 	jmp	skip_number_segments
-    skip_literal_string:
-	add	esi,5
-	call	move_to_next_symbol
+    check_for_exponent:
+	cmp	dh,1+2
+	jne	literal_symbol_skipped
+	cmp	al,'+'
+	je	skip_exponent
+	cmp	al,'-'
+	jne	literal_symbol_skipped
+    skip_exponent:
+	xor	dh,dh
+	jmp	skip_decimal_point
+    check_literal_concatenation:
+	call	check_concatenation
+	jnc	skip_attached_segment
     literal_symbol_skipped:
-	retn
-    skip_internal_number:
-	inc	esi
-	lodsd
-	add	esi,eax
-	call	move_to_next_symbol
-	jc	literal_symbol_skipped
-	cmp	al,'#'
-	je	check_literal_concatenation
 	retn
 
 get_processed_value:
