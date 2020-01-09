@@ -459,35 +459,44 @@ end macro
 element PLT?
 
 macro dword? value
-	local v
+	local v, o
 	v = value
 	if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto ELF.relocatable
-		namespace ELF
-			store $% - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
-			store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
-			store R_32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
-			RELOCATION_INDEX = RELOCATION_INDEX + 1
-		end namespace
+		o = $%
 		emit dword: ?
+		if $% > o
+			namespace ELF
+				store o - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
+				store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
+				store R_32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
+				RELOCATION_INDEX = RELOCATION_INDEX + 1
+			end namespace
+		end if
 	else if ~ v relativeto 0 & (v + ELF.SECTION_BASE) relativeto 1 elementof (v + ELF.SECTION_BASE)
 		if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto ELF.relocatable
-			namespace ELF
-				v = v + (SECTION_BASE + $% - SECTION_OFFSET)
-				store $% - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
-				store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
-				store R_PC32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
-				RELOCATION_INDEX = RELOCATION_INDEX + 1
-			end namespace
+			o = $%
 			emit dword: ?
+			if $% > o
+				namespace ELF
+					v = v + (SECTION_BASE + o - SECTION_OFFSET)
+					store o - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
+					store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
+					store R_PC32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
+					RELOCATION_INDEX = RELOCATION_INDEX + 1
+				end namespace
+			end if
 		else if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto PLT
-			namespace ELF
-				v = v + (SECTION_BASE + $% - SECTION_OFFSET)
-				store $% - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
-				store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
-				store R_PLT32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
-				RELOCATION_INDEX = RELOCATION_INDEX + 1
-			end namespace
+			o = $%
 			emit dword: ?
+			if $% > o
+				namespace ELF
+					v = v + (SECTION_BASE + o - SECTION_OFFSET)
+					store o - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
+					store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
+					store R_PLT32 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
+					RELOCATION_INDEX = RELOCATION_INDEX + 1
+				end namespace
+			end if
 		else
 			emit dword: v
 		end if
@@ -497,16 +506,19 @@ macro dword? value
 end macro
 
 macro qword? value
-	local v
+	local v, o
 	v = value
 	if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto ELF.relocatable
-		namespace ELF
-			store $% - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
-			store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
-			store R_64 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
-			RELOCATION_INDEX = RELOCATION_INDEX + 1
-		end namespace
+		o = $%
 		emit qword: ?
+		if $% > o
+			namespace ELF
+				store o - SECTION_OFFSET at relocations : Elf64_Rela.r_offset + RELOCATION_INDEX * sizeof Elf64_Rela
+				store 0 scaleof v at relocations : Elf64_Rela.r_addend + RELOCATION_INDEX * sizeof Elf64_Rela
+				store R_64 + (0 scaleof (1 metadataof v)) shl 32 at relocations : Elf64_Rela.r_info + RELOCATION_INDEX * sizeof Elf64_Rela
+				RELOCATION_INDEX = RELOCATION_INDEX + 1
+			end namespace
+		end if
 	else
 		emit qword: v
 	end if
@@ -585,37 +597,6 @@ struc dq? definitions&
 		end match
 	end iterate
 end struc
-
-macro store? disposition
-	match data =at? area:address, disposition
-		store data at area:address
-	else match data =at? address, disposition
-		local value,length
-		match val:len, data
-			value = val
-			length = len
-		else
-			value = data
-			length = sizeof(address)
-		end match
-		if elementsof value
-			$%? = $%?-($-address)
-			virtual at address
-				if length = 4
-					dword value
-					load value:dword from address
-				else if length = 8
-					qword value
-					load value:qword from address
-				end if
-			end virtual
-			restore $%?
-		end if
-		store value:length at address
-	else
-		store disposition
-	end match
-end macro
 
 postpone
 	purge section?

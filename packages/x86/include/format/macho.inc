@@ -1019,15 +1019,20 @@ else
 	end macro
 
 	macro dword? value
-		local v
+		local v, o
 		v = value
 		if ~ v relativeto 0 & v relativeto 1 elementof v & (1 elementof (1 metadataof v) eq MachO.section | 1 elementof (1 metadataof v) eq MachO.symbol)
 			MachO.reloc =: $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof v)) shl 32 + 2 shl 57 + GENERIC_RELOC_VANILLA shl 60
 			if 1 elementof (1 metadataof v) eq MachO.symbol
 				MachO.reloc = MachO.reloc + 1 shl 59
 			end if
-			MachO.NRELOC = MachO.NRELOC + 1
+			o = $%
 			emit dword: 0 scaleof (1 metadataof v) + 0 scaleof v
+			if $% > o
+				MachO.NRELOC = MachO.NRELOC + 1
+			else
+				restore MachO.reloc
+			end if
 		else if ~ v relativeto 0 & (v + $) relativeto 1 elementof (v + $) & (1 elementof (1 metadataof (v + $)) eq MachO.section | 1 elementof (1 metadataof (v + $)) eq MachO.symbol)
 			if MachO.CPUTYPE = CPU_TYPE_X86_64
 				if 1 elementof (1 metadataof (v + $)) eq MachO.symbol
@@ -1043,8 +1048,13 @@ else
 			if 1 elementof (1 metadataof (v + $)) eq MachO.symbol
 				MachO.reloc = MachO.reloc + 1 shl 59
 			end if
-			MachO.NRELOC = MachO.NRELOC + 1
+			o = $%
 			emit dword: 0 scaleof v
+			if $% > o
+				MachO.NRELOC = MachO.NRELOC + 1
+			else
+				restore MachO.reloc
+			end if
 		else
 			emit dword: v
 		end if
@@ -1142,33 +1152,5 @@ else
 			end match
 		end iterate
 	end struc
-
-	macro store? disposition
-		match data =at? area:address, disposition
-			store data at area:address
-		else match data =at? address, disposition
-			local value,length
-			match val:len, data
-				value = val
-				length = len
-			else
-				value = data
-				length = sizeof(address)
-			end match
-			if elementsof value
-				$%? = $%?-($-address)
-				virtual at address
-					if length = 4
-						dword value
-						load value:dword from address
-					end if
-				end virtual
-				restore $%?
-			end if
-			store value:length at address
-		else
-			store disposition
-		end match
-	end macro
 
 end if

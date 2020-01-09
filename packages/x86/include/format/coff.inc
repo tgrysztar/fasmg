@@ -351,26 +351,32 @@ macro extrn? declaration*
 end macro
 
 macro dword? value
-	local v
+	local v, o
 	v = value
 	if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto COFF.relocatable
 		namespace COFF
-			store $% - SECTION_OFFSET at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_vaddr
-			store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_symndx
-			store RELOC_ADDR32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
-			RELOCATION_INDEX = RELOCATION_INDEX + 1
+			o = $%
+			emit dword: 0 scaleof v
+			if $% > o
+				store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_vaddr
+				store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_symndx
+				store RELOC_ADDR32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
+				RELOCATION_INDEX = RELOCATION_INDEX + 1
+			end if
 		end namespace
-		emit dword: 0 scaleof v
 	else if ~ v relativeto 0 & (v + COFF.SECTION_BASE) relativeto 1 elementof (v + COFF.SECTION_BASE)
 		if 1 elementof (1 metadataof (v + COFF.SECTION_BASE)) relativeto COFF.relocatable
 			namespace COFF
-				v = v + (SECTION_BASE + $% - SECTION_OFFSET)
-				store $% - SECTION_OFFSET at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_vaddr
-				store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_symndx
-				store RELOC_REL32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
-				RELOCATION_INDEX = RELOCATION_INDEX + 1
+				o = $%
+				v = v + (SECTION_BASE + o - SECTION_OFFSET)
+				emit dword: 0 scaleof v
+				if $% > o
+					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_vaddr
+					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_symndx
+					store RELOC_REL32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
+					RELOCATION_INDEX = RELOCATION_INDEX + 1
+				end if
 			end namespace
-			emit dword: 0 scaleof v
 		else
 			emit dword: v
 		end if
@@ -415,32 +421,6 @@ struc dd? definitions&
 		end match
 	end iterate
 end struc
-
-macro store? disposition
-	match data =at? area:address, disposition
-		store data at area:address
-	else match data =at? address, disposition
-		local value,length
-		match val:len, data
-			value = val
-			length = len
-		else
-			value = data
-			length = sizeof(address)
-		end match
-		if elementsof value & length = 4
-			$%? = $%?-($-address)
-			virtual at address
-				dword value
-				load value:dword from address
-			end virtual
-			restore $%?
-		end if
-		store value:length at address
-	else
-		store disposition
-	end match
-end macro
 
 postpone
 	purge section?

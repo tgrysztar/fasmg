@@ -483,40 +483,52 @@ RVA? equ -_GLOBAL_OFFSET_TABLE_+
 element PLT?
 
 macro dword? value
-	local v
+	local v, o
 	v = value
 	if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto ELF.relocatable
 		namespace ELF
-			store $% - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
-			store R_32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
-			RELOCATION_INDEX = RELOCATION_INDEX + 1
+			o = $%
+			emit dword: 0 scaleof v
+			if $% > o
+				store o - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
+				store R_32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
+				RELOCATION_INDEX = RELOCATION_INDEX + 1
+			end if
 		end namespace
-		emit dword: 0 scaleof v
 	else if ~ v relativeto 0 & (v + _GLOBAL_OFFSET_TABLE_) relativeto 1 elementof (v + _GLOBAL_OFFSET_TABLE_) & 1 elementof (1 metadataof (v + _GLOBAL_OFFSET_TABLE_)) relativeto ELF.relocatable
 		namespace ELF
+			o = $%
 			v = v + _GLOBAL_OFFSET_TABLE_
-			store $% - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
-			store R_GOTOFF + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
-			RELOCATION_INDEX = RELOCATION_INDEX + 1
+			emit dword: 0 scaleof v
+			if $% > o
+				store o - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
+				store R_GOTOFF + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
+				RELOCATION_INDEX = RELOCATION_INDEX + 1
+			end if
 		end namespace
-		emit dword: 0 scaleof v
 	else if ~ v relativeto 0 & (v + ELF.SECTION_BASE) relativeto 1 elementof (v + ELF.SECTION_BASE)
 		if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto ELF.relocatable
 			namespace ELF
-				v = v + (SECTION_BASE + $% - SECTION_OFFSET)
-				store $% - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
-				store R_PC32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
-				RELOCATION_INDEX = RELOCATION_INDEX + 1
+				o = $%
+				v = v + (SECTION_BASE + o - SECTION_OFFSET)
+				emit dword: 0 scaleof v
+				if $% > o
+					store o - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
+					store R_PC32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
+					RELOCATION_INDEX = RELOCATION_INDEX + 1
+				end if
 			end namespace
-			emit dword: 0 scaleof v
 		else if 1 elementof (1 metadataof (v + ELF.SECTION_BASE)) relativeto PLT
 			namespace ELF
-				v = v + (SECTION_BASE + $% - SECTION_OFFSET)
-				store $% - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
-				store R_PLT32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
-				RELOCATION_INDEX = RELOCATION_INDEX + 1
+				o = $%
+				v = v + (SECTION_BASE + o - SECTION_OFFSET)
+				emit dword: 0 scaleof v
+				if $% > o
+					store o - SECTION_OFFSET at relocations : Elf32_Rel.r_offset + RELOCATION_INDEX * sizeof Elf32_Rel
+					store R_PLT32 + (0 scaleof (1 metadataof v)) shl 8 at relocations : Elf32_Rel.r_info + RELOCATION_INDEX * sizeof Elf32_Rel
+					RELOCATION_INDEX = RELOCATION_INDEX + 1
+				end if
 			end namespace
-			emit dword: 0 scaleof v
 		else
 			emit dword: v
 		end if
@@ -561,32 +573,6 @@ struc dd? definitions&
 		end match
 	end iterate
 end struc
-
-macro store? disposition
-	match data =at? area:address, disposition
-		store data at area:address
-	else match data =at? address, disposition
-		local value,length
-		match val:len, data
-			value = val
-			length = len
-		else
-			value = data
-			length = sizeof(address)
-		end match
-		if elementsof value & length = 4
-			$%? = $%?-($-address)
-			virtual at address
-				dword value
-				load value:dword from address
-			end virtual
-			restore $%?
-		end if
-		store value:length at address
-	else
-		store disposition
-	end match
-end macro
 
 postpone
 	purge section?

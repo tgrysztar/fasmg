@@ -111,28 +111,34 @@ macro segment? definition
 end macro
 
 macro word? value
-    local v,a
+    local v, o
     v = value
     if v relativeto MZ.segment
-	a = $% - MZ.HEADER_LENGTH
-	a = a and 0FFFFh + (a and not 0FFFFh) shl 12
-	store a : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
+	o = $%
 	emit word: v - MZ.segment
-	MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
+	if $% > o
+	    o = o - MZ.HEADER_LENGTH
+	    o = o and 0FFFFh + (o and not 0FFFFh) shl 12
+	    store o : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
+	    MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
+	end if
     else
 	emit word: v
     end if
 end macro
 
 macro dword? value
-    local v,a
+    local v, o
     v = value
     if v relativeto MZ.segment
-	a = $% - MZ.HEADER_LENGTH
-	a = a and 0FFFFh + (a and not 0FFFFh) shl 12
-	store a : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
+	o = $%
 	emit dword: v - MZ.segment
-	MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
+	if $% > o
+	    o = o - MZ.HEADER_LENGTH
+	    o = o and 0FFFFh + (o and not 0FFFFh) shl 12
+	    store o : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
+	    MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
+	end if
     else
 	emit dword: v
     end if

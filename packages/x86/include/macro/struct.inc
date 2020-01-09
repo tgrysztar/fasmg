@@ -5,12 +5,12 @@ struct?.counter = -1
 struct?.subcounter = -1
 
 struc struct?.init_field: name,field,value&
+	local data
 	match =struct type, name.field.__type
 		.field struct?.init type,value
 	else match =substruct type, name.field.__type
 		. struct?.init name.type,value
 	else match first=,rest, value
-		local data
 		virtual at 0
 			emit sizeof .field : value
 			load data : $ from 0
@@ -27,7 +27,26 @@ struc struct?.init_field: name,field,value&
 			err 'data too long for ',`name,'.',`field
 		end if
 	else
-		store value at .field
+		data = value
+		if data relativeto 0
+			store data at .field
+		else
+			virtual at .field
+				local adjustment
+				adjustment = $%-($-.field) - $
+				define $%? ($ - adjustment)	; fool the relocation handlers
+				if sizeof .field = 4
+					dword data
+				else if sizeof .field = 8
+					qword data
+				else
+					emit sizeof .field : data
+				end if
+				restore $%?
+				load data : $-$$ from $$
+			end virtual
+			store data at .field
+		end if
 	end if
 end struc
 

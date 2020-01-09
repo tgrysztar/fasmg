@@ -883,26 +883,32 @@ end macro
 if defined PE.Fixups
 
 	macro dword? value
-	    local v
+	    local v, o
 	    v = value
 	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
-		store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-		store IMAGE_REL_BASED_HIGHLOW:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		o = $%
 		emit dword: v - PE.RELOCATION
-		PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
+		if $% > o
+		    store $-4-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
+		    store IMAGE_REL_BASED_HIGHLOW:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		    PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
+		end if
 	    else
 		emit dword: v
 	    end if
 	end macro
 
 	macro qword? value
-	    local v
+	    local v, o
 	    v = value
 	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
-		store $-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-		store IMAGE_REL_BASED_DIR64:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		o = $%
 		emit qword: v - PE.RELOCATION
-		PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
+		if $% > o
+		    store $-8-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
+		    store IMAGE_REL_BASED_DIR64:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		    PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
+		end if
 	    else
 		emit qword: v
 	    end if
@@ -981,36 +987,6 @@ if defined PE.Fixups
 		end match
 	    end iterate
 	end struc
-
-	macro store? disposition
-		match data =at? area:address, disposition
-			store data at area:address
-		else match data =at? address, disposition
-			local value,length
-			match val:len, data
-				value = val
-				length = len
-			else
-				value = data
-				length = sizeof(address)
-			end match
-			if elementsof value
-				virtual at address
-					if length = 4
-						dword value
-					else if length = 8
-						qword value
-					else
-						emit length: value
-					end if
-					load value:length from address
-				end virtual
-			end if
-			store value:length at address
-		else
-			store disposition
-		end match
-	end macro
 
 end if
 
