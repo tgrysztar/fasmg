@@ -1,7 +1,8 @@
 
-if ~ definite AVX
+if ~ defined AVX
 
-	AVX := 1
+	restore AVX	; this ensures that symbol cannot be forward-referenced
+	AVX = 1
 
 	include 'sse4.2.inc'
 	include 'xsave.inc'
@@ -51,115 +52,233 @@ if ~ definite AVX
 	VEX_F3_0F3A_W1 = VEX_F3_0F3A_W0 or 8000h
 	VEX_F2_0F3A_W1 = VEX_F2_0F3A_W0 or 8000h
 
-	macro AVX.parse_operand ns,op
-		x86.parse_operand ns,op
-		if ns.type = 'imm' & ns.size = 0
-			if 1 metadataof ns.imm relativeto SSE.reg & ns.imm eq 1 elementof ns.imm
-				ns.type = 'mmreg'
-				ns.mod = 11b
-				ns.rm = 1 metadataof ns.imm - SSE.reg
-				ns.size = 16
-			else if 1 metadataof ns.imm relativeto AVX.reg & ns.imm eq 1 elementof ns.imm
-				ns.type = 'mmreg'
-				ns.mod = 11b
-				ns.rm = 1 metadataof ns.imm - AVX.reg
-				ns.size = 32
-			end if
-		else if ns.type = 'reg' & ns.size = 1 & ns.rm >= 4 & (~ defined x86.REX_FORBIDDEN | ns.rm and x86.REX_FORBIDDEN)
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction AVX.parse_operand namespace, operand
 
-	macro AVX.store_instruction vsize*,vex_mpw*,opcode*,rm_operand*,reg*,vreg:0,imm_size:0,imm
+		local	size, type, mod, rm, imm
+		local	i, sym, cmd
 
-		if rm_operand.segment_prefix
-			if x86.mode = 64
-				if rm_operand.segment_prefix >= 64h
-					db rm_operand.segment_prefix
-				end if
-			else if rm_operand.mode = 16 & ( rm_operand.rm = 2 | rm_operand.rm = 3 | ( rm_operand.mod > 0 & rm_operand.rm = 6 ) )
-				if rm_operand.segment_prefix <> 36h
-					db rm_operand.segment_prefix
-				end if
-			else if rm_operand.mode = 32 & ( ( rm_operand.mod > 0 & rm_operand.rm = 5 ) | ( rm_operand.rm = 4 & rm_operand.base = 4 ) | ( rm_operand.mod > 0 & rm_operand.rm = 4 & rm_operand.base = 5 ) )
-				if rm_operand.segment_prefix <> 36h
-					db rm_operand.segment_prefix
-				end if
-			else if rm_operand.segment_prefix <> 3Eh
-				db rm_operand.segment_prefix
-			end if
-		end if
-		if rm_operand.mod <> 11b & rm_operand.mode <> x86.mode
-			if rm_operand.mode = 64 | (rm_operand.mode = 16 & x86.mode = 64)
-				err 'illegal addressing mode'
-			end if
-			db 67h
-		end if
+		asmcmd	=x86.=parse_operand namespace, operand
 
-		rm_operand.vex = vex_mpw
+		arrange type, namespace.=type
+		arrange size, namespace.=size
+		arrange imm, namespace.=imm
 
-		if vsize = 32
-			rm_operand.vex = rm_operand.vex or 1 shl 10
-		end if
+		check	type = 'reg' & size = 1 & rm >= 4 & (~ defined x86.REX_FORBIDDEN | rm and x86.REX_FORBIDDEN)
+		jyes	invalid_operand
+		check	type = 'imm' & size = 0
+		jno	done
 
-		if rm_operand.rm and 1000b | (rm_operand.mod <> 11b & rm_operand.mode > 16 & rm_operand.rm = 4 & rm_operand.base and 1000b)
-			rm_operand.vex = rm_operand.vex or (1 shl 5)
-		end if
-		if rm_operand.mod <> 11b & rm_operand.mode > 16 & rm_operand.rm = 4 & rm_operand.index and 1000b
-			rm_operand.vex = rm_operand.vex or (1 shl 6)
-		end if
-		if reg and 1000b
-			rm_operand.vex = rm_operand.vex or (1 shl 7)
-		end if
-		rm_operand.vex = rm_operand.vex or (vreg and 1111b) shl 11
+		check	imm eq 1 elementof imm & 1 metadataof imm relativeto SSE.reg
+		jyes	xmm_register
+		check	imm eq 1 elementof imm & 1 metadataof imm relativeto AVX.reg
+		jyes	ymm_register
+		exit
 
-		if x86.mode < 64 & rm_operand.vex and 01000000_11100000b
-			err 'instruction requires long mode'
-		end if
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
 
-		if rm_operand.vex and 10000000_01111111b <> 1
-			db 0C4h,(rm_operand.vex and 11111111b) xor 11100000b,(rm_operand.vex shr 8) xor 01111000b
-		else
-			db 0C5h,((rm_operand.vex and 10000000b) or ((rm_operand.vex shr 8) and 1111111b)) xor 11111000b
-		end if
+	    xmm_register:
 
-		db opcode, rm_operand.mod shl 6 + (reg and 111b) shl 3 + rm_operand.rm and 111b
-		if rm_operand.mod <> 11b & rm_operand.rm = 4 & rm_operand.mode <> 16
-			db (bsf rm_operand.scale) shl 6 + (rm_operand.index and 111b) shl 3 + (rm_operand.base and 111b)
-		end if
-		if rm_operand.displacement_size = 1
-			db rm_operand.displacement
-		else if rm_operand.displacement_size = 2
-			dw rm_operand.displacement
-		else if rm_operand.displacement_size = 4
-			if defined rm_operand.auto_relative & rm_operand.auto_relative
-				if imm_size < 8
-					rm_operand.displacement = rm_operand.displacement - ($ + 4 + imm_size)
-				else
-					rm_operand.displacement = rm_operand.displacement - ($ + 4 + 4)
-				end if
-			end if
-			if rm_operand.mode = 64 & rm_operand.displacement relativeto 0
-				if rm_operand.displacement - 1 shl 64 >= -80000000h & rm_operand.displacement < 1 shl 64
-					rm_operand.displacement = rm_operand.displacement - 1 shl 64
-				else if rm_operand.displacement < -80000000h | rm_operand.displacement >= 80000000h
-					err 'address value out of signed range'
-				end if
-			end if
-			dd rm_operand.displacement
-		else if rm_operand.displacement_size = 8
-			err 'long address not encodable'
-		end if
-		if imm_size = 1
-			db imm
-		else if imm_size = 2
-			dw imm
-		else if imm_size = 4
-			dd imm
-		else if imm_size = 8
-			x86.simm32 imm
-		end if
-	end macro
+		compute rm, 1 metadataof imm - SSE.reg
+		compute size, 16
+
+		jump	export_mmreg
+
+	    ymm_register:
+
+		compute rm, 1 metadataof imm - AVX.reg
+		compute size, 32
+
+	    export_mmreg:
+
+		compute type, 'mmreg'
+		compute mod, 11b
+
+		arrange sym, namespace.=mod
+		publish sym, mod
+
+		arrange sym, namespace.=rm
+		publish sym, rm
+
+		arrange sym, namespace.=type
+		publish sym, type
+
+		arrange sym, namespace.=size
+		publish sym, size
+
+	    done:
+
+	end calminstruction
+
+	calminstruction AVX.store_instruction vsize*,vex_mpw*,opcode*,rm_operand*,reg*,vreg:0,imm_size:0,imm
+
+		local	segment_prefix, vex
+		local	mode, mod, rm
+		local	scale, index, base
+		local	displacement, displacement_size, auto_relative
+		local	sym
+
+		arrange segment_prefix, rm_operand.=segment_prefix
+
+		arrange mode, rm_operand.=mode
+		arrange mod, rm_operand.=mod
+		arrange rm, rm_operand.=rm
+
+		arrange scale, rm_operand.=scale
+		arrange index, rm_operand.=index
+		arrange base, rm_operand.=base
+
+		arrange displacement_size, rm_operand.=displacement_size
+		arrange displacement, rm_operand.=displacement
+		arrange auto_relative, rm_operand.=auto_relative
+
+		check	segment_prefix
+		jno	segment_prefix_ok
+
+		check	mode = 64
+		jyes	segment_in_long_mode
+		check	mode = 16 & ( rm = 2 | rm = 3 | ( mod > 0 & rm = 6 ) )
+		jyes	ss_segment_default
+		check	mode = 32 & ( ( mod > 0 & rm = 5 ) | ( rm = 4 & base = 4 ) | ( mod > 0 & rm = 4 & base = 5 ) )
+		jyes	ss_segment_default
+
+	    ds_segment_default:
+		check	segment_prefix = 3Eh
+		jyes	segment_prefix_ok
+		jump	store_segment_prefix
+	    ss_segment_default:
+		check	segment_prefix = 36h
+		jyes	segment_prefix_ok
+		jump	store_segment_prefix
+	    segment_in_long_mode:
+		check	segment_prefix < 64h
+		jyes	segment_prefix_ok
+	    store_segment_prefix:
+		asmcmd	=db segment_prefix
+	    segment_prefix_ok:
+
+		check	mod <> 11b & mode <> x86.mode
+		jno	addressing_prefix_ok
+		check	mode = 64 | (mode = 16 & x86.mode = 64)
+		jno	store_addressing_prefix
+		asmcmd	=err 'illegal addressing mode'
+	    store_addressing_prefix:
+		asmcmd	=db 67h
+	    addressing_prefix_ok:
+
+		compute vex, vex_mpw
+	    vex_L:
+		check	vsize = 32
+		jno	vex_B
+		compute vex, vex or 1 shl 10
+	    vex_B:
+		check	rm and 1000b | (mod <> 11b & mode > 16 & rm = 4 & base and 1000b)
+		jno	vex_X
+		compute vex, vex or 1 shl 5
+	    vex_X:
+		check	mod <> 11b & mode > 16 & rm = 4 & index and 1000b
+		jno	vex_R
+		compute vex, vex or 1 shl 6
+	    vex_R:
+		check	reg and 1000b
+		jno	vex_vvvv
+		compute vex, vex or 1 shl 7
+	    vex_vvvv:
+		compute vex, vex or (vreg and 1111b) shl 11
+
+		check	x86.mode < 64 & vex and 01000000_11100000b
+		jno	allowed
+		asmcmd	=err 'instruction requires long mode'
+	    allowed:
+
+		local	byte2, byte3
+		check	vex and 10000000_01111111b <> 1
+		jyes	vex_3byte
+	    vex_2byte:
+		compute byte2, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
+		asmcmd	=db 0C5h,byte2
+		jump	vex_done
+	    vex_3byte:
+		compute byte2, (vex and 11111111b) xor 11100000b
+		compute byte3, (vex shr 8) xor 01111000b
+		asmcmd	=db 0C4h,byte2,byte3
+	    vex_done:
+
+		local	modrm, sib
+
+		compute modrm, mod shl 6 + (reg and 111b) shl 3 + rm and 111b
+		asmcmd	=db opcode, modrm
+
+		check	mod <> 11b & rm = 4 & mode <> 16
+		jno	sib_ok
+		compute sib, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
+		asmcmd	=db sib
+	    sib_ok:
+
+		check	displacement_size = 1
+		jyes	displacement_8bit
+		check	displacement_size = 2
+		jyes	displacement_16bit
+		check	displacement_size = 4 | displacement_size = 8
+		jno	displacement_ok
+
+		compute displacement, displacement
+
+		check	auto_relative
+		jno	auto_relative_ok
+		check	imm_size < 8
+		jyes	adjust_auto_relative_displacement
+		compute displacement, displacement - ($ + 4 + 4)
+		jump	auto_relative_ok
+	      adjust_auto_relative_displacement:
+		compute displacement, displacement - ($ + 4 + imm_size)
+	      auto_relative_ok:
+
+		check	mode = 64 & displacement relativeto 0
+		jno	displacement_ready
+		check	displacement - 1 shl 64 >= -80000000h & displacement < 1 shl 64
+		jyes	adjust_displacement_wrap
+		check	displacement >= -80000000h & displacement < 80000000h
+		jyes	displacement_ready
+		asmcmd	=err 'address value out of signed range'
+	      adjust_displacement_wrap:
+		compute displacement, displacement - 1 shl 64
+	      displacement_ready:
+
+		arrange sym, rm_operand.=displacement
+		publish sym, displacement
+
+		asmcmd	=dd rm_operand.=displacement
+
+		jump	displacement_ok
+	    displacement_16bit:
+		asmcmd	=dw rm_operand.=displacement
+		jump	displacement_ok
+	    displacement_8bit:
+		asmcmd	=db rm_operand.=displacement
+	    displacement_ok:
+
+		check	imm_size = 1
+		jyes	immediate_8bit
+		check	imm_size = 2
+		jyes	immediate_16bit
+		check	imm_size = 4
+		jyes	immediate_32bit
+		check	imm_size = 8
+		jno	immediate_ok
+		asmcmd	=x86.=simm32 imm
+		jump	immediate_ok
+	    immediate_32bit:
+		asmcmd	=dd imm
+		jump	immediate_ok
+	    immediate_16bit:
+		asmcmd	=dw imm
+		jump	immediate_ok
+	    immediate_8bit:
+		asmcmd	=db imm
+	    immediate_ok:
+
+	end calminstruction
 
 	macro AVX.basic_instruction vex_mpw,opcode,msize,dest,src,src2
 		AVX.parse_operand @dest,dest
@@ -1154,9 +1273,13 @@ if ~ definite AVX
 
 	end iterate
 
-	macro vptest? dest*,src*
-		AVX.single_source_instruction VEX_66_0F38_W0,17h,0,dest,src
-	end macro
+	iterate <instr,opcode>, vtestps,0Eh, vtestpd,0Fh, vptest,17h
+
+		macro instr? dest*,src*
+			AVX.single_source_instruction VEX_66_0F38_W0,opcode,0,dest,src
+		end macro
+
+	end iterate
 
 	macro vzeroall?
 		db 0C5h,11111100b,77h

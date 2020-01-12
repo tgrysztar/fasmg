@@ -100,10 +100,18 @@ show_errors:
 	test	[esi+Error.flags],ERR_CUSTOM
 	jnz	skip_line_content
       show_source_line:
+	cmp	[ebx+SourceEntry.type],SOURCE_CALM
+	je	show_calm_source
 	mov	esi,_line_content_prefix
 	xor	ecx,ecx
 	call	display_error_string
 	call	show_line_content
+	mov	esi,_new_line
+	jmp	next_source_entry
+      show_calm_source:
+	mov	esi,_calm_source
+	xor	ecx,ecx
+	call	display_error_string
 	mov	esi,_new_line
 	jmp	next_source_entry
       source_context_shown:

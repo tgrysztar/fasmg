@@ -324,9 +324,11 @@ namespace MachO
 
 end namespace
 
-macro align? boundary,value:?
-	db (boundary-1)-($+boundary-1) mod boundary dup value
-end macro
+calminstruction align? boundary,value:?
+	compute boundary, (boundary-1)-($+boundary-1) mod boundary
+	arrange value, =db boundary =dup value
+	assemble value
+end calminstruction
 
 postpone
 	MachO.text
@@ -1019,15 +1021,20 @@ else
 	end macro
 
 	macro dword? value
-		local v
+		local v, o
 		v = value
 		if ~ v relativeto 0 & v relativeto 1 elementof v & (1 elementof (1 metadataof v) eq MachO.section | 1 elementof (1 metadataof v) eq MachO.symbol)
 			MachO.reloc =: $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof v)) shl 32 + 2 shl 57 + GENERIC_RELOC_VANILLA shl 60
 			if 1 elementof (1 metadataof v) eq MachO.symbol
 				MachO.reloc = MachO.reloc + 1 shl 59
 			end if
-			MachO.NRELOC = MachO.NRELOC + 1
+			o = $%
 			emit dword: 0 scaleof (1 metadataof v) + 0 scaleof v
+			if $% > o
+				MachO.NRELOC = MachO.NRELOC + 1
+			else
+				restore MachO.reloc
+			end if
 		else if ~ v relativeto 0 & (v + $) relativeto 1 elementof (v + $) & (1 elementof (1 metadataof (v + $)) eq MachO.section | 1 elementof (1 metadataof (v + $)) eq MachO.symbol)
 			if MachO.CPUTYPE = CPU_TYPE_X86_64
 				if 1 elementof (1 metadataof (v + $)) eq MachO.symbol
@@ -1043,8 +1050,13 @@ else
 			if 1 elementof (1 metadataof (v + $)) eq MachO.symbol
 				MachO.reloc = MachO.reloc + 1 shl 59
 			end if
-			MachO.NRELOC = MachO.NRELOC + 1
+			o = $%
 			emit dword: 0 scaleof v
+			if $% > o
+				MachO.NRELOC = MachO.NRELOC + 1
+			else
+				restore MachO.reloc
+			end if
 		else
 			emit dword: v
 		end if
@@ -1098,77 +1110,60 @@ else
 	end if
 	end postpone
 
-	macro align? boundary,value:?
-		if $ relativeto 0 | MachO.SECTION_ALIGN mod (boundary) = 0
-			db (boundary-1)-(0 scaleof $+boundary-1) mod boundary dup value
-		else
-			err 'section not aligned enough'
-		end if
-	end macro
+	calminstruction align? boundary,value:?
+		check	$ relativeto 0 | MachO.SECTION_ALIGN mod (boundary) = 0
+		jyes	allowed
+		arrange value, =err 'section not aligned enough'
+		assemble value
+		exit
+	    allowed:
+		compute boundary, (boundary-1)-(0 scaleof $+boundary-1) mod boundary
+		arrange value, =db boundary =dup value
+		assemble value
+	end calminstruction
 
-	macro dd? definitions&
-		iterate value,definitions
-			match ?, value
-				dd ?
-			else match n =dup? ?, value
-				dd n dup ?
-			else match n =dup? (?), value
-				dd n dup ?
-			else match n =dup? v, value
-				repeat n
-					dword v
-				end repeat
-			else
-				dword value
-			end match
-		end iterate
-	end macro
+	calminstruction dd? definitions&
+		local	value, n
+	    start:
+		match	value=,definitions, definitions, ()
+		jyes	recognize
+		match	value, definitions
+		arrange definitions,
+	    recognize:
+		match	n =dup? value, value, ()
+		jyes	duplicate
+		match	?, value
+		jyes	reserve
+		arrange value, =dword value
+		assemble value
+	    next:
+		match	, definitions
+		jno	start
+		take	, definitions
+		take	definitions, definitions
+		jyes	next
+		exit
+	    reserve:
+		arrange value, =dd ?
+		assemble value
+		jump	next
+	    duplicate:
+		match	(value), value
+	    stack:
+		check	n
+		jno	next
+		take	definitions, value
+		arrange value, definitions
+		compute n, n - 1
+		jump	stack
+	end calminstruction
 
-	struc dd? definitions&
-		label . : dword
-		iterate value,definitions
-			match ?, value
-				dd ?
-			else match n =dup? ?, value
-				dd n dup ?
-			else match n =dup? (?), value
-				dd n dup ?
-			else match n =dup? v, value
-				repeat n
-					dword v
-				end repeat
-			else
-				dword value
-			end match
-		end iterate
-	end struc
-
-	macro store? disposition
-		match data =at? area:address, disposition
-			store data at area:address
-		else match data =at? address, disposition
-			local value,length
-			match val:len, data
-				value = val
-				length = len
-			else
-				value = data
-				length = sizeof(address)
-			end match
-			if elementsof value
-				$%? = $%?-($-address)
-				virtual at address
-					if length = 4
-						dword value
-						load value:dword from address
-					end if
-				end virtual
-				restore $%?
-			end if
-			store value:length at address
-		else
-			store disposition
-		end match
-	end macro
+	calminstruction (label) dd? definitions&
+		local	cmd
+		arrange cmd, =label label : =dword
+		assemble cmd
+		arrange cmd, =dd definitions
+		assemble cmd
+	end calminstruction
 
 end if

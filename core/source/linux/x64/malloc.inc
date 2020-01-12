@@ -302,7 +302,7 @@ realloc:
 	pop	rax
 	mov	edx,[eax-4]
 	mov	ecx,edx
-	add	ecx,[eax+edx]
+	add	ecx,[eax+edx-4]
 	mov	[eax-4],ecx
 	sub	ecx,4
 	ret

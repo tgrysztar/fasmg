@@ -58,6 +58,7 @@ DBLOCK_NAMESPACE = 1
 DBLOCK_CONTROL = 2
 DBLOCK_MACRO = 3
 DBLOCK_VIRTUAL = 4
+DBLOCK_CALMINSTRUCTION = 5
 DBLOCK_POSTPONED = 8
 DBLOCK_SUSPENDED = 9
 
@@ -254,20 +255,21 @@ add_block_parameter:
 
 remove_block_parameters:
 ; in: edi - DirectiveBlock
-; preserves: esi
+; preserves: esi, edi
 	mov	eax,[edi+DirectiveBlock.parameter]
 	test	eax,eax
 	jz	no_block_parameters
-	push	esi
+	push	esi edi
 	mov	esi,eax
     remove_block_parameter:
 	mov	ebx,[esi+BlockParameter.symbol]
 	mov	edx,[esi+BlockParameter.definition]
+	xor	edi,edi
 	call	remove_value_definition
 	mov	esi,[esi+BlockParameter.next]
 	test	esi,esi
 	jnz	remove_block_parameter
-	pop	esi
+	pop	edi esi
     no_block_parameters:
 	retn
 
@@ -356,6 +358,57 @@ extract_parameter_value:
       parameter_value_extracted:
 	retn
 
+get_macro_symbol:
+; in:
+;  esi = pointer into preprocessed line or current embedded value
+;  al = initial byte of symbol at esi
+;  dl = SYMCLASS_#
+; out:
+;  ebx - SymbolTree_Leaf
+;  esi = pointer advanced past the processed declaration
+;  [macro_leaf] - SymbolTree_Leaf
+;  [macro_flags] = VAL_#
+	mov	[macro_flags],VAL_NONRECURSIVE
+	cmp	al,'!'
+	je	unconditional_interceptor
+	or	[symbol_definition],1
+	call	identify_symbol
+	jc	invalid_macro_symbol
+	test	ebx,ebx
+	jz	invalid_macro_symbol
+    macro_symbol_identified:
+	call	move_to_next_symbol
+	jc	macro_symbol_ok
+	cmp	al,':'
+	je	recursive_macro
+	test	ecx,ecx
+	jnz	macro_symbol_ok
+	cmp	al,'!'
+	je	unconditional_macro
+	jmp	macro_symbol_ok
+    recursive_macro:
+	inc	esi
+	call	move_to_next_symbol
+	and	[macro_flags],not VAL_NONRECURSIVE
+	or	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
+	jmp	macro_symbol_ok
+    unconditional_interceptor:
+	mov	ebx,[interceptor_symbol]
+	cmp	bl,SYMCLASS_STRUCTURE
+	jne	unconditional_macro
+	mov	ebx,[label_interceptor_symbol]
+    unconditional_macro:
+	inc	esi
+	call	move_to_next_symbol
+	or	[macro_flags],VAL_UNCONDITIONAL
+    macro_symbol_ok:
+	mov	[macro_leaf],ebx
+	clc
+	retn
+    invalid_macro_symbol:
+	stc
+	retn
+
 ; instruction handler
 ; in:
 ;  esi = pointer into preprocessed line
@@ -428,6 +481,7 @@ begin_new_section:
 	jc	invalid_argument
 	push	esi
 	call	convert_terms_to_numeric_value
+	call	trim_output
 	call	create_output_area
 	mov	eax,edx
 	inc	[eax+ValueDefinition.reference_count]
@@ -435,16 +489,6 @@ begin_new_section:
 	dec	[eax+ValueDefinition.reference_count]
        ; jz	 internal_error
 	pop	esi
-    trim_previous_areas:
-	mov	edx,[edx+ValueDefinition.previous]
-	test	edx,edx
-	jz	instruction_assembled
-	mov	eax,[edx+ValueDefinition.value]
-	and	[eax+AreaHeader.uninitialized_data_length],0
-	mov	ecx,[edx+ValueDefinition.value_length]
-	sub	ecx,sizeof.AreaHeader
-	sub	ecx,[eax+AreaHeader.base_address_length]
-	jz	trim_previous_areas
 	jmp	instruction_assembled
 restart_output:
 	mov	edx,[current_area]
@@ -466,8 +510,6 @@ restart_output:
 	jmp	begin_new_output_area
 
 define_label:
-	test	[assembly_mode],AMODE_SKIP
-	jnz	assembly_line
 	inc	esi
 	xor	ecx,ecx
 	call	move_to_next_symbol
@@ -479,6 +521,8 @@ define_label:
 	cmp	al,':'
 	je	define_area_label
     define_simple_label:
+	test	[assembly_mode],AMODE_SKIP
+	jnz	assemble_after_label
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_label_to_macro
 	cmp	[interceptor],0
@@ -495,12 +539,15 @@ define_label:
     label_defined:
 	call	update_current_label
 	mov	esi,[argument_start]
+    assemble_after_label:
 	mov	[line_start],esi
 	mov	eax,[embedded_context]
 	mov	[line_context],eax
 	jmp	assemble_instruction
     define_area_label:
 	inc	esi
+	test	[assembly_mode],AMODE_SKIP
+	jnz	assemble_after_label
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_label_to_macro
 	cmp	[interceptor],0
@@ -563,6 +610,8 @@ define_numeric_symbol:
 	call	create_value_definition
 	jmp	define_numeric_value
 define_numeric_constant:
+	test	[assembly_mode],AMODE_SKIP
+	jnz	assembly_line
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_line_to_macro
 	cmp	[interceptor],0
@@ -842,6 +891,7 @@ restore_variables:
 	jz	invalid_identifier
     remove_variable_value:
 	xor	edx,edx
+	xor	edi,edi
 	call	remove_value_definition
 	call	move_to_next_symbol
 	jc	assembly_line
@@ -971,7 +1021,7 @@ virtual_block:
 	push	esi
 	call	get_current_address_value
     create_virtual_block:
-	mov	ebx,[virtual_area_entry]
+	lea	ebx,[virtual_area]
 	call	create_area
 	or	[ebx+AreaHeader.flags],AREA_VIRTUAL
 	cmp	[shift_tracking],0
@@ -1920,6 +1970,8 @@ variable_iterator_block:
 	mov	eax,[edx+ValueDefinition.pass]
 	cmp	eax,[current_pass]
 	jne	variable_values_collected
+	cmp	[edx+ValueDefinition.type],VALTYPE_RESERVED
+	je	skip_variable_value
 	add	edi,4
 	cmp	edi,[assembly_stack_end]
 	jbe	store_variable_value
@@ -1938,6 +1990,7 @@ variable_iterator_block:
 	inc	[number_of_values]
 	add	ecx,[edx+ValueDefinition.value_length]
 	add	ecx,1+sizeof.RecognitionContext
+      skip_variable_value:
 	mov	edx,[edx+ValueDefinition.previous]
 	jmp	collect_variable_values
       variable_values_collected:
@@ -2992,48 +3045,15 @@ define_macro:
 	or	[assembly_mode],AMODE_DEFINITION
 	test	[assembly_mode],AMODE_SKIP
 	jnz	assembly_line
-	mov	[macro_flags],VAL_NONRECURSIVE
 	xor	ecx,ecx
 	call	move_to_next_symbol
 	jc	invalid_macro_definition
 	cmp	al,'('
 	je	macro_with_label_parameter
     read_macro_name:
-	cmp	al,'!'
-	je	unconditional_interceptor
-	or	[symbol_definition],1
 	mov	dl,bl
-	call	identify_symbol
-	jc	invalid_macro_definition
-	test	ebx,ebx
-	jz	invalid_identifier
-    macro_symbol_identified:
-	call	move_to_next_symbol
-	jc	macro_symbol_ok
-	cmp	al,':'
-	je	recursive_macro
-	test	ecx,ecx
-	jnz	macro_symbol_ok
-	cmp	al,'!'
-	je	unconditional_macro
-	jmp	macro_symbol_ok
-    recursive_macro:
-	inc	esi
-	call	move_to_next_symbol
-	and	[macro_flags],not VAL_NONRECURSIVE
-	or	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
-	jmp	macro_symbol_ok
-    unconditional_interceptor:
-	mov	ebx,[interceptor_symbol]
-	cmp	bl,SYMCLASS_STRUCTURE
-	jne	unconditional_macro
-	mov	ebx,[label_interceptor_symbol]
-    unconditional_macro:
-	inc	esi
-	call	move_to_next_symbol
-	or	[macro_flags],VAL_UNCONDITIONAL
-    macro_symbol_ok:
-	mov	[macro_leaf],ebx
+	call	get_macro_symbol
+	jc	invalid_identifier
 	mov	edx,[ebx+SymbolTree_Leaf.definition]
 	test	edx,edx
 	jz	create_placeholder_value
@@ -3471,35 +3491,7 @@ use_struc:
 	mov	[line_end],esi
 	mov	eax,ebx
 	mov	ecx,[parameter_namespace]
-	xor	ebx,ebx
-	mov	dl,SYMCLASS_PARAMETER
-	call	get_abstract_symbol
-	mov	eax,[ebx+SymbolTree_Leaf.definition]
-	test	eax,eax
-	jz	create_namespace_counter
-	mov	ecx,[current_pass]
-	cmp	ecx,[eax+ValueDefinition.pass]
-	je	increment_namespace_counter
-	mov	[eax+ValueDefinition.pass],ecx
-	and	[eax+ValueDefinition.value],0
-	jmp	increment_namespace_counter
-    create_namespace_counter:
-	mov	ecx,sizeof.ValueDefinition
-	call	create_tree_element
-	mov	[ebx+SymbolTree_Leaf.definition],eax
-	inc	[eax+ValueDefinition.reference_count]
-	mov	[eax+ValueDefinition.type],VALTYPE_PLAIN
-	mov	ecx,[current_pass]
-	mov	[eax+ValueDefinition.pass],ecx
-    increment_namespace_counter:
-	mov	ecx,[eax+ValueDefinition.value]
-	inc	[eax+ValueDefinition.value]
-	jecxz	create_local_namespace
-	mov	eax,ebx
-	xor	ebx,ebx
-	mov	dl,SYMCLASS_PARAMETER
-	call	get_abstract_symbol
-    create_local_namespace:
+	call	get_local_anchor
 	call	get_local_namespace
 	mov	[new_local_namespace],ebx
 	mov	eax,[parameter_namespace]
@@ -3850,12 +3842,13 @@ outscope_directive:
 	lea	ebx,[ebx+sizeof.SourceContext+eax]
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	define_outscope
-	mov	ebx,[ebx+SourceEntry.local_namespace]
-	test	[ebx+SymbolTree_Root.flags],NAMESPACE_UNATTACHED
+	mov	ecx,[ebx+SourceEntry.local_namespace]
+	test	[ecx+SymbolTree_Root.flags],NAMESPACE_UNATTACHED
 	jnz	unexpected_instruction
-	mov	eax,[ebx+SymbolTree_Root.chain]
+	mov	eax,[ecx+SymbolTree_Root.chain]
 	test	eax,eax
 	jz	unexpected_instruction
+    outscope_namespace_ok:
 	mov	[parameter_namespace],eax
 	test	[eax+SymbolTree_Root.flags],NAMESPACE_UNATTACHED
 	jz	outscope_local_namespace_ok
@@ -4368,10 +4361,10 @@ load_value:
 	mov	esi,ebx
 	cmp	[value_length],0
 	je	value_loaded
-	mov	ecx,[eax+AreaHeader.uninitialized_data_length]
+	mov	ecx,[eax+AreaHeader.uninitialized_length]
 	jmp	load_uninitialized_data
       load_out_of_initialized_data:
-	add	ecx,[eax+AreaHeader.uninitialized_data_length]
+	add	ecx,[eax+AreaHeader.uninitialized_length]
 	jc	load_uninitialized_data
 	xor	ecx,ecx
       load_uninitialized_data:
@@ -4582,20 +4575,26 @@ store_value:
 	sub	ebx,[edx+ValueDefinition.value_length]
 	sbb	ecx,0
 	jnz	store_out_of_area
-	sub	[eax+AreaHeader.uninitialized_data_length],ebx
+	sub	[eax+AreaHeader.uninitialized_length],ebx
 	jnc	extend_area
-	add	[eax+AreaHeader.uninitialized_data_length],ebx
+	add	[eax+AreaHeader.uninitialized_length],ebx
 	test	[eax+AreaHeader.flags],AREA_VIRTUAL
 	jz	store_out_of_area
 	test	[edx+ValueDefinition.flags],VAL_IN_USE
 	jnz	store_out_of_area
-	and	[eax+AreaHeader.uninitialized_data_length],0
+	and	[eax+AreaHeader.uninitialized_length],0
 	push	edx
 	mov	edx,_address_out_of_range
 	call	register_error
 	pop	edx
-    extend_area:
+    extend_virtual_area:
 	call	expand_value
+	jmp	prepare_store
+    extend_area:
+	test	[eax+AreaHeader.flags],AREA_VIRTUAL
+	jnz	extend_virtual_area
+	call	expand_value
+	call	update_output_offsets
 	jmp	prepare_store
     store_out_of_area:
 	mov	edx,_address_out_of_range

@@ -110,107 +110,98 @@ macro segment? definition
     org 0
 end macro
 
-macro word? value
-    local v,a
-    v = value
-    if v relativeto MZ.segment
-	a = $% - MZ.HEADER_LENGTH
-	a = a and 0FFFFh + (a and not 0FFFFh) shl 12
-	store a : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
-	emit word: v - MZ.segment
-	MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
-    else
-	emit word: v
-    end if
-end macro
+calminstruction calminstruction?.init? var*, val:0
+	compute val, val
+	publish var, val
+end calminstruction
 
-macro dword? value
-    local v,a
-    v = value
-    if v relativeto MZ.segment
-	a = $% - MZ.HEADER_LENGTH
-	a = a and 0FFFFh + (a and not 0FFFFh) shl 12
-	store a : dword at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
-	emit dword: v - MZ.segment
-	MZ.RELOCATION_INDEX = MZ.RELOCATION_INDEX + 1
-    else
-	emit dword: v
-    end if
-end macro
+calminstruction calminstruction?.initsym? var*, val&
+	publish var, val
+end calminstruction
 
-macro dw? definitions&
-    iterate value,definitions
-	match ?, value
-	    dw ?
-	else match n =dup? ?, value
-	    dw n dup ?
-	else match n =dup? (?), value
-	    dw n dup ?
-	else match n =dup? v, value
-	    repeat n
-		word v
-	    end repeat
-	else
-	    word value
-	end match
-    end iterate
-end macro
+calminstruction calminstruction?.unique? name
+	local counter, buffer
+	init counter
+	compute counter, counter + 1
+	arrange buffer, name#counter
+	publish name, buffer
+end calminstruction
 
-struc dw? definitions&
-    label . : word
-    iterate value,definitions
-	match ?, value
-	    dw ?
-	else match n =dup? ?, value
-	    dw n dup ?
-	else match n =dup? (?), value
-	    dw n dup ?
-	else match n =dup? v, value
-	    repeat n
-		word v
-	    end repeat
-	else
-	    word value
-	end match
-    end iterate
-end struc
+calminstruction calminstruction?.asm? line&
+	local tmp, ln, buffer
+	initsym tmp, unique ln
+	assemble tmp
+	publish ln, line
+	arrange buffer, =assemble ln
+	assemble buffer
+end calminstruction
 
-macro dd? definitions&
-    iterate value,definitions
-	match ?, value
-	    dd ?
-	else match n =dup? ?, value
-	    dd n dup ?
-	else match n =dup? (?), value
-	    dd n dup ?
-	else match n =dup? v, value
-	    repeat n
-		dword v
-	    end repeat
-	else
-	    dword value
-	end match
-    end iterate
-end macro
+iterate <dw,word>, dw,word, dd,dword
 
-struc dd? definitions&
-    label . : dword
-    iterate value,definitions
-	match ?, value
-	    dd ?
-	else match n =dup? ?, value
-	    dd n dup ?
-	else match n =dup? (?), value
-	    dd n dup ?
-	else match n =dup? v, value
-	    repeat n
-		dword v
-	    end repeat
-	else
-	    dword value
-	end match
-    end iterate
-end struc
+	calminstruction word? value
+		compute value, value
+		check	value relativeto MZ.segment
+		jno	plain
+		local	offset
+		compute offset, $%
+		asm	emit word: value - MZ.segment
+		check	$% > offset
+		jno	done
+		compute offset, offset - MZ.HEADER_LENGTH
+		compute offset, offset and 0FFFFh + (offset and not 0FFFFh) shl 12
+		asm	store offset:4 at MZ : MZ.relocations + MZ.RELOCATION_INDEX shl 2
+		compute MZ.RELOCATION_INDEX, MZ.RELOCATION_INDEX + 1
+	    done:
+		exit
+	    plain:
+		asm	emit word: value
+	end calminstruction
+
+	calminstruction dw? definitions&
+		local	value, n
+	    start:
+		match	value=,definitions, definitions, ()
+		jyes	recognize
+		match	value, definitions
+		arrange definitions,
+	    recognize:
+		match	n =dup? value, value, ()
+		jyes	duplicate
+		match	?, value
+		jyes	reserve
+		arrange value, =word value
+		assemble value
+	    next:
+		match	, definitions
+		jno	start
+		take	, definitions
+		take	definitions, definitions
+		jyes	next
+		exit
+	    reserve:
+		arrange value, =dw ?
+		assemble value
+		jump	next
+	    duplicate:
+		match	(value), value
+	    stack:
+		check	n
+		jno	next
+		take	definitions, value
+		arrange value, definitions
+		compute n, n - 1
+		jump	stack
+	end calminstruction
+
+	calminstruction (label) dw? definitions&
+		local	cmd
+		arrange cmd, =label label : =word
+		assemble cmd
+		arrange cmd, =dd definitions
+		assemble cmd
+	end calminstruction
+
+end iterate
 
 postpone
     if MZ.STACK_LENGTH

@@ -1,51 +1,39 @@
 
-macro element definition
-	match name:meta, definition
-		if ~ meta relativeto x86.trx
-			element? name:meta
-		end if
-	else
-		element? definition
-	end match
-end macro
+calminstruction element? definition
+	local	name, meta
+	match	=tr? any, definition
+	jyes	skip
+	arrange definition, =element? definition
+	assemble definition
+    skip:
+end calminstruction
 
 include '80486.inc'
+
+purge element?
+
+iterate <instr,opcode>, wrmsr,<0Fh,30h>, rdtsc,<0Fh,31h>, rdmsr,<0Fh,32h>, rdpmc,<0Fh,33h>, cpuid,<0Fh,0A2h>, rsm,<0Fh,0AAh>
+
+	define x86.instr? db opcode
+
+	calminstruction instr?
+		assemble x86.instr?
+	end calminstruction
+
+end iterate
+
+calminstruction cmpxchg8b? dest*
+	asmcmd	=x86.parse_operand =@dest,dest
+	check	@dest.type = 'mem'
+	jyes	operand_ok
+	asmcmd	=err 'invalid operand'
+	exit
+    operand_ok:
+	check	@dest.size and not 8
+	jno	size_ok
+	asmcmd	=err 'invalid operand size'
+    size_ok:
+	asmcmd	=x86.=store_instruction <0Fh,0C7h>,=@dest,1
+end calminstruction
+
 include '80387.inc'
-
-purge element
-
-macro cpuid?
-	db 0Fh,0A2h
-end macro
-
-macro cmpxchg8b? dest*
-	x86.parse_operand @dest,dest
-	if @dest.size <> 0 & @dest.size <> 8
-		err 'invalid operand size'
-	end if
-	if @dest.type = 'mem'
-		x86.store_instruction <0Fh,0C7h>,@dest,1
-	else
-		err 'invalid operand'
-	end if
-end macro
-
-macro wrmsr?
-	db 0Fh,30h
-end macro
-
-macro rdtsc?
-	db 0Fh,31h
-end macro
-
-macro rdmsr?
-	db 0Fh,32h
-end macro
-
-macro rdpmc?
-	db 0Fh,33h
-end macro
-
-macro rsm?
-	db 0Fh,0AAh
-end macro

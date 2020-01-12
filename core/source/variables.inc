@@ -51,10 +51,12 @@ maximum_number_of_errors dd ?
 maximum_depth_of_stack dd ?
 
 current_area dd ?
-first_output_area_entry dd ?
+output_areas_list dd ?
+output_areas_list_end dd ?
 initial_output_area_entry dd ?
 current_output_area_entry dd ?
-virtual_area_entry dd ?
+prior_uninitialized_length dq ?
+virtual_area dd ?
 auxiliary_output_areas dd ?
 
 base_path dd ?
@@ -119,6 +121,20 @@ constituent_symbol dd ?
 constituent_value dd ?
 constituent_whitespace dd ?
 
+alm_namespace dd ?
+calm_code_buffer Workspace
+calm_code_cursor dd ?
+calm_literals_buffer Workspace
+calm_literals_cursor dd ?
+calm_auxiliary_buffer Workspace
+calm_auxiliary_cursor dd ?
+calm_line_number dd ?
+calm_instruction_number dd ?
+calm_value dd ?
+calm_literals dd ?
+calm_source_pointer dd ?
+calm_rollback_offset dd ?
+
 value_position dd ?
 kept_value dd ?
 converter_position dd ?
@@ -150,6 +166,7 @@ condition_stack_base dd ?
 condition_stack_end dd ?
 initial_parentheses dd ?
 comparator dd ?
+outer_expression dd ?
 
 assembly_stack_base dd ?
 assembly_stack_end dd ?
@@ -188,7 +205,7 @@ file_cache_pointer dd ?
 
 address_length dd ?
 data_unit_length dd ?
-uninitialized_data_length dq ?
+uninitialized_length dq ?
 
 directive_block dd ?
 number_of_iterations dd ?
@@ -214,6 +231,7 @@ stored_position dd ?
 stored_substitution dd ?
 stored_context dd ?
 stored_pattern dd ?
+brackets dd ?
 
 instruction_value dd ?
 instruction_branch dd ?
@@ -244,6 +262,7 @@ waiting_for_digit db ?
 literal_exponent_sign db ?
 literal_fractional_part db ?
 float_literal_status db ?
+use_raw_values db ?
 
 last_token db ?
 breakpoint_token db ?
@@ -270,8 +289,12 @@ whitespace_matching db ?
 macro_definition_active db ?
 macro_flags db ?
 macro_greedy db ?
+calm_definition_active db ?
 
 size_specified db ?
 
 message_volatile db ?
 displayed_byte db ?
+
+calm_result db ?
+hidden_context db ?

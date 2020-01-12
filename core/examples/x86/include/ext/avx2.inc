@@ -1,123 +1,224 @@
 
-if ~ definite AVX2
+if ~ defined AVX2
 
-	AVX2 := 1
+	restore AVX2	; this ensures that symbol cannot be forward-referenced
+	AVX2 = 1
 
 	include 'avx.inc'
 
-	macro AVX.parse_vsib_address ns,addr
-		ns.mode = 0
-		match :sz value, x86.addr
-			if sz = 4 | sz = 8
-				ns.mode = sz shl 3
-			else
-				err 'invalid address size'
-			end if
-			ns.address = +value
-			if ns.size = 0
-				ns.size = sizeof (value)
-			end if
-		else
-			ns.address = +addr
-			if ns.size = 0
-				ns.size = sizeof (addr)
-			end if
-		end match
-		ns.base_registers = 0
-		ns.index_registers = 0
-		repeat elementsof ns.address
-			if % metadataof ns.address relativeto x86.r32 | % metadataof ns.address relativeto x86.r64
-				ns.base_registers = ns.base_registers + % elementof ns.address * % scaleof ns.address
-			else if % metadataof ns.address relativeto SSE.reg | % metadataof ns.address relativeto AVX.reg
-				ns.index_registers = ns.index_registers + % elementof ns.address * % scaleof ns.address
-			end if
-		end repeat
-		ns.displacement = ns.address - ns.base_registers - ns.index_registers
-		ns.auto_relative = 0
-		if elementsof ns.index_registers = 1
-			if 1 metadataof ns.index_registers relativeto SSE.reg
-				ns.visize = 16
-			else
-				ns.visize = 32
-			end if
-			ns.rm = 4
-			if elementsof ns.base_registers = 1 & 1 scaleof ns.base_registers = 1
-				if ns.mode = 0
-					ns.mode = 0 scaleof (1 metadataof (1 metadataof ns.base_registers)) shl 3
-				else if ns.mode <> 0 scaleof (1 metadataof (1 metadataof ns.base_registers)) shl 3
-					err 'invalid address'
-				end if
-				ns.index_only = 0
-				ns.base = 0 scaleof (1 metadataof ns.base_registers)
-			else if elementsof ns.base_registers = 0
-				if x86.mode = 64
-					ns.mode = 64
-				else
-					ns.mode = 32
-				end if
-				ns.index_only = 1
-				ns.base = 5
-			else
-				err 'invalid address'
-			end if
-			ns.scale = 1 scaleof ns.index_registers
-			ns.index = 0 scaleof (1 metadataof ns.index_registers)
-			if ns.scale > 2 & ns.scale <> 4 & ns.scale <> 8
-				err 'invalid address'
-			end if
-			ns.displacement_size = 4
-			ns.mod = 2
-			if ns.index_only
-				ns.mod = 0
-			else if ns.displacement relativeto 0
-				if ns.displacement = 0 & ns.rm and 111b <> 5 & (ns.rm <> 4 | ns.base and 111b <> 5)
-					ns.displacement_size = 0
-					ns.mod = 0
-				else if ns.displacement < 80h & ns.displacement >= -80h
-					ns.displacement_size = 1
-					ns.mod = 1
-				else if ns.displacement - 1 shl ns.mode >= -80h & ns.displacement < 1 shl ns.mode
-					ns.displacement = ns.displacement - 1 shl ns.mode
-					ns.displacement_size = 1
-					ns.mod = 1
-				end if
-			end if
-		else
-			err 'invalid address'
-		end if
-	end macro
+	calminstruction AVX.parse_vsib_operand namespace, operand
 
-	macro AVX.parse_vsib_operand_value ns,op
-		ns.type = 'mem'
-		ns.segment_prefix = 0
-		match [seg:offs], op
-			x86.parse_segment_prefix ns,seg
-			AVX.parse_vsib_address ns,offs
-		else match [addr], op
-			AVX.parse_vsib_address ns,addr
-		else match =ptr? seg:offs, op
-			x86.parse_segment_prefix ns,seg
-			AVX.parse_vsib_address ns,offs
-		else match =ptr? addr, op
-			AVX.parse_vsib_address ns,addr
-		else
-			err 'invalid operand'
-		end match
-	end macro
+		local	size, type, segment_prefix
+		local	displacement, displacement_size, auto_relative
+		local	address, base_registers, index_registers
+		local	mode, mod, rm
+		local	scale, index, base
+		local	visize
 
-	macro AVX.parse_vsib_operand ns,op
-		ns.size = 0
-		match prefix value, op
-			match :sz, x86.prefix
-				ns.size = sz
-				AVX.parse_vsib_operand_value ns,value
-			else
-				AVX.parse_vsib_operand_value ns,op
-			end match
-		else
-			AVX.parse_vsib_operand_value ns,op
-		end match
-	end macro
+		local	i, pre, suf, sym
+
+		compute segment_prefix, 0
+
+		compute size, 0
+		compute displacement_size, 0
+
+		transform operand
+
+		match	pre suf, operand
+		jno	no_size_prefix
+		arrange pre, =x86.pre
+		transform pre
+		jno	no_size_prefix
+		match	:size, pre
+		jno	no_size_prefix
+		arrange operand, suf
+	      no_size_prefix:
+
+		match	[address], operand
+		jyes	memory_operand
+		match	=ptr? address, operand
+		jyes	memory_operand
+
+		jump	invalid_operand
+
+	  memory_operand:
+		compute type, 'mem'
+
+		match	segment:address, address
+		jno	segment_prefix_ok
+		check	segment eq 1 elementof segment & 1 metadataof segment relativeto x86.sreg
+		jno	invalid_operand
+		compute segment, 1 metadataof segment - x86.sreg
+		check	segment >= 4
+		jyes	segment_prefix_386
+		compute segment_prefix, 26h + segment shl 3
+		jump	segment_prefix_ok
+	      segment_prefix_386:
+		compute segment_prefix, 64h + segment-4
+	      segment_prefix_ok:
+
+		match	pre suf, address
+		jno	no_address_size_prefix
+		arrange pre, =x86.pre
+		transform pre
+		jno	no_address_size_prefix
+		match	:pre, pre
+		jno	no_address_size_prefix
+		arrange address, suf
+		check	pre = 4 | pre = 8
+		jno	invalid_address_size
+		compute mode, pre shl 3
+	      no_address_size_prefix:
+
+		compute mode, 0
+		compute scale, 0
+		compute index, 0
+		compute base, 0
+		compute auto_relative, 0
+
+		check	size
+		jyes	size_override
+		compute size, sizeof address
+	      size_override:
+
+		compute address, address
+		compute base_registers, 0
+		compute index_registers, 0
+		compute i, 1
+	      extract_registers:
+		check	i > elementsof address
+		jyes	registers_extracted
+		check	i metadataof address relativeto SSE.reg | i metadataof address relativeto AVX.reg
+		jyes	index_term
+		check	i metadataof address relativeto x86.r32 | i metadataof address relativeto x86.r64
+		jno	next_term
+		compute base_registers, base_registers + i elementof address * i scaleof address
+		jump	next_term
+	      index_term:
+		compute index_registers, index_registers + i elementof address * i scaleof address
+	      next_term:
+		compute i, i+1
+		jump	extract_registers
+	      registers_extracted:
+		compute displacement, address - base_registers - index_registers
+		compute auto_relative, 0
+
+		check	elementsof index_registers = 1
+		jno	invalid_address
+		compute scale, 1 scaleof index_registers
+		compute index, 0 scaleof (1 metadataof index_registers)
+		check	scale > 2 & scale <> 4 & scale <> 8
+		jyes	invalid_address
+		check	1 metadataof index_registers relativeto SSE.reg
+		jyes	xmm_index
+		compute visize, 32
+		jump	index_ok
+	      xmm_index:
+		compute visize, 16
+	      index_ok:
+
+		compute rm, 4
+		check	elementsof base_registers = 1 & 1 scaleof base_registers = 1
+		jyes	base_and_index
+		check	elementsof base_registers = 0
+		jno	invalid_address
+		compute base, 5
+		compute displacement_size, 4
+		compute mod, 0
+		compute mode, x86.mode
+		check	mode > 16
+		jyes	export_address
+		compute mode, 32
+		jump	export_address
+	      base_and_index:
+		compute base, 0 scaleof (1 metadataof base_registers)
+		check	mode & mode <> 0 scaleof (1 metadataof (1 metadataof base_registers)) shl 3
+		jyes	invalid_address
+		compute mode, 0 scaleof (1 metadataof (1 metadataof base_registers)) shl 3
+
+	      setup_displacement:
+		check	displacement relativeto 0
+		jno	displacement_32bit
+		check	displacement = 0 & rm and 111b <> 5 & (rm <> 4 | base and 111b <> 5)
+		jyes	displacement_empty
+		check	displacement < 80h & displacement >= -80h
+		jyes	displacement_8bit
+		check	displacement - 1 shl mode >= -80h & displacement < 1 shl mode
+		jyes	displacement_8bit_wrap
+	      displacement_32bit:
+		compute displacement_size, 4
+		compute mod, 2
+		jump	export_address
+	      displacement_8bit_wrap:
+		compute displacement, displacement - 1 shl mode
+	      displacement_8bit:
+		compute displacement_size, 1
+		compute mod, 1
+		jump	export_address
+	      index_only:
+		compute displacement_size, 4
+		compute mod, 0
+		jump	export_address
+	      displacement_empty:
+		compute displacement_size, 0
+		compute mod, 0
+
+	  export_address:
+
+		arrange sym, namespace.=address
+		publish sym, address
+
+		arrange sym, namespace.=scale
+		publish sym, scale
+
+		arrange sym, namespace.=index
+		publish sym, index
+
+		arrange sym, namespace.=base
+		publish sym, base
+
+		arrange sym, namespace.=auto_relative
+		publish sym, auto_relative
+
+		arrange sym, namespace.=displacement
+		publish sym, displacement
+
+		arrange sym, namespace.=mode
+		publish sym, mode
+
+		arrange sym, namespace.=mod
+		publish sym, mod
+
+		arrange sym, namespace.=rm
+		publish sym, rm
+
+		arrange sym, namespace.=type
+		publish sym, type
+
+		arrange sym, namespace.=size
+		publish sym, size
+
+		arrange sym, namespace.=visize
+		publish sym, visize
+
+		arrange sym, namespace.=displacement_size
+		publish sym, displacement_size
+
+		arrange sym, namespace.=segment_prefix
+		publish sym, segment_prefix
+		exit
+
+	  invalid_operand:
+		asmcmd	=err 'invalid operand'
+		exit
+	  invalid_address:
+		asmcmd	=err 'invalid address'
+		exit
+	  invalid_address_size:
+		asmcmd	=err 'invalid address size'
+		exit
+
+	end calminstruction
 
 	iterate <instr,opcode,asize>, vpgatherdd,90h,4, vpgatherqd,91h,8, vgatherdps,92h,4, vgatherqps,93h,8
 

@@ -7,12 +7,12 @@ macro format?.MachO64? variant
 	match , variant
 		MachO.Settings.ProcessorType = CPU_TYPE_X86_64
 		MachO.Settings.FileType equ MH_OBJECT
-		include '../macho.inc'
+		include '../../../examples/x86/include/format/macho.inc'
 		use64
 	else match =executable?, variant
 		MachO.Settings.ProcessorType = CPU_TYPE_X86_64
 		MachO.Settings.BaseAddress = 0x1000
-		include '../macho.inc'
+		include '../../../examples/x86/include/format/macho.inc'
 		use64
 	else
 		err 'invalid argument'

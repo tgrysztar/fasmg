@@ -17,5 +17,4 @@ object file in Mach-O format can be assembled from "source/macos/fasmg.o.asm".
 
 When the source code is assembled with fasmg, it depends on the files from
 "examples/x86/include" directory that implement the instruction sets and
-output formats compatible with flat assembler 1. Additionally the Mach-O format
-is available to fasmg via "source/macos/macho.inc".
+output formats compatible with flat assembler 1.

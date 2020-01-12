@@ -4,11 +4,11 @@ include '../../examples/x86/include/80386.inc'
 macro format?.MachO? variant
 	match , variant
 		MachO.Settings.FileType equ MH_OBJECT
-		include 'macho.inc'
+		include '../../examples/x86/include/format/macho.inc'
 		use32
 	else match =executable?, variant
 		MachO.Settings.BaseAddress = 0x1000
-		include 'macho.inc'
+		include '../../examples/x86/include/format/macho.inc'
 		use32
 	else
 		err 'invalid argument'

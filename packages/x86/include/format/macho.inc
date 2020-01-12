@@ -324,9 +324,11 @@ namespace MachO
 
 end namespace
 
-macro align? boundary,value:?
-	db (boundary-1)-($+boundary-1) mod boundary dup value
-end macro
+calminstruction align? boundary,value:?
+	compute boundary, (boundary-1)-($+boundary-1) mod boundary
+	arrange value, =db boundary =dup value
+	assemble value
+end calminstruction
 
 postpone
 	MachO.text
@@ -1108,49 +1110,60 @@ else
 	end if
 	end postpone
 
-	macro align? boundary,value:?
-		if $ relativeto 0 | MachO.SECTION_ALIGN mod (boundary) = 0
-			db (boundary-1)-(0 scaleof $+boundary-1) mod boundary dup value
-		else
-			err 'section not aligned enough'
-		end if
-	end macro
+	calminstruction align? boundary,value:?
+		check	$ relativeto 0 | MachO.SECTION_ALIGN mod (boundary) = 0
+		jyes	allowed
+		arrange value, =err 'section not aligned enough'
+		assemble value
+		exit
+	    allowed:
+		compute boundary, (boundary-1)-(0 scaleof $+boundary-1) mod boundary
+		arrange value, =db boundary =dup value
+		assemble value
+	end calminstruction
 
-	macro dd? definitions&
-		iterate value,definitions
-			match ?, value
-				dd ?
-			else match n =dup? ?, value
-				dd n dup ?
-			else match n =dup? (?), value
-				dd n dup ?
-			else match n =dup? v, value
-				repeat n
-					dword v
-				end repeat
-			else
-				dword value
-			end match
-		end iterate
-	end macro
+	calminstruction dd? definitions&
+		local	value, n
+	    start:
+		match	value=,definitions, definitions, ()
+		jyes	recognize
+		match	value, definitions
+		arrange definitions,
+	    recognize:
+		match	n =dup? value, value, ()
+		jyes	duplicate
+		match	?, value
+		jyes	reserve
+		arrange value, =dword value
+		assemble value
+	    next:
+		match	, definitions
+		jno	start
+		take	, definitions
+		take	definitions, definitions
+		jyes	next
+		exit
+	    reserve:
+		arrange value, =dd ?
+		assemble value
+		jump	next
+	    duplicate:
+		match	(value), value
+	    stack:
+		check	n
+		jno	next
+		take	definitions, value
+		arrange value, definitions
+		compute n, n - 1
+		jump	stack
+	end calminstruction
 
-	struc dd? definitions&
-		label . : dword
-		iterate value,definitions
-			match ?, value
-				dd ?
-			else match n =dup? ?, value
-				dd n dup ?
-			else match n =dup? (?), value
-				dd n dup ?
-			else match n =dup? v, value
-				repeat n
-					dword v
-				end repeat
-			else
-				dword value
-			end match
-		end iterate
-	end struc
+	calminstruction (label) dd? definitions&
+		local	cmd
+		arrange cmd, =label label : =dword
+		assemble cmd
+		arrange cmd, =dd definitions
+		assemble cmd
+	end calminstruction
 
 end if

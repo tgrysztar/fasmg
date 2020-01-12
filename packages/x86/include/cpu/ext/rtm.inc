@@ -10,7 +10,7 @@ macro xbegin? dest*
 			dw @dest.imm-($+2)
 		else
 			if ~ $ relativeto 0 & @dest.imm relativeto 0
-				@dest.imm = @dest.imm + $ - $ scale 0
+				@dest.imm = @dest.imm + $ - 0 scaleof $
 				err 'invalid address'
 			end if
 			if @dest.unresolved | ( @dest.imm relativeto $ & @dest.imm-($+5) < 8000h & @dest.imm-($+5) >= -8000h )

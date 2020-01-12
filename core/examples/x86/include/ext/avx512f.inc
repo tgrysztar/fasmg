@@ -1,7 +1,8 @@
 
-if ~ definite AVX_512
+if ~ defined AVX_512
 
-	AVX_512 := 1
+	restore AVX_512 ; this ensures that symbol cannot be forward-referenced
+	AVX_512 = 1
 
 	include 'avx2.inc'
 
@@ -122,13 +123,13 @@ if ~ definite AVX_512
 				else if ns.size and not ns.memsize
 					err 'invalid operand size'
 				end if
-				match =1to2, bcst
+				match =1to2?, bcst
 					ns.broadcast = 2
-				else match =1to4, bcst
+				else match =1to4?, bcst
 					ns.broadcast = 4
-				else match =1to8, bcst
+				else match =1to8?, bcst
 					ns.broadcast = 8
-				else match =1to16, bcst
+				else match =1to16?, bcst
 					ns.broadcast = 16
 				else
 					err 'invalid broadcast'

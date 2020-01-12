@@ -1,9 +1,10 @@
 
-if ~ definite i8087
+if ~ defined i8087
 
-	i8087 := 1
+	restore i8087	; this ensures that symbol cannot be forward-referenced
+	i8087 = 1
 
-	define x87
+	define x87 x87
 
 	element st?
 
@@ -15,523 +16,557 @@ if ~ definite i8087
 	define x86.tword? :10
 	define x86.tbyte? :10
 
-	macro x87.parse_operand ns,op
-		match =st?(i), op
-			ns.size = 0
-			ns.type = 'streg'
-			ns.mod = 11b
-			ns.rm = +i
-		else
-			x86.parse_operand ns,op
-			if ns.type = 'imm' & ns.size = 0
-				if ns.imm relativeto st? & ns.imm = st?
-					ns.type = 'streg'
-					ns.mod = 11b
-					ns.rm = 0
-				else if ns.imm eq 1 elementof ns.imm & 1 metadataof ns.imm relativeto st?
-					ns.type = 'streg'
-					ns.mod = 11b
-					ns.rm = 1 metadataof ns.imm - st?
-				end if
-			end if
-		end match
-	end macro
+	calminstruction x87.parse_operand namespace, operand
 
-	macro fwait?
-		db 9Bh
-	end macro
+		local	size, type, mod, rm, imm
+		local	i, sym, cmd
 
-	macro wait?
-		fwait
-	end macro
+		match	=st?(i), operand
+		jyes	indexed_streg_operand
 
-	macro fnop?
-		db 0D9h,0D0h
-	end macro
+		asmcmd	=x86.=parse_operand namespace, operand
 
-	macro fchs?
-		db 0D9h,0E0h
-	end macro
+		arrange type, namespace.=type
+		arrange size, namespace.=size
+		arrange imm, namespace.=imm
 
-	macro fabs?
-		db 0D9h,0E1h
-	end macro
+		check	type = 'imm' & size = 0
+		jno	done
+		check	imm eq 1 elementof imm & 1 metadataof imm relativeto st?
+		jyes	streg_operand
+		check	imm relativeto st? & imm = st?
+		jno	done
 
-	macro ftst?
-		db 0D9h,0E4h
-	end macro
+		compute type, 'streg'
+		compute mod, 11b
+		compute rm, 0
 
-	macro fxam?
-		db 0D9h,0E5h
-	end macro
+		jump	export_register
 
-	macro fld1?
-		db 0D9h,0E8h
-	end macro
+	    streg_operand:
 
-	macro fldl2t?
-		db 0D9h,0E9h
-	end macro
+		compute type, 'streg'
+		compute mod, 11b
+		compute rm, 1 metadataof imm - st?
 
-	macro fldl2e?
-		db 0D9h,0EAh
-	end macro
+		jump	export_register
 
-	macro fldpi?
-		db 0D9h,0EBh
-	end macro
+	    indexed_streg_operand:
 
-	macro fldlg2?
-		db 0D9h,0ECh
-	end macro
+		compute size, 0
+		compute type, 'streg'
+		compute mod, 11b
+		compute rm, +i
 
-	macro fldln2?
-		db 0D9h,0EDh
-	end macro
+		arrange sym, namespace.=size
+		publish sym, size
 
-	macro fldz?
-		db 0D9h,0EEh
-	end macro
+	    export_register:
 
-	macro f2xm1?
-		db 0D9h,0F0h
-	end macro
+		arrange sym, namespace.=mod
+		publish sym, mod
 
-	macro fyl2x?
-		db 0D9h,0F1h
-	end macro
+		arrange sym, namespace.=rm
+		publish sym, rm
 
-	macro fptan?
-		db 0D9h,0F2h
-	end macro
+		arrange sym, namespace.=type
+		publish sym, type
 
-	macro fpatan?
-		db 0D9h,0F3h
-	end macro
+	    done:
 
-	macro fxtract?
-		db 0D9h,0F4h
-	end macro
+	end calminstruction
 
-	macro fdecstp?
-		db 0D9h,0F6h
-	end macro
+	iterate <instr,opcode>, fwait,9Bh, wait,9Bh, fnop,<0D9h,0D0h>, \
+				fchs,<0D9h,0E0h>, fabs,<0D9h,0E1h>, ftst,<0D9h,0E4h>, fxam,<0D9h,0E5h>, fld1,<0D9h,0E8h>, \
+				fldl2t,<0D9h,0E9h>, fldl2e,<0D9h,0EAh>, fldpi,<0D9h,0EBh>, fldlg2,<0D9h,0ECh>, fldln2,<0D9h,0EDh>, fldz,<0D9h,0EEh>, \
+				f2xm1,<0D9h,0F0h>, fyl2x,<0D9h,0F1h>, fptan,<0D9h,0F2h>, fpatan,<0D9h,0F3h>, fxtract,<0D9h,0F4h>, fdecstp,<0D9h,0F6h>, fincstp,<0D9h,0F7h>, fprem,<0D9h,0F8h>, \
+				fyl2xp1,<0D9h,0F9h>, fsqrt,<0D9h,0FAh>, frndint,<0D9h,0FCh>, fscale,<0D9h,0FDh>, \
+				fneni,<0DBh,0E0h>, fndisi,<0DBh,0E1h>, fnclex,<0DBh,0E2h>, fninit,<0DBh,0E3h>, \
+				fcompp,<0DEh,0D9h>
 
-	macro fincstp?
-		db 0D9h,0F7h
-	end macro
+		define x87.instr? db opcode
 
-	macro fprem?
-		db 0D9h,0F8h
-	end macro
+		calminstruction instr?
+			assemble x87.instr?
+		end calminstruction
 
-	macro fyl2xp1?
-		db 0D9h,0F9h
-	end macro
+	end iterate
 
-	macro fsqrt?
-		db 0D9h,0FAh
-	end macro
-
-	macro frndint?
-		db 0D9h,0FCh
-	end macro
-
-	macro fscale?
-		db 0D9h,0FDh
-	end macro
-
-	macro fneni?
-		db 0DBh,0E0h
-	end macro
-
-	macro feni?
-		fwait
-		fneni
-	end macro
-
-	macro fndisi?
-		db 0DBh,0E1h
-	end macro
-
-	macro fdisi?
-		fwait
-		fndisi
-	end macro
-
-	macro fnclex?
-		db 0DBh,0E2h
-	end macro
-
-	macro fclex?
-		fwait
-		fnclex
-	end macro
-
-	macro fninit?
-		db 0DBh,0E3h
-	end macro
-
-	macro finit?
-		fwait
-		fninit
-	end macro
+	iterate op,  eni, disi, clex, init
+		calminstruction f#op?
+			assemble x87.fwait?
+			assemble x87.fn#op?
+		end calminstruction
+	end iterate
 
 	iterate <instr,postbyte>, fadd,0, fmul,1, fsub,4, fsubr,5, fdiv,6, fdivr,7
-		macro instr? dest,src
-			x87.parse_operand @dest,dest
-			if @dest.type = 'mem'
-				match , src
-					if @dest.size = 4
-						x86.store_instruction 0D8h,@dest,postbyte
-					else if @dest.size = 8
-						x86.store_instruction 0DCh,@dest,postbyte
-					else if @dest.size
-						err 'invalid operand size'
-					else
-						err 'operand size not specified'
-					end if
-				else
-					err 'invalid combination of operands'
-				end match
-			else if @dest.type = 'streg'
-				x87.parse_operand @src,src
-				if @src.type = 'streg'
-					if @dest.rm = 0
-						db 0D8h, 11b shl 6 + postbyte shl 3 + @src.rm
-					else if @src.rm = 0
-						if postbyte < 4
-							db 0DCh, 11b shl 6 + postbyte shl 3 + @dest.rm
-						else
-							db 0DCh, 11b shl 6 + (postbyte xor 1) shl 3 + @dest.rm
-						end if
-					else
-						err 'invalid combination of operands'
-					end if
-				else
-					err 'invalid combination of operands'
-				end if
-			else
-				err 'invalid operand'
-			end if
-		end macro
+
+		calminstruction instr? operand&
+			local	dest, src
+			match	dest=,src, operand
+			jyes	st
+			asmcmd	=x87.=parse_operand =@dest,operand
+			check	@dest.type = 'mem'
+			jno	invalid_combination_of_operands
+			check	@dest.size = 4
+			jyes	mem_dword
+			check	@dest.size = 8
+			jyes	mem_qword
+			check	@dest.size
+			jno	unknown_size
+			asmcmd	=err 'invalid operand size'
+			jump	mem_dword
+		    unknown_size:
+			asmcmd	=err 'operand size not specified'
+		    mem_dword:
+			asmcmd	=x86.=store_instruction 0D8h,=@dest,postbyte
+			exit
+		    mem_qword:
+			asmcmd	=x86.=store_instruction 0DCh,=@dest,postbyte
+			exit
+		    st:
+			local	modrm
+			asmcmd	=x87.=parse_operand =@dest,dest
+			asmcmd	=x87.=parse_operand =@src,src
+			check	@dest.type = 'streg' & @src.type = 'streg'
+			jno	invalid_combination_of_operands
+			check	@dest.rm = 0
+			jyes	st0_sti
+			check	@src.rm = 0
+			jyes	sti_st0
+			jump	invalid_combination_of_operands
+		    st0_sti:
+			compute modrm, 11b shl 6 + postbyte shl 3 + @src.rm
+			asmcmd	=db 0D8h, modrm
+			exit
+		    sti_st0:
+			check	postbyte >= 4
+			jyes	switched
+			compute modrm, 11b shl 6 + postbyte shl 3 + @dest.rm
+			asmcmd	=db 0DCh, modrm
+			exit
+		    switched:
+			compute modrm, 11b shl 6 + (postbyte xor 1) shl 3 + @dest.rm
+			asmcmd	=db 0DCh, modrm
+			exit
+		    invalid_combination_of_operands:
+			asmcmd	=err 'invalid combination of operands'
+		end calminstruction
+
 	end iterate
 
 	iterate <instr,postbyte>, faddp,0, fmulp,1, fsubrp,4, fsubp,5, fdivrp,6, fdivp,7
-		macro instr? dest,src
-			match , dest src
-				db 0DEh, 11b shl 6 + postbyte shl 3 + 1
-			else
-				x87.parse_operand @dest,dest
-				x87.parse_operand @src,src
-				if @dest.type = 'streg' & @src.type = 'streg'
-					if @src.rm = 0
-						db 0DEh, 11b shl 6 + postbyte shl 3 + @dest.rm
-					else
-						err 'invalid combination of operands'
-					end if
-				else
-					err 'invalid combination of operands'
-				end if
-			end match
-		end macro
+
+		calminstruction instr? operand&
+			local	dest, src, modrm
+			match	, operand
+			jyes	default
+			match	dest=,src, operand
+			jno	invalid_combination_of_operands
+			asmcmd	=x87.=parse_operand =@dest,dest
+			asmcmd	=x87.=parse_operand =@src,src
+			check	@dest.type = 'streg' & @src.type = 'streg' & @src.rm = 0
+			jyes	ok
+		    invalid_combination_of_operands:
+			asmcmd	=err 'invalid combination of operands'
+			exit
+		    default:
+			compute @dest.rm, 1
+		    ok:
+			compute modrm, 11b shl 6 + postbyte shl 3 + @dest.rm
+			asmcmd	=db 0DEh, modrm
+		end calminstruction
+
 	end iterate
 
 	iterate <instr,postbyte>, fcom,2, fcomp,3
-		macro instr? src:st1
-			x87.parse_operand @src,src
-			if @src.type = 'mem'
-				if @src.size = 4
-					x86.store_instruction 0D8h,@src,postbyte
-				else if @src.size = 8
-					x86.store_instruction 0DCh,@src,postbyte
-				else if @src.size
-					err 'invalid operand size'
-				else
-					err 'operand size not specified'
-				end if
-			else if @src.type = 'streg'
-				db 0D8h, 11b shl 6 + postbyte shl 3 + @src.rm
-			else
-				err 'invalid operand'
-			end if
-		end macro
-	end iterate
 
-	macro fcompp?
-		db 0DEh,0D9h
-	end macro
+		calminstruction instr? src:st1
+			asmcmd	=x87.=parse_operand =@src,src
+			check	@src.type = 'streg'
+			jyes	st
+			check	@src.type = 'mem'
+			jno	invalid_operand
+			check	@src.size = 4
+			jyes	mem_dword
+			check	@src.size = 8
+			jyes	mem_qword
+			check	@src.size
+			jno	unknown_size
+			asmcmd	=err 'invalid operand size'
+			jump	mem_dword
+		    unknown_size:
+			asmcmd	=err 'operand size not specified'
+		    mem_dword: st:
+			asmcmd	=x86.=store_instruction 0D8h,=@src,postbyte
+			exit
+		    mem_qword:
+			asmcmd	=x86.=store_instruction 0DCh,=@src,postbyte
+			exit
+		    invalid_operand:
+			asmcmd	=err 'invalid operand'
+		end calminstruction
+
+	end iterate
 
 	iterate <instr,postbyte>, fiadd,0, fimul,1, ficom,2, ficomp,3, fisub,4, fisubr,5, fidiv,6, fidivr,7
-		macro instr? src*
-			x87.parse_operand @src,src
-			if @src.type = 'mem'
-				if @src.size = 2
-					x86.store_instruction 0DEh,@src,postbyte
-				else if @src.size = 4
-					x86.store_instruction 0DAh,@src,postbyte
-				else if @src.size
-					err 'invalid operand size'
-				else
-					err 'operand size not specified'
-				end if
-			else
-				err 'invalid operand'
-			end if
-		end macro
+
+		calminstruction instr? src*
+			asmcmd	=x87.=parse_operand =@src,src
+			check	@src.type = 'mem'
+			jno	invalid_operand
+			check	@src.size = 2
+			jyes	mem_word
+			check	@src.size = 4
+			jyes	mem_dword
+			check	@src.size
+			jno	unknown_size
+			asmcmd	=err 'invalid operand size'
+			jump	mem_word
+		    unknown_size:
+			asmcmd	=err 'operand size not specified'
+		    mem_word:
+			asmcmd	=x86.=store_instruction 0DEh,=@src,postbyte
+			exit
+		    mem_dword:
+			asmcmd	=x86.=store_instruction 0DAh,=@src,postbyte
+			exit
+		    invalid_operand:
+			asmcmd	=err 'invalid operand'
+		end calminstruction
+
 	end iterate
 
-	macro fld? src*
-		x87.parse_operand @src,src
-		if @src.type = 'mem'
-			if @src.size = 4
-				x86.store_instruction 0D9h,@src,0
-			else if @src.size = 8
-				x86.store_instruction 0DDh,@src,0
-			else if @src.size = 10
-				x86.store_instruction 0DBh,@src,5
-			else if @src.size
-				err 'invalid operand size'
-			else
-				err 'operand size not specified'
-			end if
-		else if @src.type = 'streg'
-			x86.store_instruction 0D9h,@src,0
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fld? src*
+		asmcmd	=x87.=parse_operand =@src,src
+		check	@src.type = 'streg'
+		jyes	st
+		check	@src.type = 'mem'
+		jno	invalid_operand
+		check	@src.size = 4
+		jyes	mem_dword
+		check	@src.size = 8
+		jyes	mem_qword
+		check	@src.size = 10
+		jyes	mem_tword
+		check	@src.size
+		jno	unknown_size
+		asmcmd	=err 'invalid operand size'
+		jump	mem_dword
+	    unknown_size:
+		asmcmd	=err 'operand size not specified'
+	    mem_dword: st:
+		asmcmd	=x86.=store_instruction 0D9h,=@src,0
+		exit
+	    mem_qword:
+		asmcmd	=x86.=store_instruction 0DDh,=@src,0
+		exit
+	    mem_tword:
+		asmcmd	=x86.=store_instruction 0DBh,=@src,5
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
-	macro fst? src*
-		x87.parse_operand @src,src
-		if @src.type = 'mem'
-			if @src.size = 4
-				x86.store_instruction 0D9h,@src,2
-			else if @src.size = 8
-				x86.store_instruction 0DDh,@src,2
-			else if @src.size
-				err 'invalid operand size'
-			else
-				err 'operand size not specified'
-			end if
-		else if @src.type = 'streg'
-			x86.store_instruction 0DDh,@src,2
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fst? dest*
+		asmcmd	=x87.=parse_operand =@dest,dest
+		check	@dest.type = 'streg'
+		jyes	st
+		check	@dest.type = 'mem'
+		jno	invalid_operand
+		check	@dest.size = 4
+		jyes	mem_dword
+		check	@dest.size = 8
+		jyes	mem_qword
+		check	@dest.size
+		jno	unknown_size
+		asmcmd	=err 'invalid operand size'
+		jump	mem_dword
+	    unknown_size:
+		asmcmd	=err 'operand size not specified'
+	    mem_dword:
+		asmcmd	=x86.=store_instruction 0D9h,=@dest,2
+		exit
+	    mem_qword: st:
+		asmcmd	=x86.=store_instruction 0DDh,=@dest,2
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
-	macro fstp? src*
-		x87.parse_operand @src,src
-		if @src.type = 'mem'
-			if @src.size = 4
-				x86.store_instruction 0D9h,@src,3
-			else if @src.size = 8
-				x86.store_instruction 0DDh,@src,3
-			else if @src.size = 10
-				x86.store_instruction 0DBh,@src,7
-			else if @src.size
-				err 'invalid operand size'
-			else
-				err 'operand size not specified'
-			end if
-		else if @src.type = 'streg'
-			x86.store_instruction 0DDh,@src,3
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fstp? dest*
+		asmcmd	=x87.=parse_operand =@dest,dest
+		check	@dest.type = 'streg'
+		jyes	st
+		check	@dest.type = 'mem'
+		jno	invalid_operand
+		check	@dest.size = 4
+		jyes	mem_dword
+		check	@dest.size = 8
+		jyes	mem_qword
+		check	@dest.size = 10
+		jyes	mem_tword
+		check	@dest.size
+		jno	unknown_size
+		asmcmd	=err 'invalid operand size'
+		jump	mem_dword
+	    unknown_size:
+		asmcmd	=err 'operand size not specified'
+	    mem_dword:
+		asmcmd	=x86.=store_instruction 0D9h,=@dest,3
+		exit
+	    mem_qword: st:
+		asmcmd	=x86.=store_instruction 0DDh,=@dest,3
+		exit
+	    mem_tword:
+		asmcmd	=x86.=store_instruction 0DBh,=@dest,7
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
-	macro fild? src*
-		x87.parse_operand @src,src
-		if @src.type = 'mem'
-			if @src.size = 2
-				x86.store_instruction 0DFh,@src,0
-			else if @src.size = 4
-				x86.store_instruction 0DBh,@src,0
-			else if @src.size = 8
-				x86.store_instruction 0DFh,@src,5
-			else if @src.size
-				err 'invalid operand size'
-			else
-				err 'operand size not specified'
-			end if
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fild? src*
+		asmcmd	=x87.=parse_operand =@src,src
+		check	@src.type = 'mem'
+		jno	invalid_operand
+		check	@src.size = 2
+		jyes	mem_word
+		check	@src.size = 4
+		jyes	mem_dword
+		check	@src.size = 8
+		jyes	mem_qword
+		check	@src.size
+		jno	unknown_size
+		asmcmd	=err 'invalid operand size'
+		jump	mem_word
+	    unknown_size:
+		asmcmd	=err 'operand size not specified'
+	    mem_word:
+		asmcmd	=x86.=store_instruction 0DFh,=@src,0
+		exit
+	    mem_dword:
+		asmcmd	=x86.=store_instruction 0DBh,=@src,0
+		exit
+	    mem_qword:
+		asmcmd	=x86.=store_instruction 0DFh,=@src,5
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
-	macro fist? src*
-		x87.parse_operand @src,src
-		if @src.type = 'mem'
-			if @src.size = 2
-				x86.store_instruction 0DFh,@src,2
-			else if @src.size = 4
-				x86.store_instruction 0DBh,@src,2
-			else if @src.size
-				err 'invalid operand size'
-			else
-				err 'operand size not specified'
-			end if
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fist? dest*
+		asmcmd	=x87.=parse_operand =@dest,dest
+		check	@dest.type = 'mem'
+		jno	invalid_operand
+		check	@dest.size = 2
+		jyes	mem_word
+		check	@dest.size = 4
+		jyes	mem_dword
+		check	@dest.size
+		jno	unknown_size
+		asmcmd	=err 'invalid operand size'
+		jump	mem_word
+	    unknown_size:
+		asmcmd	=err 'operand size not specified'
+	    mem_word:
+		asmcmd	=x86.=store_instruction 0DFh,=@dest,2
+		exit
+	    mem_dword:
+		asmcmd	=x86.=store_instruction 0DBh,=@dest,2
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
-	macro fistp? src*
-		x87.parse_operand @src,src
-		if @src.type = 'mem'
-			if @src.size = 2
-				x86.store_instruction 0DFh,@src,3
-			else if @src.size = 4
-				x86.store_instruction 0DBh,@src,3
-			else if @src.size = 8
-				x86.store_instruction 0DFh,@src,7
-			else if @src.size
-				err 'invalid operand size'
-			else
-				err 'operand size not specified'
-			end if
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fistp? dest*
+		asmcmd	=x87.=parse_operand =@dest,dest
+		check	@dest.type = 'mem'
+		jno	invalid_operand
+		check	@dest.size = 2
+		jyes	mem_word
+		check	@dest.size = 4
+		jyes	mem_dword
+		check	@dest.size = 8
+		jyes	mem_qword
+		check	@dest.size
+		jno	unknown_size
+		asmcmd	=err 'invalid operand size'
+		jump	mem_word
+	    unknown_size:
+		asmcmd	=err 'operand size not specified'
+	    mem_word:
+		asmcmd	=x86.=store_instruction 0DFh,=@dest,3
+		exit
+	    mem_dword:
+		asmcmd	=x86.=store_instruction 0DBh,=@dest,3
+		exit
+	    mem_qword:
+		asmcmd	=x86.=store_instruction 0DFh,=@dest,7
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
-	macro fisttp? src*
-		x87.parse_operand @src,src
-		if @src.type = 'mem'
-			if @src.size = 2
-				x86.store_instruction 0DFh,@src,1
-			else if @src.size = 4
-				x86.store_instruction 0DBh,@src,1
-			else if @src.size = 8
-				x86.store_instruction 0DDh,@src,1
-			else if @src.size
-				err 'invalid operand size'
-			else
-				err 'operand size not specified'
-			end if
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fisttp? dest*
+		asmcmd	=x87.=parse_operand =@dest,dest
+		check	@dest.type = 'mem'
+		jno	invalid_operand
+		check	@dest.size = 2
+		jyes	mem_word
+		check	@dest.size = 4
+		jyes	mem_dword
+		check	@dest.size = 8
+		jyes	mem_qword
+		check	@dest.size
+		jno	unknown_size
+		asmcmd	=err 'invalid operand size'
+		jump	mem_word
+	    unknown_size:
+		asmcmd	=err 'operand size not specified'
+	    mem_word:
+		asmcmd	=x86.=store_instruction 0DFh,=@dest,1
+		exit
+	    mem_dword:
+		asmcmd	=x86.=store_instruction 0DBh,=@dest,1
+		exit
+	    mem_qword:
+		asmcmd	=x86.=store_instruction 0DDh,=@dest,1
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
 	iterate <instr,postbyte>, fbld,4, fbstp,6
-		macro instr? src*
-			x87.parse_operand @src,src
-			if @src.type = 'mem'
-				if @src.size = 0 | @src.size = 10
-					x86.store_instruction 0DFh,@src,postbyte
-				else
-					err 'invalid operand size'
-				end if
-			else
-				err 'invalid operand'
-			end if
-		end macro
+
+		calminstruction instr? src*
+			asmcmd	=x87.=parse_operand =@src,src
+			check	@src.type = 'mem'
+			jno	invalid_operand
+			check	@src.size and not 10
+			jyes	invalid_operand_size
+			asmcmd	=x86.=store_instruction 0DFh,=@src,postbyte
+			exit
+		    invalid_operand_size:
+			asmcmd	=err 'invalid operand size'
+			exit
+		    invalid_operand:
+			asmcmd	=err 'invalid operand'
+		end calminstruction
+
 	end iterate
 
-	macro fxch? src:st1
-		x87.parse_operand @src,src
-		if @src.type = 'streg'
-			db 0D9h, 11b shl 6 + 1 shl 3 + @src.rm
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	calminstruction fxch? src:st1
+		asmcmd	=x87.=parse_operand =@src,src
+		check	@src.type = 'streg'
+		jno	invalid_operand
+		local	modrm
+		compute modrm, 11b shl 6 + 1 shl 3 + @src.rm
+		asmcmd	=db 0D9h, modrm
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
-	macro ffree? src*
-		x87.parse_operand @src,src
-		if @src.type = 'streg'
-			db 0DDh, 11b shl 6 + @src.rm
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	iterate <instr,basecode>, ffree,0DDh, ffreep,0DFh
 
-	macro ffreep? src*
-		x87.parse_operand @src,src
-		if @src.type = 'streg'
-			db 0DFh, 11b shl 6 + @src.rm
-		else
-			err 'invalid operand'
-		end if
-	end macro
+		calminstruction instr? src*
+			asmcmd	=x87.=parse_operand =@src,src
+			check	@src.type = 'streg'
+			jno	invalid_operand
+			local	modrm
+			compute modrm, 11b shl 6 + @src.rm
+			asmcmd	=db basecode, modrm
+			exit
+		    invalid_operand:
+			asmcmd	=err 'invalid operand'
+		end calminstruction
 
-	macro fnstsw? dest*
-		x86.parse_operand @dest,dest
-		if @dest.size & @dest.size <> 2
-			err 'invalid operand size'
-		end if
-		if @dest.type = 'reg' & @dest.rm = 0
-			db 0DFh,0E0h
-		else if @dest.type = 'mem'
-			x86.store_instruction 0DDh,@dest,7
-		else
-			err 'invalid operand'
-		end if
-	end macro
+	end iterate
 
-	macro fstsw dest*
-		fwait
-		fnstsw dest
-	end macro
+	define x87.fnstsw_ax? db 0DFh,0E0h
+
+	calminstruction fnstsw? dest*
+		asmcmd	=x86.=parse_operand =@dest,dest
+		check	@dest.size and not 2
+		jyes	invalid_operand_size
+		check	@dest.type = 'mem'
+		jyes	mem
+		check	@dest.type = 'reg' & @dest.rm = 0
+		jno	invalid_operand
+		assemble x87.fnstsw_ax
+		exit
+	    mem:
+		asmcmd	=x86.=store_instruction 0DDh,=@dest,7
+		exit
+	    invalid_operand_size:
+		asmcmd	=err 'invalid operand size'
+		exit
+	    invalid_operand:
+		asmcmd	=err 'invalid operand'
+	end calminstruction
 
 	iterate <instr,postbyte>, fldcw,5, fnstcw,7
-		macro instr? dest*
-			x86.parse_operand @dest,dest
-			if @dest.size & @dest.size <> 2
-				err 'invalid operand size'
-			end if
-			if @dest.type = 'mem'
-				x86.store_instruction 0D9h,@dest,postbyte
-			else
-				err 'invalid operand'
-			end if
-		end macro
-	end iterate
 
-	macro fstcw dest*
-		fwait
-		fnstcw dest
-	end macro
+		calminstruction instr? dest*
+			asmcmd	=x86.=parse_operand =@dest,dest
+			check	@dest.size and not 2
+			jyes	invalid_operand_size
+			check	@dest.type = 'mem'
+			jno	invalid_operand
+			asmcmd	=x86.=store_instruction 0D9h,=@dest,postbyte
+			exit
+		    invalid_operand_size:
+			asmcmd	=err 'invalid operand size'
+			exit
+		    invalid_operand:
+			asmcmd	=err 'invalid operand'
+		end calminstruction
+
+	end iterate
 
 	iterate <instr,postbyte>, fldenv,4, fnstenv,6
-		macro instr? dest*
-			x86.parse_operand @dest,dest
-			if @dest.size & @dest.size <> 14
-				err 'invalid operand size'
-			end if
-			if @dest.type = 'mem'
-				x86.store_instruction 0D9h,@dest,postbyte
-			else
-				err 'invalid operand'
-			end if
-		end macro
-	end iterate
 
-	macro fstenv dest*
-		fwait
-		fnstenv dest
-	end macro
+		calminstruction instr? dest*
+			asmcmd	=x86.=parse_operand =@dest,dest
+			check	@dest.size and not 14
+			jyes	invalid_operand_size
+			check	@dest.type = 'mem'
+			jno	invalid_operand
+			asmcmd	=x86.=store_instruction 0D9h,=@dest,postbyte
+			exit
+		    invalid_operand_size:
+			asmcmd	=err 'invalid operand size'
+			exit
+		    invalid_operand:
+			asmcmd	=err 'invalid operand'
+		end calminstruction
+
+	end iterate
 
 	iterate <instr,postbyte>, frstor,4, fnsave,6
-		macro instr? dest*
-			x86.parse_operand @dest,dest
-			if @dest.size & @dest.size <> 94
-				err 'invalid operand size'
-			end if
-			if @dest.type = 'mem'
-				x86.store_instruction 0DDh,@dest,postbyte
-			else
-				err 'invalid operand'
-			end if
-		end macro
+
+		calminstruction instr? dest*
+			asmcmd	=x86.=parse_operand =@dest,dest
+			check	@dest.size and not 94
+			jyes	invalid_operand_size
+			check	@dest.type = 'mem'
+			jno	invalid_operand
+			asmcmd	=x86.=store_instruction 0DDh,=@dest,postbyte
+			exit
+		    invalid_operand_size:
+			asmcmd	=err 'invalid operand size'
+			exit
+		    invalid_operand:
+			asmcmd	=err 'invalid operand'
+		end calminstruction
+
 	end iterate
 
-	macro fsave dest*
-		fwait
-		fnsave dest
-	end macro
+	iterate op,  stsw, stcw, stenv, save
+		calminstruction f#op? dest*
+			assemble x87.fwait?
+			asmcmd	=fn#op? dest
+		end calminstruction
+	end iterate
 
 end if

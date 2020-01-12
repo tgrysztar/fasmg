@@ -108,15 +108,19 @@ macro invoke? proc*,args&
 	call [proc]
 end macro
 
-macro mov? dest*,src*
-	match size [mem], ?src
-		mov dest,src
-	else if src relativeto ebp & src - ebp
-		lea dest,[src]
-	else
-		mov dest,src
-	end if
-end macro
+calminstruction mov? dest*,src*
+	local	tmp
+	match	tmp], src
+	jyes	regular
+	check	src relativeto ebp & src - ebp
+	jno	regular
+	arrange tmp, =lea dest,[src]
+	assemble tmp
+	exit
+    regular:
+	arrange tmp, =mov dest,src
+	assemble tmp
+end calminstruction
 
 macro library? definitions&
 	PE.Imports:

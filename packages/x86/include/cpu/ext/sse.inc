@@ -1,7 +1,8 @@
 
-if ~ definite SSE
+if ~ defined SSE
 
-	SSE := 1
+	restore SSE	; this ensures that symbol cannot be forward-referenced
+	SSE = 1
 
 	include 'mmx.inc'
 
@@ -14,51 +15,90 @@ if ~ definite SSE
 	define x86.dqword? :16
 	define x86.xword? :16
 
-	macro SSE.parse_operand ns,op
-		x86.parse_operand ns,op
-		if ns.type = 'imm' & ns.size = 0
-			if 1 metadataof ns.imm relativeto SSE.reg & ns.imm eq 1 elementof ns.imm
-				ns.type = 'mmreg'
-				ns.mod = 11b
-				ns.rm = 1 metadataof ns.imm - SSE.reg
-				ns.size = 16
-			else if 1 metadataof ns.imm relativeto MMX.reg & ns.imm eq 1 elementof ns.imm
-				ns.type = 'mmreg'
-				ns.mod = 11b
-				ns.rm = 1 metadataof ns.imm - MMX.reg
-				ns.size = 8
-			end if
-		end if
-	end macro
+	calminstruction SSE.parse_operand namespace, operand
 
-	macro SSE.basic_instruction pre,ext,msize,dest,src
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
-		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
-			if @dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16)
-				err 'invalid operand size'
-			end if
-			@src.opcode_prefix = pre
-			x86.store_instruction <0Fh,ext>,@src,@dest.rm
-		else
-			err 'invalid combination of operands'
-		end if
-	end macro
+		local	size, type, mod, rm, imm
+		local	i, sym, cmd
 
-	macro SSE.basic_instruction_imm8 pre,ext,msize,dest,src,aux
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
-		x86.parse_operand @aux,aux
-		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
-			if @dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16) | @aux.size and not 1
-				err 'invalid operand size'
-			end if
-			@src.opcode_prefix = pre
-			x86.store_instruction <0Fh,ext>,@src,@dest.rm,1,@aux.imm
-		else
-			err 'invalid combination of operands'
-		end if
-	end macro
+		asmcmd	=x86.=parse_operand namespace, operand
+
+		arrange type, namespace.=type
+		arrange size, namespace.=size
+		arrange imm, namespace.=imm
+
+		check	type = 'imm' & size = 0
+		jno	done
+		check	imm eq 1 elementof imm & 1 metadataof imm relativeto MMX.reg
+		jyes	mm_register
+		check	imm eq 1 elementof imm & 1 metadataof imm relativeto SSE.reg
+		jyes	xmm_register
+		exit
+
+	    mm_register:
+
+		compute rm, 1 metadataof imm - MMX.reg
+		compute size, 8
+
+		jump	export_mmreg
+
+	    xmm_register:
+
+		compute rm, 1 metadataof imm - SSE.reg
+		compute size, 16
+
+	    export_mmreg:
+
+		compute type, 'mmreg'
+		compute mod, 11b
+
+		arrange sym, namespace.=mod
+		publish sym, mod
+
+		arrange sym, namespace.=rm
+		publish sym, rm
+
+		arrange sym, namespace.=type
+		publish sym, type
+
+		arrange sym, namespace.=size
+		publish sym, size
+
+	    done:
+
+	end calminstruction
+
+	calminstruction SSE.basic_instruction pre,ext,msize,dest,src
+		asmcmd	=SSE.=parse_operand =@dest,dest
+		asmcmd	=SSE.=parse_operand =@src,src
+		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
+		jno	invalid_combination_of_operands
+		check	@dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16)
+		jno	size_ok
+		asmcmd	=err 'invalid operand size'
+	    size_ok:
+		compute @src.opcode_prefix, pre
+		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		exit
+	    invalid_combination_of_operands:
+		asmcmd	=err 'invalid combination of operands'
+	end calminstruction
+
+	calminstruction SSE.basic_instruction_imm8 pre,ext,msize,dest,src,aux
+		asmcmd	=SSE.=parse_operand =@dest,dest
+		asmcmd	=SSE.=parse_operand =@src,src
+		asmcmd	=x86.=parse_operand =@aux,aux
+		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
+		jno	invalid_combination_of_operands
+		check	@dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16) | @aux.size and not 1
+		jno	size_ok
+		asmcmd	=err 'invalid operand size'
+	    size_ok:
+		compute @src.opcode_prefix, pre
+		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm,1,=@aux.=imm
+		exit
+	    invalid_combination_of_operands:
+		asmcmd	=err 'invalid combination of operands'
+	end calminstruction
 
 	iterate <instr,ext>, sqrt,51h, rsqrt,52h, rcp,53h, add,58h, mul,59h, sub,5Ch, min,5Dh, div,5Eh, max,5Fh
 		macro instr#ps? dest*,src*

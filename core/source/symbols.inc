@@ -70,6 +70,7 @@ SYMTREE_LOCAL = 1
 NAMESPACE_UNATTACHED = 1
 NAMESPACE_WITH_CASEINSENSITIVE_PARAMETERS = 2
 NAMESPACE_CURRENT_LABEL_TO_CONFIRM = 4
+NAMESPACE_CALM = 8
 
 FOLIAGE_WITH_TOKEN = 1
 
@@ -82,6 +83,7 @@ SYMCLASS_EXPRESSION = 0
 SYMCLASS_INSTRUCTION = 1
 SYMCLASS_STRUCTURE = 2
 SYMCLASS_PARAMETER = 3
+SYMCLASS_CALM_LOCATION = 10h
 
 SYM_CONSTANT = 1
 SYM_VARIABLE = 2
@@ -100,6 +102,7 @@ VALTYPE_STRING = 3
 VALTYPE_FLOAT = 4
 VALTYPE_ELEMENT = 5
 VALTYPE_AREA = 6
+VALTYPE_CALM = 7
 VALTYPE_SYMBOLIC_SEQUENCE = 11h
 VALTYPE_NUMERIC_SEQUENCE = 12h
 VALTYPE_PLAIN = 20h
@@ -676,6 +679,43 @@ get_local_namespace:
 	mov	ebx,eax
 	retn
 
+get_local_anchor:
+; in:
+;  eax = instruction identifier
+;  ecx = context identifier
+; out:
+;  edx - SymbolTree_Foliage where a local namespace can be anchored
+	xor	ebx,ebx
+	mov	dl,SYMCLASS_PARAMETER
+	call	get_abstract_symbol
+	mov	eax,[ebx+SymbolTree_Leaf.definition]
+	test	eax,eax
+	jz	create_anchor_counter
+	mov	ecx,[current_pass]
+	cmp	ecx,[eax+ValueDefinition.pass]
+	je	increment_anchor_counter
+	mov	[eax+ValueDefinition.pass],ecx
+	and	[eax+ValueDefinition.value],0
+	jmp	increment_anchor_counter
+    create_anchor_counter:
+	mov	ecx,sizeof.ValueDefinition
+	call	create_tree_element
+	mov	[ebx+SymbolTree_Leaf.definition],eax
+	inc	[eax+ValueDefinition.reference_count]
+	mov	[eax+ValueDefinition.type],VALTYPE_PLAIN
+	mov	ecx,[current_pass]
+	mov	[eax+ValueDefinition.pass],ecx
+    increment_anchor_counter:
+	mov	ecx,[eax+ValueDefinition.value]
+	inc	[eax+ValueDefinition.value]
+	jecxz	local_anchor_ready
+	mov	eax,ebx
+	xor	ebx,ebx
+	mov	dl,SYMCLASS_PARAMETER
+	call	get_abstract_symbol
+    local_anchor_ready:
+	retn
+
 get_available_value:
 ; in:
 ;  ebx - SymbolTree_Leaf
@@ -999,13 +1039,16 @@ remove_value_definition:
 ; in:
 ;  ebx - SymbolTree_Leaf
 ;  edx - ValueDefinition, null to remove the present value
+;  edi - SymbolTree_Leaf where to move the value, null for plain remove
 ; out:
 ;  cf set if there was no value to remove
+;  when cf = 0:
+;   edx - ValueDefinition that got removed
 ; preserves: ebx, esi, edi
-	test	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
-	jnz	cannot_apply_to_constant
 	test	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	jnz	variable_ready
+	test	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
+	jnz	cannot_apply_to_constant
 	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
 	jnz	cannot_apply_to_constant
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
@@ -1024,16 +1067,44 @@ remove_value_definition:
 	jz	no_definition_to_remove
 	test	[edx+ValueDefinition.flags],VAL_INTERNAL
 	jnz	no_definition_to_remove
+	cmp	[edx+ValueDefinition.type],VALTYPE_RESERVED
+	je	no_definition_to_remove
 	mov	eax,[edx+ValueDefinition.pass]
 	cmp	eax,[current_pass]
 	jne	no_definition_to_remove
     remove_definition:
 	mov	eax,[edx+ValueDefinition.previous]
+	test	edi,edi
+	jnz	move_definition
 	mov	[ecx],eax
 	mov	eax,[ebx+SymbolTree_Leaf.retired_definition]
 	mov	[edx+ValueDefinition.previous],eax
 	dec	[edx+ValueDefinition.reference_count]
 	mov	[ebx+SymbolTree_Leaf.retired_definition],edx
+	clc
+	retn
+    move_definition:
+	cmp	edi,edx
+	je	definition_moved
+	test	[edi+SymbolTree_Leaf.flags],SYM_VARIABLE
+	jnz	append_moved_definition
+	test	[edi+SymbolTree_Leaf.extended_flags],SYMX_LINK
+	jnz	cannot_apply_to_constant
+	test	[edi+SymbolTree_Leaf.flags],SYM_CONSTANT
+	jnz	cannot_apply_to_constant
+	or	[edi+SymbolTree_Leaf.flags],SYM_VARIABLE
+	test	[edi+SymbolTree_Leaf.flags],SYM_PREDICTED
+	jz	append_moved_definition
+	and	[ebx+SymbolTree_Leaf.flags],not SYM_PREDICTED
+	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED_DEFINED
+	jz	append_moved_definition
+	or	[next_pass_needed],1
+    append_moved_definition:
+	mov	[ecx],eax
+	mov	eax,[edi+SymbolTree_Leaf.definition]
+	mov	[edx+ValueDefinition.previous],eax
+	mov	[edi+SymbolTree_Leaf.definition],edx
+    definition_moved:
 	clc
 	retn
     find_definition_to_remove:

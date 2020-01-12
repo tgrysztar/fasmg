@@ -235,7 +235,7 @@ namespace COFF
 	SizeOfOptionalHeader	dw 0
 	Characteristics 	dw CHARACTERISTICS
 
-	Sections:		rb NUMBER_OF_SECTIONS * sizeof IMAGE_SECTION_HEADER
+	Sections:		db NUMBER_OF_SECTIONS * sizeof IMAGE_SECTION_HEADER dup 0
 
 	virtual at 0
 		symbol_table:: rb NUMBER_OF_SYMBOLS * sizeof IMAGE_SYMBOL
@@ -412,13 +412,17 @@ macro section? declaration*
 	end namespace
 end macro
 
-macro align? boundary,value:?
-	if COFF.SECTION_ALIGN mod (boundary) = 0
-		db (boundary-1)-($-COFF.SECTION_BASE+boundary-1) mod boundary dup value
-	else
-		err 'section not aligned enough'
-	end if
-end macro
+calminstruction align? boundary,value:?
+	check	COFF.SECTION_ALIGN mod (boundary) = 0
+	jyes	allowed
+	arrange value, =err 'section not aligned enough'
+	assemble value
+	exit
+    allowed:
+	compute boundary, (boundary-1)-($-COFF.SECTION_BASE+boundary-1) mod boundary
+	arrange value, =db boundary =dup value
+	assemble value
+end calminstruction
 
 macro public? declaration*
 	namespace COFF
@@ -506,241 +510,239 @@ end macro
 element COFF.IMAGE_BASE
 RVA? equ -COFF.IMAGE_BASE+
 
+calminstruction calminstruction?.init? var*, val:0
+	compute val, val
+	publish var, val
+end calminstruction
+
+calminstruction calminstruction?.initsym? var*, val&
+	publish var, val
+end calminstruction
+
+calminstruction calminstruction?.unique? name
+	local counter, buffer
+	init counter
+	compute counter, counter + 1
+	arrange buffer, name#counter
+	publish name, buffer
+end calminstruction
+
+calminstruction calminstruction?.asm? line&
+	local tmp, ln, buffer
+	initsym tmp, unique ln
+	assemble tmp
+	publish ln, line
+	arrange buffer, =assemble ln
+	assemble buffer
+end calminstruction
+
 if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 
-	macro dword? value
-		local v, o
-		v = value
-		if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				emit dword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_I386_DIR32 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else if ~ v relativeto 0 & (v + COFF.IMAGE_BASE) relativeto 1 elementof (v + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (v + COFF.IMAGE_BASE)) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				v = v + COFF.IMAGE_BASE
-				emit dword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_I386_DIR32NB at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else if ~ v relativeto 0 & (v + COFF.SECTION_BASE) relativeto 1 elementof (v + COFF.SECTION_BASE)
-			if 1 elementof (1 metadataof (v + COFF.SECTION_BASE)) relativeto COFF.relocatable
-				namespace COFF
-					o = $%
-					v = v + (SECTION_BASE + o + 4 - SECTION_OFFSET)
-					emit dword: 0 scaleof v
-					if $% > o
-						store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-						store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-						store IMAGE_REL_I386_REL32 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-						RELOCATION_INDEX = RELOCATION_INDEX + 1
-					end if
-				end namespace
-			else
-				emit dword: v
-			end if
-		else
-			emit dword: v
-		end if
-	end macro
+	calminstruction dword? value
+		compute value, value
+		check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto COFF.relocatable
+		jyes	dir32
+		check	~ value relativeto 0 & (value + COFF.IMAGE_BASE) relativeto 1 elementof (value + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (value + COFF.IMAGE_BASE)) relativeto COFF.relocatable
+		jyes	dir32nb
+		check	~ value relativeto 0 & (value + COFF.SECTION_BASE) relativeto 1 elementof (value + COFF.SECTION_BASE)
+		jno	plain
+		check	1 elementof (1 metadataof (value + COFF.SECTION_BASE)) relativeto COFF.relocatable
+		jyes	rel32
+	    plain:
+		asm	emit 4: value
+		exit
+		local	offset, symndx, type
+	    dir32:
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_I386_DIR32
+		jump	add_relocation
+	    dir32nb:
+		compute value, value + COFF.IMAGE_BASE
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_I386_DIR32NB
+		jump	add_relocation
+	    rel32:
+		compute value, value + (COFF.SECTION_BASE + $% + 4 - COFF.SECTION_OFFSET)
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_I386_REL32
+		jump	add_relocation
+	    add_relocation:
+		compute offset, $%
+		asm	emit 4: 0 scaleof value
+		check	$% > offset
+		jno	done
+		compute offset, offset - COFF.SECTION_OFFSET
+		local	relocation
+		compute relocation, COFF.RELOCATION_INDEX * sizeof IMAGE_RELOCATION
+		asm	store offset at COFF.relocations : relocation + IMAGE_RELOCATION.VirtualAddress
+		asm	store symndx at COFF.relocations : relocation + IMAGE_RELOCATION.SymbolTableIndex
+		asm	store type at COFF.relocations : relocation + IMAGE_RELOCATION.Type
+		compute COFF.RELOCATION_INDEX, COFF.RELOCATION_INDEX + 1
+	    done:
+	end calminstruction
 
-	macro qword? value
-		local v, o
-		v = value
-		if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				emit qword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_I386_DIR32 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else if ~ v relativeto 0 & (v + COFF.IMAGE_BASE) relativeto 1 elementof (v + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (v + COFF.IMAGE_BASE)) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				v = v + COFF.IMAGE_BASE
-				emit qword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_I386_DIR32NB at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else
-			emit qword: v
-		end if
-	end macro
+	calminstruction qword? value
+		compute value, value
+		check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto COFF.relocatable
+		jyes	dir32
+		check	~ value relativeto 0 & (value + COFF.IMAGE_BASE) relativeto 1 elementof (value + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (value + COFF.IMAGE_BASE)) relativeto COFF.relocatable
+		jyes	dir32nb
+	    plain:
+		asm	emit 8: value
+		exit
+		local	offset, symndx, type
+	    dir32:
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_I386_DIR32
+		jump	add_relocation
+	    dir32nb:
+		compute value, value + COFF.IMAGE_BASE
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_I386_DIR32NB
+		jump	add_relocation
+	    add_relocation:
+		compute offset, $%
+		asm	emit 8: 0 scaleof value
+		check	$% > offset
+		jno	done
+		compute offset, offset - COFF.SECTION_OFFSET
+		local	relocation
+		compute relocation, COFF.RELOCATION_INDEX * sizeof IMAGE_RELOCATION
+		asm	store offset at COFF.relocations : relocation + IMAGE_RELOCATION.VirtualAddress
+		asm	store symndx at COFF.relocations : relocation + IMAGE_RELOCATION.SymbolTableIndex
+		asm	store type at COFF.relocations : relocation + IMAGE_RELOCATION.Type
+		compute COFF.RELOCATION_INDEX, COFF.RELOCATION_INDEX + 1
+	    done:
+	end calminstruction
 
 else if COFF.MACHINE = IMAGE_FILE_MACHINE_AMD64
 
-	macro dword? value
-		local v, o
-		v = value
-		if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				emit dword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_AMD64_ADDR32 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else if ~ v relativeto 0 & (v + COFF.IMAGE_BASE) relativeto 1 elementof (v + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (v + COFF.IMAGE_BASE)) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				v = v + COFF.IMAGE_BASE
-				emit dword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_AMD64_ADDR32NB at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else if ~ v relativeto 0 & (v + COFF.SECTION_BASE) relativeto 1 elementof (v + COFF.SECTION_BASE)
-			if 1 elementof (1 metadataof (v + COFF.SECTION_BASE)) relativeto COFF.relocatable
-				namespace COFF
-					o = $%
-					v = v + (SECTION_BASE + o + 4 - SECTION_OFFSET)
-					emit dword: 0 scaleof v
-					if $% > o
-						store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-						store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-						store IMAGE_REL_AMD64_REL32 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-						RELOCATION_INDEX = RELOCATION_INDEX + 1
-					end if
-				end namespace
-			else
-				emit dword: v
-			end if
-		else
-			emit dword: v
-		end if
-	end macro
+	calminstruction dword? value
+		compute value, value
+		check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto COFF.relocatable
+		jyes	addr32
+		check	~ value relativeto 0 & (value + COFF.IMAGE_BASE) relativeto 1 elementof (value + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (value + COFF.IMAGE_BASE)) relativeto COFF.relocatable
+		jyes	addr32nb
+		check	~ value relativeto 0 & (value + COFF.SECTION_BASE) relativeto 1 elementof (value + COFF.SECTION_BASE)
+		jno	plain
+		check	1 elementof (1 metadataof (value + COFF.SECTION_BASE)) relativeto COFF.relocatable
+		jyes	rel32
+	    plain:
+		asm	emit 4: value
+		exit
+		local	offset, symndx, type
+	    addr32:
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_AMD64_ADDR32
+		jump	add_relocation
+	    addr32nb:
+		compute value, value + COFF.IMAGE_BASE
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_AMD64_ADDR32NB
+		jump	add_relocation
+	    rel32:
+		compute value, value + (COFF.SECTION_BASE + $% + 4 - COFF.SECTION_OFFSET)
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_AMD64_REL32
+		jump	add_relocation
+	    add_relocation:
+		compute offset, $%
+		asm	emit 4: 0 scaleof value
+		check	$% > offset
+		jno	done
+		compute offset, offset - COFF.SECTION_OFFSET
+		local	relocation
+		compute relocation, COFF.RELOCATION_INDEX * sizeof IMAGE_RELOCATION
+		asm	store offset at COFF.relocations : relocation + IMAGE_RELOCATION.VirtualAddress
+		asm	store symndx at COFF.relocations : relocation + IMAGE_RELOCATION.SymbolTableIndex
+		asm	store type at COFF.relocations : relocation + IMAGE_RELOCATION.Type
+		compute COFF.RELOCATION_INDEX, COFF.RELOCATION_INDEX + 1
+	    done:
+	end calminstruction
 
-	macro qword? value
-		local v, o
-		v = value
-		if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				emit qword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_AMD64_ADDR64 at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else if ~ v relativeto 0 & (v + COFF.IMAGE_BASE) relativeto 1 elementof (v + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (v + COFF.IMAGE_BASE)) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				v = v + COFF.IMAGE_BASE
-				emit qword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.VirtualAddress
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.SymbolTableIndex
-					store IMAGE_REL_AMD64_ADDR32NB at relocations : RELOCATION_INDEX * sizeof IMAGE_RELOCATION + IMAGE_RELOCATION.Type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else
-			emit qword: v
-		end if
-	end macro
+	calminstruction qword? value
+		compute value, value
+		check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto COFF.relocatable
+		jyes	addr64
+		check	~ value relativeto 0 & (value + COFF.IMAGE_BASE) relativeto 1 elementof (value + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (value + COFF.IMAGE_BASE)) relativeto COFF.relocatable
+		jyes	addr64nb
+	    plain:
+		asm	emit 8: value
+		exit
+		local	offset, symndx, type
+	    addr64:
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_AMD64_ADDR64
+		jump	add_relocation
+	    addr64nb:
+		compute value, value + COFF.IMAGE_BASE
+		compute symndx, 0 scaleof (1 metadataof value)
+		compute type, IMAGE_REL_AMD64_ADDR64NB
+		jump	add_relocation
+	    add_relocation:
+		compute offset, $%
+		asm	emit 8: 0 scaleof value
+		check	$% > offset
+		jno	done
+		compute offset, offset - COFF.SECTION_OFFSET
+		local	relocation
+		compute relocation, COFF.RELOCATION_INDEX * sizeof IMAGE_RELOCATION
+		asm	store offset at COFF.relocations : relocation + IMAGE_RELOCATION.VirtualAddress
+		asm	store symndx at COFF.relocations : relocation + IMAGE_RELOCATION.SymbolTableIndex
+		asm	store type at COFF.relocations : relocation + IMAGE_RELOCATION.Type
+		compute COFF.RELOCATION_INDEX, COFF.RELOCATION_INDEX + 1
+	    done:
+	end calminstruction
 
 end if
 
-macro dd? definitions&
-	iterate value,definitions
-		match ?, value
-			dd ?
-		else match n =dup? ?, value
-			dd n dup ?
-		else match n =dup? (?), value
-			dd n dup ?
-		else match n =dup? v, value
-			repeat n
-				dword v
-			end repeat
-		else
-			dword value
-		end match
-	end iterate
-end macro
+iterate <dd,dword>, dd,dword, dq,qword
 
-struc dd? definitions&
-	label . : dword
-	iterate value,definitions
-		match ?, value
-			dd ?
-		else match n =dup? ?, value
-			dd n dup ?
-		else match n =dup? (?), value
-			dd n dup ?
-		else match n =dup? v, value
-			repeat n
-				dword v
-			end repeat
-		else
-			dword value
-		end match
-	end iterate
-end struc
+	calminstruction dd? definitions&
+		local	value, n
+	    start:
+		match	value=,definitions, definitions, ()
+		jyes	recognize
+		match	value, definitions
+		arrange definitions,
+	    recognize:
+		match	n =dup? value, value, ()
+		jyes	duplicate
+		match	?, value
+		jyes	reserve
+		arrange value, =dword value
+		assemble value
+	    next:
+		match	, definitions
+		jno	start
+		take	, definitions
+		take	definitions, definitions
+		jyes	next
+		exit
+	    reserve:
+		arrange value, =dd ?
+		assemble value
+		jump	next
+	    duplicate:
+		match	(value), value
+	    stack:
+		check	n
+		jno	next
+		take	definitions, value
+		arrange value, definitions
+		compute n, n - 1
+		jump	stack
+	end calminstruction
 
-macro dq? definitions&
-	iterate value,definitions
-		match ?, value
-			dq ?
-		else match n =dup? ?, value
-			dq n dup ?
-		else match n =dup? (?), value
-			dq n dup ?
-		else match n =dup? v, value
-			repeat n
-				qword v
-			end repeat
-		else
-			qword value
-		end match
-	end iterate
-end macro
+	calminstruction (label) dd? definitions&
+		local	cmd
+		arrange cmd, =label label : =dword
+		assemble cmd
+		arrange cmd, =dd definitions
+		assemble cmd
+	end calminstruction
 
-struc dq? definitions&
-	label . : qword
-	iterate value,definitions
-		match ?, value
-			dq ?
-		else match n =dup? ?, value
-			dq n dup ?
-		else match n =dup? (?), value
-			dq n dup ?
-		else match n =dup? v, value
-			repeat n
-				qword v
-			end repeat
-		else
-			qword value
-		end match
-	end iterate
-end struc
+end iterate
 
 postpone
 	purge section?

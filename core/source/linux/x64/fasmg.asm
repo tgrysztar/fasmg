@@ -462,6 +462,7 @@ segment readable executable
   include '../../conditions.inc'
   include '../../floats.inc'
   include '../../directives.inc'
+  include '../../calm.inc'
   include '../../errors.inc'
   include '../../map.inc'
   include '../../reader.inc'

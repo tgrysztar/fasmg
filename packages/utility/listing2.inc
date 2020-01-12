@@ -10,101 +10,128 @@
 ;		include 'cpu/p5.inc'
 ;	list
 
+include 'xcalm.inc'
+
 define Listing?
 
 namespace Listing
+
+	ON = 0
+
 	virtual at 0
 		HexDigits:: db '0123456789ABCDEF'
 	end virtual
+
 	virtual as 'lst'
 		Text::
 	end virtual
+
+	define base
+	define address
+
+	calminstruction ? line&
+		assemble line
+		check	ON
+		jno	done
+
+		stringify line
+
+		check	$$ eq base
+		jyes	area_ok
+		compute base, $$
+		compute address, $
+	    area_ok:
+
+		local	bytes, counter, digit
+
+		compute bytes, $ - address
+		check	$ - bytes >= $$ & bytes >= 0
+		jyes	size_ok
+		compute bytes, $ - $$
+	    size_ok:
+
+		asm	virtual Text
+		compute counter, 16
+	    print_address:
+		compute counter, counter - 1
+		compute digit, (address shr (counter shl 2)) and 0Fh
+		asm	load digit:1 from HexDigits:digit
+		asm	db digit
+		check	counter
+		jyes	print_address
+		asm	db ': '
+		asm	end virtual
+
+		compute address, $
+
+		local	bytes_in_row, readable_bytes, data
+
+		check	bytes > 0
+		jyes	main
+		asm	virtual Text
+		asm	db 8 dup '   ',line,13,10
+		jump	finish
+
+	    main:
+		compute bytes_in_row, bytes
+		check	bytes_in_row <= 8
+		jyes	check_bytes
+		compute bytes_in_row, 8
+	    check_bytes:
+		check	$ - bytes + bytes_in_row <= $@
+		jyes	all_readable
+		check	$ - bytes_in_row >= $@
+		jyes	none_readable
+		compute readable_bytes, bytes_in_row - ($ - $@)
+		jyes	read_bytes
+	    all_readable:
+		compute readable_bytes, bytes_in_row
+		jump	read_bytes
+	    none_readable:
+		compute readable_bytes, 0
+	    read_bytes:
+		asm	load data:readable_bytes from $ - bytes
+		asm	virtual Text
+		compute counter, 0
+	    print_bytes:
+		compute digit, (data shr (counter shl 3 + 4)) and 0Fh
+		asm	load digit:byte from HexDigits:digit
+		asm	db digit
+		compute digit, (data shr (counter shl 3)) and 0Fh
+		asm	load digit:byte from HexDigits:digit
+		asm	db digit, ' '
+		compute counter, counter + 1
+		check	counter < readable_bytes
+		jyes	print_bytes
+		asm	db bytes_in_row - readable_bytes dup '?? '
+		check	line
+		jno	line_printed
+		asm	db 8-bytes_in_row dup '   ',line
+		compute line, ''
+	    line_printed:
+		asm	db 13,10
+		check	bytes > bytes_in_row
+		jno	finish
+		compute bytes, bytes - bytes_in_row
+		asm	db 18 dup ' '
+		asm	end virtual
+		jump	main
+	    finish:
+		asm	end virtual
+	    done:
+	end calminstruction
+
 end namespace
 
-macro Listing.process line&
-	namespace Listing
-		if ~ $$ eq base
-			base = $$
-			address = $$
-		end if
-		bytes = $ - address
-		if $ - bytes < $$
-			bytes = $ - $$
-		end if
-		address = $
-		virtual Text
-		repeat 16
-		       load digit:byte from HexDigits:((address scale 0-bytes) shr ((%%-%) shl 2)) and 0Fh
-		       db digit
-		end repeat
-		db ': '
-		end virtual
-		if bytes < 0
-			bytes = 0
-		end if
-		while bytes > 0
-			if bytes > 8
-				bytes_in_row = 8
-			else
-				bytes_in_row = bytes
-			end if
-			if $ - bytes + bytes_in_row <= $@
-				readable_bytes = bytes_in_row
-			else if $ - bytes_in_row >= $@
-				readable_bytes = 0
-			else
-				readable_bytes = bytes_in_row - ($ - $@)
-			end if
-			load data:readable_bytes from $ - bytes
-			virtual Text
-			repeat readable_bytes
-				load digit:byte from HexDigits:(data shr ((%-1) shl 3 + 4)) and 0Fh
-				db digit
-				load digit:byte from HexDigits:(data shr ((%-1) shl 3)) and 0Fh
-				db digit,' '
-			end repeat
-			repeat bytes_in_row - readable_bytes
-				db '?? '
-			end repeat
-			if bytes > bytes_in_row
-				db 13,10,16+2 dup ' '
-				end virtual
-				bytes = bytes - bytes_in_row
-			else
-				end virtual
-				break
-			end if
-		end while
-		virtual Text
-		repeat 8-bytes
-			db '   '
-		end repeat
-		db `line,13,10
-		end virtual
-	end namespace
-end macro
+calminstruction nolist?!
+	compute Listing.ON, 0
+end calminstruction
 
-macro nolist?
-	Listing? = Listing? - 1
-	if Listing? = 0
-		purge ?
-		macro Listing.process line&
-			purge Listing.process
-		end macro
-	end if
-end macro
-
-macro list?
-	Listing? = Listing? + 1
-	if Listing? = 1
-		Listing.base = $$
-		Listing.address = $
-		macro ? line&
-			line
-			Listing.process line
-		end macro
-	end if
-end macro
+calminstruction list?!
+	compute Listing.ON, 1
+	compute Listing.base, $$
+	compute Listing.address, $
+end calminstruction
 
 postpone
 	nolist 

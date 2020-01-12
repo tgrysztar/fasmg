@@ -7,6 +7,7 @@ _line_number_prefix db ' [',0
 _line_number_suffix db ']',0
 _line_content_prefix db ':'
 _line_segment_prefix db LINE_FEED,9,0
+_calm_source db ' (CALM)',0
 _single_quote db 27h,0
 _preprocessed_text_prefix db 'Processed: ',0
 _error_prefix db 'Error: ',0
@@ -47,5 +48,7 @@ _address_out_of_range db "address out of range",0
 _invalid_area db "invalid or inaccessible addressing area",0
 _stack_limit_exceeded db "exceeded the maximum allowed depth of stack",0
 _repeated_declaration db "choice has already been declared",0
+_undefined_jump_target db "the target of the jump is not defined in this instruction",0
+_invalid_symbol_value db "the value of symbol '%' is not valid for this use",0
 
 _not_implemented_yet db "this feature is not implemented yet",0

@@ -16,9 +16,10 @@ struct SourceContext
 ends
 
 struct SourceEntry
-	type db ?			 ; SOURCE_#
-	flags db ?
-	reserved dw ?
+	type db ?			; SOURCE_#
+	flags db ?			; SRCF_#
+	saved_result db ?
+	reserved db ?
 	name dd ?
 	name_length dd ?
 	text dd ?
@@ -52,6 +53,10 @@ ends
 SOURCE_FILE = 0
 SOURCE_MEMORY = 1
 SOURCE_MACRO = 2
+SOURCE_CALM = 3
+
+SRCF_PREPROCESSED = 1
+SRCF_ALM_STATEMENT = 2
 
 PMODE_RETAIN_COMMENTS = 1
 PMODE_ISOLATE_LINES = 2
@@ -59,6 +64,7 @@ PMODE_ISOLATE_LINES = 2
 AMODE_SKIP = 1
 AMODE_DEFINITION = 2
 AMODE_POSTPONED = 4
+AMODE_CALM_DEFINITION = 8
 
 TRACE_ERROR_STACK = 1
 TRACE_DISPLAY = 2
@@ -93,6 +99,9 @@ assembly_init:
 	mov	[expression_workspace.memory_start],eax
 	mov	[calculation_workspace.memory_start],eax
 	mov	[auxiliary_workspace.memory_start],eax
+	mov	[calm_code_buffer.memory_start],eax
+	mov	[calm_literals_buffer.memory_start],eax
+	mov	[calm_auxiliary_buffer.memory_start],eax
 
 	mov	[display_buffer],eax
 	mov	[macro_buffer],eax
@@ -161,6 +170,11 @@ assembly_init:
 	call	create_tree_element
 	mov	[root_namespace],eax
 
+	mov	ecx,sizeof.SymbolTree_Root + sizeof.SymbolTree_Node
+	call	create_tree_element
+	or	[eax+SymbolTree_Root.flags],NAMESPACE_UNATTACHED
+	mov	[alm_namespace],eax
+
 	call	create_parameter_namespace
 	mov	[root_parameter_namespace],eax
 
@@ -191,13 +205,17 @@ assembly_init:
 	mov	[line_embeddings],eax
 	mov	[line_embeddings_maximum_length],ecx
 
+	mov	ecx,140h
+	call	malloc_growable
+	mov	[output_areas_list],eax
+	mov	edi,eax
+	add	eax,ecx
+	mov	[output_areas_list_end],eax
 	xor	eax,eax
+	shr	ecx,2
+	rep	stosd
 	mov	[number_of_line_embeddings],eax
-	mov	[first_output_area_entry],eax
-
-	mov	ecx,sizeof.AreaEntry
-	call	create_tree_element
-	mov	[virtual_area_entry],eax
+	mov	[virtual_area],eax
 
 	mov	ecx,1000h
 	call	malloc_growable
@@ -254,6 +272,18 @@ assembly_init:
 	call	allocate_workspace
 
 	mov	edx,calculation_workspace
+	mov	ecx,1000h
+	call	allocate_workspace
+
+	mov	edx,calm_code_buffer
+	mov	ecx,1000h
+	call	allocate_workspace
+
+	mov	edx,calm_literals_buffer
+	mov	ecx,1000h
+	call	allocate_workspace
+
+	mov	edx,calm_auxiliary_buffer
 	mov	ecx,1000h
 	call	allocate_workspace
 
@@ -442,6 +472,8 @@ assembly_shutdown:
 	call	mfree
 	mov	eax,[line_embeddings]
 	call	mfree
+	mov	eax,[output_areas_list]
+	call	mfree
 	mov	eax,[directives_stack_base]
 	call	mfree
 	mov	eax,[counters_stack_base]
@@ -466,6 +498,12 @@ assembly_shutdown:
 	mov	eax,[calculation_workspace.memory_start]
 	call	mfree
 	mov	eax,[auxiliary_workspace.memory_start]
+	call	mfree
+	mov	eax,[calm_code_buffer.memory_start]
+	call	mfree
+	mov	eax,[calm_literals_buffer.memory_start]
+	call	mfree
+	mov	eax,[calm_auxiliary_buffer.memory_start]
 	call	mfree
 
 	mov	eax,[display_buffer]
@@ -543,6 +581,7 @@ assembly_pass:
 	mov	[preprocessing_mode],al
 	mov	[next_pass_needed],al
 	mov	[assembly_mode],al
+	mov	[use_raw_values],al
 	mov	[shift_tracking],al
 	mov	[current_area],eax
 	mov	[current_output_area_entry],eax
@@ -620,6 +659,8 @@ assembly_line:
 	xchg	eax,[ebx+SourceEntry.number_of_attached_lines]
 	inc	eax
 	add	[ebx+SourceEntry.line_number],eax
+	cmp	[ebx+SourceEntry.type],SOURCE_CALM
+	je	calm_virtual_machine
 	mov	eax,[ebx+SourceEntry.local_namespace]
 	mov	[parameter_namespace],eax
 	test	[eax+SymbolTree_Root.flags],NAMESPACE_UNATTACHED
@@ -751,7 +792,7 @@ assembly_line:
     line_ended:
 	sub	esi,[ebx+SourceEntry.text]
 	mov	[ebx+SourceEntry.offset],esi
-	jmp	got_line
+	jmp	line_preprocessed
     source_ended:
 	mov	ebx,[source_context]
 	dec	[ebx+SourceContext.number_of_entries]
@@ -785,16 +826,20 @@ assembly_line:
     get_line_from_macro:
 	mov	edx,[ebx+SourceEntry.text]
 	mov	esi,[edx+ValueDefinition.value]
-	mov	eax,[edx+ValueDefinition.value_length]
-	add	eax,esi
-	mov	[source_end],eax
+	mov	ecx,[edx+ValueDefinition.value_length]
 	mov	eax,[ebx+SourceEntry.offset]
+	test	[ebx+SourceEntry.flags],SRCF_PREPROCESSED
+	jnz	use_preprocessed_line
+	add	ecx,esi
+	mov	[source_end],ecx
 	add	esi,eax
+	cmp	esi,[source_end]
+	je	macro_ended
 	mov	[ebx+SourceEntry.line_offset],eax
 	mov	edi,[preprocessing_workspace.memory_start]
     preprocess_line_from_macro:
 	cmp	esi,[source_end]
-	je	macro_ended
+	je	macro_line_ended
 	mov	ecx,14
 	mov	edx,preprocessing_workspace
 	call	reserve_workspace
@@ -838,7 +883,7 @@ assembly_line:
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd
 	cmp	esi,[source_end]
-	je	macro_ended
+	je	macro_line_ended
 	cmp	byte [esi],40h
 	jne	preprocess_line_from_macro
 	inc	esi
@@ -867,6 +912,18 @@ assembly_line:
 	jc	name_symbol_reproduced
 	call	convert_parameter_to_string
 	jmp	name_symbol_reproduced
+    convert_parameter_to_string:
+	call	convert_symbolic_value_to_string
+	mov	ebx,[memory_source_cache]
+	xor	eax,eax
+	call	put_into_map
+	mov	edi,[symbol_value_start]
+	dec	edi
+	mov	al,22h
+	stosb
+	mov	eax,esi
+	stosd
+	retn
     macro_ended:
 	mov	edx,[ebx+SourceEntry.text]
 	and	[edx+ValueDefinition.flags],not VAL_IN_USE
@@ -875,14 +932,24 @@ assembly_line:
 	dec	[ebx+SourceContext.number_of_entries]
 	jnz	get_line
 	jmp	pass_done
+    use_preprocessed_line:
+	jecxz	macro_ended
+	test	eax,eax
+	jnz	macro_ended
+	mov	[ebx+SourceEntry.offset],ecx
+	add	ecx,esi
+	mov	[line_start],esi
+	mov	[line_end],ecx
+	jmp	got_line
     macro_line_ended:
 	mov	edx,[ebx+SourceEntry.text]
 	sub	esi,[edx+ValueDefinition.value]
 	mov	[ebx+SourceEntry.offset],esi
-    got_line:
+    line_preprocessed:
 	mov	[line_end],edi
 	mov	esi,[preprocessing_workspace.memory_start]
 	mov	[line_start],esi
+    got_line:
 	xor	eax,eax
 	mov	[line_context],eax
 	mov	[embedded_context],eax
@@ -892,6 +959,8 @@ assemble_instruction:
 	jc	no_interceptor
 	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
 	jz	weak_interceptor
+	cmp	[edx+ValueDefinition.type],VALTYPE_CALM
+	je	launch_calm
 	jmp	use_macro
       no_interceptor:
 	xor	edx,edx
@@ -899,6 +968,8 @@ assemble_instruction:
 	mov	[interceptor],edx
 	xor	eax,eax
 	mov	[label_interceptor],eax
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jnz	assemble_alm_instruction
 	mov	[symbol_definition],al
 	mov	[instruction_branch],eax
 	mov	dl,SYMCLASS_INSTRUCTION
@@ -921,6 +992,8 @@ assemble_instruction:
 	jnz	unrecognized_instruction
     execute_instruction:
 	mov	al,[edx+ValueDefinition.type]
+	cmp	al,VALTYPE_CALM
+	je	launch_calm
 	cmp	al,VALTYPE_SYMBOLIC
 	je	use_macro
 	cmp	al,VALTYPE_NATIVE_COMMAND
@@ -998,6 +1071,8 @@ assemble_instruction:
 	jne	execute_label_interceptor
     execute_labeled_instruction:
 	mov	al,[edx+ValueDefinition.type]
+	cmp	al,VALTYPE_CALM
+	je	launch_calm
 	cmp	al,VALTYPE_SYMBOLIC
 	je	use_struc
 	cmp	al,VALTYPE_NATIVE_COMMAND
@@ -1018,6 +1093,8 @@ assemble_instruction:
 	xor	eax,eax
 	mov	[embedded_context],eax
 	mov	esi,[line_start]
+	cmp	[edx+ValueDefinition.type],VALTYPE_CALM
+	je	launch_calm
 	jmp	use_macro
     execute_label_interceptor:
 	mov	ebx,[label_interceptor_symbol]
@@ -1025,6 +1102,8 @@ assemble_instruction:
 	mov	eax,[label_instruction_context]
 	mov	[embedded_context],eax
 	mov	esi,[label_instruction_start]
+	cmp	[edx+ValueDefinition.type],VALTYPE_CALM
+	je	launch_calm
 	jmp	use_struc
 instruction_assembled:
 	cmp	[current_constituent],0
@@ -1228,6 +1307,10 @@ create_source_entry:
 	assert	sizeof.SourceEntry and 11b = 0
 	xor	eax,eax
 	rep	stosd
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jz	source_entry_created
+	mov	[edi-sizeof.SourceEntry+SourceEntry.flags],SRCF_ALM_STATEMENT
+    source_entry_created:
 	clc
 	retn
     source_context_full:
@@ -1632,12 +1715,13 @@ preprocess_symbol:
 	clc
 	retn
 
-convert_parameter_to_string:
+convert_symbolic_value_to_string:
 ; in:
-;  [symbol_value_start] - start of the preprocessed text to convert (in the preprocessing_workspace)
-;  [symbol_value_end] - end of the preprocessed text to convert (in the preprocessing_workspace)
+;  [symbol_value_start] - start of the preprocessed text to convert
+;  [symbol_value_end] - end of the preprocessed text to convert
 ; out:
-;  edi - just after the string token that replaced the preprocessed text
+;  esi - 32-bit length followed by string data
+;  ecx = total length of string data (including the length prefix)
 	mov	esi,[symbol_value_start]
 	mov	edx,assembly_workspace
 	mov	edi,[edx+Workspace.memory_start]
@@ -1645,7 +1729,7 @@ convert_parameter_to_string:
       convert_token_to_text:
 	mov	ecx,[symbol_value_end]
 	sub	ecx,esi
-	jbe	finish_parameter_to_string_conversion
+	jbe	finish_conversion
 	mov	edx,assembly_workspace
 	call	reserve_workspace
 	lodsb
@@ -1725,21 +1809,12 @@ convert_parameter_to_string:
 	rep	movsb
 	pop	esi
 	jmp	convert_token_to_text
-      finish_parameter_to_string_conversion:
+      finish_conversion:
 	mov	esi,[assembly_workspace.memory_start]
 	mov	ecx,edi
 	sub	ecx,esi
 	lea	eax,[ecx-4]
 	mov	[esi],eax
-	mov	ebx,[memory_source_cache]
-	xor	eax,eax
-	call	put_into_map
-	mov	edi,[symbol_value_start]
-	dec	edi
-	mov	al,22h
-	stosb
-	mov	eax,esi
-	stosd
 	retn
 
 move_to_next_symbol:
@@ -3224,6 +3299,7 @@ get_processed_value:
 ; note:
 ;  to detect whitespace between two consecutive symbols, warp_to_next_symbol should be called after this function,
 ;  since it may further increase ecx when there is additional whitespace outside of current embedded value
+;  when [use_raw_values] flag is set, this function is identical to get_raw_value
 	call	get_raw_value
 	jc	no_more_values
 	cmp	al,1Ah
@@ -3236,6 +3312,8 @@ get_processed_value:
 	clc
 	retn
     symbolic_value:
+	cmp	[use_raw_values],0
+	jne	value_ok
 	mov	eax,[current_pass]
 	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	test	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE

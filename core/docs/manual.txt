@@ -29,6 +29,7 @@ Table of contents
 12. Matching parameters
 13. Output areas
 14. Source and output control
+15. CALM instructions
 
 
 0. Executing the assembler
@@ -1970,3 +1971,289 @@ lines read from the source text when the line break is preceded by a backslash.
   The "removecomments" directive brings back the default behavior of semicolons
 and the "combinelines" directive allows lines from the source text to be combined
 as usual.
+
+
+15. CALM instructions
+
+The "calminstruction" directive allows to define new instructions in form of
+a compiled sequences of specialized commands. As opposed to regular macroinstructions,
+which operate on a straightforward principle of textual substitution, CALM 
+(Compiled Assembly-Like Macro) instructions are able to perform many operations
+without passing any text through the standard preprocessing and assembly cycle. 
+This allows for a finer control, better error handling and faster execution.
+  All references to symbols in the text defining a CALM instruction are fixed
+at the time of definition. As a consequence, any symbols local to the CALM instruction
+are shared among all its executed instances (for example consecutive instances may see
+the values of local symbols left by the previous ones). To aid in reusing these
+references, commands in CALM are generally operating on variables, routinely rewriting
+the symbols with new values.
+  A "calminstruction" statement follows the same rules as "macro" declaration,
+including options like "!" modifier to define unconditional instruction, "*" to mark
+a required argument, ":" to give it a default value and "&" to indicate that
+the final argument consumes all the remaining text in line.
+  However, because CALM instruction operates outside of the standard preprocessing
+and assembly cycle, its arguments do not become preprocessed parameters. Instead
+they are local symbolic variables, given new values every time the instruction is called.
+  If the name of defined instruction is preceded by another name enclosed in round
+brackets, the statement defines a labeled instruction and enclosed name is the
+argument that is going to receive the text of the label.
+  In the definition of CALM instruction, only the statements of its specialized
+language are identified. The initial symbol of every line must be a simple name without
+modifiers and it is only recognized as valid instruction if a case-insensitive symbol with
+such name is found in the namespace of CALM commands (which, for the purpose
+of customization, is accessible as the namespace anchored at the case-insensitive
+"calminstruction" symbol). When no such named instruction is found, the initial name may
+become a label if it is followed by ":", it is then treated as a case-sensitive symbol
+belonging to a specialized class. Symbols of this class are only recognized when used
+as arguments to CALM jump commands (described further down).
+  An "end calminstruction" statement needs to be used to close the definition and
+bring back normal mode of assembly. It is not a regular "end" command, 
+but an identically named instruction in the CALM namespace, which only accepts
+"calminstruction" as its argument.
+  The "assemble" is a command that takes a single argument, which should be
+an identifier of a symbolic variable. The text of this variable is passed directly
+to assembly, without any preprocessing (if the text came from an argument to
+the instruction, it already went through preprocessing when that line was prepared).
+
+        calminstruction please? cmd&
+		assemble cmd
+	end calminstruction
+
+        please display 'Hi!'
+
+  The "match" command is in many ways similar to the standard directive with the same
+name. Its first argument should be a pattern following the same rules as those for
+"match" directive. The second argument must be an identifier of a symbolic variable,
+whose text is going to be matched against the pattern. The name tokens in pattern
+(except for the ones made literal with "=" symbol) are treated as names of variables
+where the matched portions of text should be put if the match is successful. The same
+variable that is a source of text can also be used in pattern as a variable
+to write to. When there is no match, all variables remain unaffected.
+
+        calminstruction please? cmd&
+                match (cmd), cmd
+                assemble cmd
+        end calminstruction
+
+        please(display 'Hi!')
+
+  Whether the match was successful can also be tested with a conditional jump "jyes"
+or "jno" following the "match" command. A "jyes" jump is taken only when the match
+succeeded.
+
+        calminstruction please? cmd&
+                match =do? =not? cmd, cmd
+                jyes done
+                assemble cmd
+            done:
+        end calminstruction
+
+        please do not display 'Bye!'
+
+To further control the flow of processing, the "jump" command allows to jump
+unconditionally, and with "exit" it is possible to terminate processing of
+CALM instruction at any moment (this command takes no arguments). 
+  While the symbols used for the arguments of the instruction are implicitly local,
+other identifiers may become fixed references to global symbols if they are seen
+as accessible at the time of definition (because in CALM instruction all such references
+are treated as uses, not as definitions). A command like "match" may then write to
+a global variable.
+
+        define comment
+
+        calminstruction please? cmd&
+                match cmd //comment, cmd
+                assemble cmd
+        end calminstruction
+
+        please display 'Hi!' // 3
+        db comment                      ; db 3 
+
+To enforce treatment of a symbol as local, a "local" command should be used, followed
+by one or more names separated with commas.
+
+        calminstruction please? cmd&
+                local comment
+                match cmd //comment, cmd
+                assemble cmd
+        end calminstruction
+
+A symbol made local is initally assigned a defined but unusable value.
+  Since the source text for "match" is in this variant given by just a single identifier,
+this syntax allows to have more arguments. An optional third argument to "match" may
+contain a pair of bracket characters. Any wildcard element must then be matched with
+a text that has this kind of brackets properly balanced.
+
+        calminstruction please? cmd&
+                local first, second
+                match first + second, cmd, ()
+                jyes split
+                assemble cmd
+                exit
+            split:
+                assemble first
+                assemble second
+        end calminstruction
+
+        please display 'H',('g'+2) + display '!'
+
+The brackets selected by the third argument must not be used anywhere in the pattern.
+  The "arrange" command is like an inverse of "match", it can build up a text
+containing the values of one or more variables. The first argument defines a variable
+where the constructed text is going to be stored, while the second argument is
+a pattern formed in the same way as for "match" (except that it does not need
+to precede a comma with "=" to have it included in the argument).
+All non-name tokens other than "=" and tokens preceded with "=" are copied literally
+into the constructed text and they do not carry any recognition context with them.
+The name tokens that are not made literal with "=" are treates as names of variables
+whose symbolic values are put in their place into the constructed text.
+
+        calminstruction addr? arg
+                local base, index
+                match base[index], arg
+                local cmd
+                arrange cmd, =dd base + index
+                assemble cmd
+        end calminstruction
+
+        addr 8[5]                       ; dd 8 + 5
+
+With suitably selected patterns, "arrange" can be used to copy symbolic value
+from one variable to another or to assign it a fixed value (even an empty one).
+  If a variable used in pattern turns out to have a numeric value instead of symbolic,
+as long as it is a non-negative number with no additional terms, it is converted
+into a decimal token stored into the constructed symbolic value (an operation
+that outside of CALM instructions would require use of a "repeat 1" trick):
+
+        digit = 4 - 1
+
+        calminstruction demo
+                local cmd
+                arrange cmd, =display digit#0h
+                assemble cmd
+        end calminstruction
+
+        demo                            ; display 3#0h
+
+  The "compute" command allows to evaluate expressions and assign numeric results to
+variables. The first argument to "compute" defines a target where the result should
+be stored, while the second argument can be any numeric expression, which is
+becomes pre-compiled at the time of definition. When the expression is evaluated
+and any of the symbols it refers to turns out to have symbolic value, this text
+is parsed as a new sub-expression, and its calculated value is then used in the
+computation of the main expression.
+  A "compute" therefore can be used not only to evaluate a pre-defined expression,
+but also to parse and compute an expression from a text of a symbolic variable
+(like one coming from an argument to the instruction), or a combination of both:
+
+        a = 0
+
+        calminstruction low expr*
+                compute a, expr and 0FFh
+        end calminstruction
+
+        low 200 + 73                    ; a = 11h
+
+Because symbolic variable is evaluated as a sub-expression, its use here has no
+side-effects that would be caused by a straightforward text substitution.
+  The "check" command is analogous to "if". It evaluates a condition defined by
+the logical expression that follows it and accordingly sets up the result flag which
+may be tested with "jyes" or "jno" command. The values of symbolic variables
+are treated as numeric sub-expressions (they may not contain any operators specific
+to logical expression).
+
+        calminstruction u8range? value
+                check value >= 0 & value < 256
+                jyes ok
+                local cmd
+                arrange cmd, =err 'value out of range'
+                assemble cmd
+            ok:
+        end calminstruction
+
+        u8range -1
+  
+  The "publish" command allows to assign a value to a symbol identified by the text
+held in a variable. This allows to define a symbol with a name constructed with
+a command like "arrange", or a name that was passed in an argument to an instruction.
+The first argument needs to be the symbolic variable containing the identifier
+of the symbol to define, the second argument should be the variable holding
+the value to assign (either symbolic or numeric). The first argument may be
+followed by ":" character to indicate that the symbol should be made constant, 
+or it can be preceded by ":" to make the value stacked on top of the previous one
+(so that the previous one can be brought back with "restore" directive).
+
+        calminstruction constdefine? var
+                local val
+                arrange val,
+                match var=  val, var
+                publish var:, val
+        end calminstruction
+
+        constdefine plus? +
+
+The above instruction allows to define a symbolic constant, something that is not
+possible with standard directives of the assembler.
+  The purpose of "transform" command is to replace identifiers of symbolic variables
+(or constants) with their values in a given text, which is the same operation as done
+by "equ" directive when it prepares the value to assign. The only argument to
+"transform" should be the symbolic variable whose value is going to be processed
+this way and then replaced by the transformed text.
+
+        calminstruction (var) constequ? val
+                transform val
+                publish var:, val
+        end calminstruction
+
+A "transform" command updates the result flag to indicate whether any replacement
+has been done.
+
+        calminstruction prepasm? cmd&
+            loop:
+                transform cmd
+                jyes loop               ; warning: may hang on cyclic references
+                assemble cmd
+        end calminstruction
+
+The result flag is modified only by some of the commands, like "check", "match" 
+or "transform". Other commands keep it unchanged.
+  The "stringify" is a command that converts text of a variable into a string
+and writes it into the same variable (specified by the only argument). This operation
+is similar to one performed by "`" operator in preprocessing.
+
+        calminstruction (var) strcalc? val
+                compute val, val        ; compute expression
+                arrange val, val        ; convert result to a decimal token
+                stringify val           ; convert decimal token to string
+                publish var, val
+        end calminstruction
+                     
+        p strcalc 1 shl 1000
+        display p
+
+  While most commands available to CALM instructions replace the values of variables
+when writing to them, the "take" is a command that allows to work with stacks of values.
+It removes the topmost value of the source symbol (specified by the second argument)
+and gives it to the destination symbol (the first argument), placing it on top of any
+existing values. The destination argument may be empty, in such case the value is
+removed completely and the operation is analogous to "restore" directive. This command
+updates the result flag to indicate whether there was any value to remove.
+If the destination symbol is the same as source, the result flag can be used to check
+whether there is an available value without affecting it.
+
+        calminstruction reverse? cmd&
+                local tmp, stack
+            collect:
+                match tmp=,cmd, cmd
+                take stack, tmp
+                jyes collect
+            execute:
+                assemble cmd
+                take cmd, stack
+                jyes execute
+        end calminstruction
+
+        reverse display '!', display 'i', display 'H' 
+
+A symbol accessed as either destination or source by a "take" command can never be
+forward-referenced even if it could otherwise.

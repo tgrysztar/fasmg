@@ -6,40 +6,21 @@ What is flat assembler g?
 It is an assembly engine designed as a successor of the one used in
 flat assembler 1, one of the recognized assemblers for x86 processors.
 This is a bare engine that by itself has no ability to recognize and
-encode instructions of any processor, however it has an ability to
+encode instructions of any processor, however it has the ability to
 become an assembler for any CPU architecture. It has a macroinstruction
 language that is substantially improved compared to the one provided by
 flat assembler 1 and it allows to easily implement instruction encoders
-in form of customizable macroinstructions. This approach has a great
-flexibility at the cost of performance.
-  If it happened that very fast assembly comparable to flat assembler 1
-was required and the performance drawback of macroinstructions was not
-acceptable, it would be possible to address the issue by building
-a custom assembler based on this engine, and the complete source code
-is available to anyone who would like to try it. But the focus of this
-package is on the use of flat assembler g in its pure form.
+in form of customizable macroinstructions.
   The source code of this tool can be compiled with flat assembler 1,
 but it is also possible to use flat assembler g itself to compile it.
 The source contains clauses that include different header files depending
-on the assembler used. When flat assembler g compiles itself, it uses the
-macroinstructions that come with the supplied example programs, since they
-implement x86 instructions and formats with a syntax compatible with
-flat assembler 1.
-  The macroinstructions that process the syntax of x86 instructions are
-complex and take a long time to assemble, but incidentally the time it 
-takes for flat assembler g to compile itself on an ordinary modern machine
-is comparable to the time that an early version of flat assembler 1 needed
-to assemble itself a decade and a half earlier on a computer that was then
-similarly mediocre. This can be seen as an interesting demonstration of
-how the software may be getting slower at the same rate as the hardware
-becomes faster.
+on the assembler used. When flat assembler g compiles itself, it uses
+the provided set of headers that implement x86 instructions and formats
+with a syntax mostly compatible with flat assembler 1.
   The example programs for x86 architecture that come in this package are
-the selected samples that originally came with flat assembler 1, with an
-addition of the sets of the macroinstructions that implement instruction
-encoders and output formatters required to assemble them just like the
-original flat assembler did. While they are not complete, they are intended
-to encourage the creation of further sets of macroinstructions that would
-provide more instructions and output formats.
+the selected samples that originally came with flat assembler 1 and they
+use sets of headers that implement instruction encoders and output formatters
+required to assemble them just like the original flat assembler did.
   To demonstrate how the instruction sets of different architectures
 may be implemented, there are some example programs for the microcontrollers,
 8051 and AVR. They have been kept simple and therefore they do not provide
@@ -285,8 +266,11 @@ may contain any text and when such value is placed into an expression,
 it may induce erratic behavior. For example if "INC (1|0)" was processed,
 it would turn the "a eq HL" expression into "1|0 eq HL" and this logical
 expression is correct and true even though the argument was malformed.
-To prevent this from happening, a local variable may be used as a proxy
-holding the value of an argument:
+Such unfortunate side-effect is a consequence of macroinstructions
+operating on a simple principle of text substitution (and the best way
+to avoid such problems is to use CALM instead). Here, to prevent it
+from happening, a local variable may be used as a proxy holding the value
+of an argument:
 
         macro INC? argument
                 match [:r:], REG.argument
@@ -798,8 +782,8 @@ unknown commands, it should cause less overhead on the assembly:
 followed by another instruction in the same line. If that next instruction
 (which here becomes hidden in the "tail" parameter) is a control directive
 like "if", putting it inside the "else" clause is going to cause broken nesting
-of control blocks. A solution is to somehow invoke "tail" contents outside of
-"match" block. One way could be to call a special macro:
+of control blocks. A possible solution is to somehow invoke "tail" contents
+outside of "match" block. One way could be to call a special macro:
 
         struc (head) ? tail&
                 local invoker
@@ -829,8 +813,17 @@ is needed, cause it to be ignored with help of another line interceptor
                 head tail
         end struc
 
-Another macro for the purpose of ignoring the following line could
-be added to make this solution more compact.
+However, a much better way of avoiding this kinds of pitfalls is to use
+CALM instructions instead of standard macros. There it is possible to
+process arguments and assemble the original or modified line without
+use of any control directives. CALM instruction also offer a much better
+performance, which might be especially important in case of interceptors
+that get called for nearly every line in source text.
+
+
+
+How to define an instruction sharing a name with one of the core directives?
+
   It may happen that a language can be in general easily implemented with
 macros, but it needs to include a command with the same name as one of
 the directives of assembler. While it is possible to override any
@@ -919,6 +912,9 @@ variable:
 This would not work without passing the text through symbolic variable,
 because parameters defined by control directives like "match" do not
 add context information to the text unless it was already there.
-  The instructions that need to be available in the custom language
-would have to be defined using one of these tricks if internally they
-used any commands that are not generally accessible.
+  CALM instructions allow for another approach to this kind of problems.
+If a customized instruction set is defined entirely in form of CALM,
+they may not even need an access to original control directives.
+However, if CALM instruction needs to assemble a directive that might not
+be accessible, the symbolic variable passed to "assemble" should be
+defined with appropriate context for the instruction symbol.

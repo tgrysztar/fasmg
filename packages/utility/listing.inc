@@ -3,80 +3,140 @@
 ; and assumed address in memory (limited to the constant term if an address is a linear polynomial).
 ; The listing is stored in a file with .LST extension.
 
+include 'xcalm.inc'
+
 define Listing
 
 namespace Listing
-	element ?1
-	element ?2
-	element ?3
+
 	virtual at 0
 		HexDigits:: db '0123456789ABCDEF'
 	end virtual
-	offset = $%
+
+	collected_source = ''
+	collected_$ = $
+	collected_$% = $%
+	collected_$%% = $%%
+
+	calminstruction generate
+		local	source, $, $%, $%%
+
+	    reverse:
+		take	source, collected_source
+		take	$, collected_$
+		take	$%, collected_$%
+		take	$%%, collected_$%%
+		jyes	reverse
+
+		local	offset
+		compute offset, $%
+
+	    main:
+		take	, $%
+		take	, $%%
+		take	$%, $%
+		jno	done
+
+		check	source
+		jno	next
+
+		local	undefined_bytes, defined_bytes
+		compute undefined_bytes, $% - $%%
+		compute defined_bytes, $%% - offset
+		compute offset, $%
+
+		local	counter, digit
+
+		compute counter, 16
+		asm	db '['
+	    print_address:
+		compute counter, counter - 1
+		compute digit, ($ shr (counter shl 2)) and 0Fh
+		asm	load digit:1 from HexDigits:digit
+		asm	db digit
+		check	counter
+		jyes	print_address
+		asm	db '] '
+
+		check	defined_bytes > 0
+		jyes	bytes_present
+		asm	db 34 dup ' '
+		jump	print_source
+
+	    bytes_present:
+		compute counter, 8
+	    print_offset:
+		compute counter, counter - 1
+		compute digit, (($%-undefined_bytes-defined_bytes) shr (counter shl 2)) and 0Fh
+		asm	load digit:1 from HexDigits:digit
+		asm	db digit
+		check	counter
+		jyes	print_offset
+
+		local	column, byte
+
+		asm	db ': '
+		compute column, 0
+	    print_bytes:
+		check	defined_bytes > 0
+		jno	fill_up
+		asm	load byte:1 from : $% - undefined_bytes - defined_bytes
+		check	column = 8
+		jno	print_byte
+		compute column, 0
+		asm	db ' ',source,13,10,29 dup ' '
+		compute source, ''
+	    print_byte:
+		compute digit, byte shr 4
+		asm	load digit:1 from HexDigits:digit
+		asm	db digit
+		compute digit, byte and 0Fh
+		asm	load digit:1 from HexDigits:digit
+		asm	db digit, ' '
+		compute defined_bytes, defined_bytes - 1
+		compute column, column + 1
+		jump	print_bytes
+	    fill_up:
+		asm	db 8-column dup '   '
+	    print_source:
+		asm	db ' ',source,13,10
+	    next:
+		take	, source
+		take	, $
+		jump	main
+	    done:
+	end calminstruction
+
 end namespace
 
 postpone ?
 	purge ?
-	namespace Listing
-		virtual as 'lst'
-			source = 0
-			irpv object, collection
-				$% = string object scale 2
-				$%% = string object scale 3
-				if source
-					undefined_bytes = $% - $%%
-					defined_bytes = $%% - offset
-					offset = $%
-					db '['
-					repeat 16
-						load digit:byte from HexDigits:($ shr ((%%-%) shl 2)) and 0Fh
-						db digit
-					end repeat
-					db '] '
-					if defined_bytes > 0
-						repeat 8
-							load digit:byte from HexDigits:(($%-undefined_bytes-defined_bytes) shr ((%%-%) shl 2)) and 0Fh
-							db digit
-						end repeat
-						db ': '
-					else
-						db 10 dup ' '
-					end if
-					column = 0
-					while defined_bytes > 0
-						load data:byte from : $% - undefined_bytes - defined_bytes
-						if column = 8
-							column = 0
-							db ' ',source,13,10,8+2+16+3 dup ' '
-							source = ''
-						end if
-						load digit:byte from HexDigits:data shr 4
-						db digit
-						load digit:byte from HexDigits:data and 0Fh
-						db digit,' '
-						defined_bytes = defined_bytes - 1
-						column = column + 1
-					end while
-					repeat 8-column
-						db '   '
-					end repeat
-					db ' ',source,13,10
-				end if
-				source = string object scale 0
-				$ = object scale 1
-			end irpv
-		end virtual
-	end namespace
+	virtual as 'lst'
+		Listing.generate
+	end virtual
 end postpone
 
-macro ? line&
-	Listing.collection =: `line + Listing.1*($ scale 0) + Listing.2*$% + Listing.3*$%%
-	line
-end macro
+calminstruction ? line&
+	local	tmp
+	arrange tmp, line
+	stringify tmp
+	take	Listing.collected_source, tmp
+	compute tmp, $ scale 0
+	take	Listing.collected_$, tmp
+	compute tmp, $%
+	take	Listing.collected_$%, tmp
+	compute tmp, $%%
+	take	Listing.collected_$%%, tmp
+	assemble line
+end calminstruction
 
-macro restartout? origin
-	while defined Listing.collection
-		restore Listing.collection
-	end while
-	restartout origin
-end macro
+calminstruction restartout? origin
+	arrange origin, =restartout origin
+	assemble origin
+    reset:
+	take	, Listing.collected_source
+	take	, Listing.collected_$
+	take	, Listing.collected_$%
+	take	, Listing.collected_$%%
+	jyes	reset
+end calminstruction

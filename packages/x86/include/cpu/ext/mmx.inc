@@ -1,7 +1,8 @@
 
-if ~ definite MMX
+if ~ defined MMX
 
-	MMX := 1
+	restore MMX	; this ensures that symbol cannot be forward-referenced
+	MMX = 1
 
 	element MMX.reg
 
@@ -9,257 +10,148 @@ if ~ definite MMX
 		element mm#i? : MMX.reg + i
 	end repeat
 
-	macro MMX.parse_operand ns,op
-		x86.parse_operand ns,op
-		if ns.type = 'imm' & ns.size = 0
-			if ns.imm eq 1 elementof ns.imm & 1 metadataof ns.imm relativeto MMX.reg
-				ns.type = 'mmreg'
-				ns.mod = 11b
-				ns.rm = 1 metadataof ns.imm - MMX.reg
-				ns.size = 8
-			end if
-		end if
-	end macro
+	calminstruction MMX.parse_operand namespace, operand
 
-	macro MMX.basic_instruction ext,dest,src
-		MMX.parse_operand @dest,dest
-		MMX.parse_operand @src,src
-		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
-			if @src.size and not 8
-				err 'invalid operand size'
-			end if
-			x86.store_instruction <0Fh,ext>,@src,@dest.rm
-		else
-			err 'invalid combination of operands'
-		end if
-	end macro
+		local	size, type, mod, rm, imm
+		local	i, sym, cmd
 
-	macro punpcklbw? dest*,src*
-		MMX.basic_instruction 60h,dest,src
-	end macro
+		asmcmd	=x86.=parse_operand namespace, operand
 
-	macro punpcklwd? dest*,src*
-		MMX.basic_instruction 61h,dest,src
-	end macro
+		arrange type, namespace.=type
+		arrange size, namespace.=size
+		arrange imm, namespace.=imm
 
-	macro punpckldq? dest*,src*
-		MMX.basic_instruction 62h,dest,src
-	end macro
+		check	type = 'imm' & size = 0
+		jno	done
+		check	imm eq 1 elementof imm & 1 metadataof imm relativeto MMX.reg
+		jno	done
 
-	macro packsswb? dest*,src*
-		MMX.basic_instruction 63h,dest,src
-	end macro
+		compute type, 'mmreg'
+		compute mod, 11b
+		compute rm, 1 metadataof imm - MMX.reg
+		compute size, 8
 
-	macro pcmpgtb? dest*,src*
-		MMX.basic_instruction 64h,dest,src
-	end macro
+		arrange sym, namespace.=mod
+		publish sym, mod
 
-	macro pcmpgtw? dest*,src*
-		MMX.basic_instruction 65h,dest,src
-	end macro
+		arrange sym, namespace.=rm
+		publish sym, rm
 
-	macro pcmpgtd? dest*,src*
-		MMX.basic_instruction 66h,dest,src
-	end macro
+		arrange sym, namespace.=type
+		publish sym, type
 
-	macro packuswb? dest*,src*
-		MMX.basic_instruction 67h,dest,src
-	end macro
+		arrange sym, namespace.=size
+		publish sym, size
 
-	macro punpckhbw? dest*,src*
-		MMX.basic_instruction 68h,dest,src
-	end macro
+	    done:
 
-	macro punpckhwd? dest*,src*
-		MMX.basic_instruction 69h,dest,src
-	end macro
+	end calminstruction
 
-	macro punpckhdq? dest*,src*
-		MMX.basic_instruction 6Ah,dest,src
-	end macro
+	calminstruction MMX.basic_instruction ext,dest,src
+		asmcmd	=MMX.=parse_operand =@dest,dest
+		asmcmd	=MMX.=parse_operand =@src,src
+		check	(@src.size or @dest.size) and not 8
+		jno	size_ok
+		asmcmd	=err 'invalid operand size'
+	    size_ok:
+		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
+		jno	invalid_combination_of_operands
+		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		exit
+	    invalid_combination_of_operands:
+		asmcmd	=err 'invalid combination of operands'
+	end calminstruction
 
-	macro packssdw? dest*,src*
-		MMX.basic_instruction 6Bh,dest,src
-	end macro
+	iterate <instr,opcode>, punpcklbw,60h, punpcklwd,61h, punpckldq,62h, packsswb,63h, pcmpgtb,64h, pcmpgtw,65h, pcmpgtd,66h, packuswb,67h, punpckhbw,68h, \
+				punpckhwd,69h, punpckhdq,6Ah, packssdw,6Bh, pcmpeqb,74h, pcmpeqw,75h, pcmpeqd,76h, pmullw,0D5h, psubusb,0D8h, psubusw,0D9h, \
+				pand,0DBh, paddusb,0DCh, paddusw,0DDh, pandn,0DFh, pmulhw,0E5h, psubsb,0E8h, psubsw,0E9h, por,0EBh, paddsb,0ECh, paddsw,0EDh, \
+				pxor,0EFh, pmaddwd,0F5h, psubb,0F8h, psubw,0F9h, psubd,0FAh, paddb,0FCh, paddw,0FDh, paddd,0FEh
 
-	macro pcmpeqb? dest*,src*
-		MMX.basic_instruction 74h,dest,src
-	end macro
+		macro instr? dest*,src*
+			MMX.basic_instruction opcode,dest,src
+		end macro
 
-	macro pcmpeqw? dest*,src*
-		MMX.basic_instruction 75h,dest,src
-	end macro
+	end iterate
 
-	macro pcmpeqd? dest*,src*
-		MMX.basic_instruction 76h,dest,src
-	end macro
+	calminstruction movq? dest*,src*
+		asmcmd	=MMX.=parse_operand =@dest,dest
+		asmcmd	=MMX.=parse_operand =@src,src
+		check	(@src.size or @dest.size) and not 8
+		jno	size_ok
+		asmcmd	=err 'invalid operand size'
+	    size_ok:
+		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
+		jyes	mmreg_mem
+		check	@dest.type = 'mem' & @src.type = 'mmreg'
+		jyes	mem_mmreg
+		asmcmd	=err 'invalid combination of operands'
+		exit
+	    mmreg_mem:
+		asmcmd	=x86.=store_instruction <0Fh,6Fh>,=@src,=@dest.=rm
+		exit
+	    mem_mmreg:
+		asmcmd	=x86.=store_instruction <0Fh,7Fh>,=@dest,=@src.=rm
+		exit
+	end calminstruction
 
-	macro pmullw? dest*,src*
-		MMX.basic_instruction 0D5h,dest,src
-	end macro
+	calminstruction movd? dest*,src*
+		asmcmd	=MMX.=parse_operand =@dest,dest
+		asmcmd	=MMX.=parse_operand =@src,src
+		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'reg')
+		jyes	mmreg_rm
+		check	(@dest.type = 'mem' | @dest.type = 'reg') & @src.type = 'mmreg'
+		jyes	rm_mmreg
+		asmcmd	=err 'invalid combination of operands'
+		exit
+	    mmreg_rm:
+		check	@src.size and not 4
+		jno	mmreg_rm_ok
+		asmcmd	=err 'invalid operand size'
+	      mmreg_rm_ok:
+		asmcmd	=x86.=store_instruction <0Fh,6Eh>,=@src,=@dest.=rm
+		exit
+	    rm_mmreg:
+		check	@dest.size and not 4
+		jno	rm_mmreg_ok
+		asmcmd	=err 'invalid operand size'
+	      rm_mmreg_ok:
+		asmcmd	=x86.=store_instruction <0Fh,7Eh>,=@dest,=@src.=rm
+	end calminstruction
 
-	macro psubusb? dest*,src*
-		MMX.basic_instruction 0D8h,dest,src
-	end macro
+	calminstruction MMX.bit_shift_instruction ext,dest,src
+		asmcmd	=MMX.=parse_operand =@dest,dest
+		asmcmd	=MMX.=parse_operand =@src,src
+		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
+		jyes	mmreg_rm
+		check	@dest.type = 'mmreg' & @src.type = 'imm'
+		jyes	mmreg_imm
+		asmcmd	=err 'invalid combination of operands'
+		exit
+	    mmreg_rm:
+		check	@src.size and not 8
+		jno	mmreg_rm_ok
+		asmcmd	=err 'invalid operand size'
+	      mmreg_rm_ok:
+		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		exit
+	    mmreg_imm:
+		check	@src.size and not 1
+		jno	rm_mmreg_ok
+		asmcmd	=err 'invalid operand size'
+	      rm_mmreg_ok:
+		local	iext, irm
+		compute iext, 70h+(ext and 0Fh)
+		compute irm, ((ext shr 4)-0Ch) shl 1
+		asmcmd	=x86.=store_instruction <0Fh,iext>,=@dest,irm,1,=@src.=imm
+	end calminstruction
 
-	macro psubusw? dest*,src*
-		MMX.basic_instruction 0D9h,dest,src
-	end macro
+	iterate <instr,opcode>, psrlw,0D1h, psrld,0D2h, psrlq,0D3h, psrad,0E2h, psraw,0E1h, psllw,0F1h, pslld,0F2h, psllq,0F3h
 
-	macro pand? dest*,src*
-		MMX.basic_instruction 0DBh,dest,src
-	end macro
+		macro instr? dest*,src*
+			MMX.bit_shift_instruction opcode,dest,src
+		end macro
 
-	macro paddusb? dest*,src*
-		MMX.basic_instruction 0DCh,dest,src
-	end macro
-
-	macro paddusw? dest*,src*
-		MMX.basic_instruction 0DDh,dest,src
-	end macro
-
-	macro pandn? dest*,src*
-		MMX.basic_instruction 0DFh,dest,src
-	end macro
-
-	macro pmulhw? dest*,src*
-		MMX.basic_instruction 0E5h,dest,src
-	end macro
-
-	macro psubsb? dest*,src*
-		MMX.basic_instruction 0E8h,dest,src
-	end macro
-
-	macro psubsw? dest*,src*
-		MMX.basic_instruction 0E9h,dest,src
-	end macro
-
-	macro por? dest*,src*
-		MMX.basic_instruction 0EBh,dest,src
-	end macro
-
-	macro paddsb? dest*,src*
-		MMX.basic_instruction 0ECh,dest,src
-	end macro
-
-	macro paddsw? dest*,src*
-		MMX.basic_instruction 0EDh,dest,src
-	end macro
-
-	macro pxor? dest*,src*
-		MMX.basic_instruction 0EFh,dest,src
-	end macro
-
-	macro pmaddwd? dest*,src*
-		MMX.basic_instruction 0F5h,dest,src
-	end macro
-
-	macro psubb? dest*,src*
-		MMX.basic_instruction 0F8h,dest,src
-	end macro
-
-	macro psubw? dest*,src*
-		MMX.basic_instruction 0F9h,dest,src
-	end macro
-
-	macro psubd? dest*,src*
-		MMX.basic_instruction 0FAh,dest,src
-	end macro
-
-	macro paddb? dest*,src*
-		MMX.basic_instruction 0FCh,dest,src
-	end macro
-
-	macro paddw? dest*,src*
-		MMX.basic_instruction 0FDh,dest,src
-	end macro
-
-	macro paddd? dest*,src*
-		MMX.basic_instruction 0FEh,dest,src
-	end macro
-
-	macro movq? dest*,src*
-		MMX.parse_operand @dest,dest
-		MMX.parse_operand @src,src
-		if (@dest.size or @src.size) and not 8
-			err 'invalid operand size'
-		end if
-		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
-			x86.store_instruction <0Fh,6Fh>,@src,@dest.rm
-		else if @dest.type = 'mem' & @src.type = 'mmreg'
-			x86.store_instruction <0Fh,7Fh>,@dest,@src.rm
-		else
-			err 'invalid combination of operands'
-		end if
-	end macro
-
-	macro movd? dest*,src*
-		MMX.parse_operand @dest,dest
-		MMX.parse_operand @src,src
-		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'reg')
-			if @src.size and not 4
-				err 'invalid operand size'
-			end if
-			x86.store_instruction <0Fh,6Eh>,@src,@dest.rm
-		else if (@dest.type = 'mem' | @dest.type = 'reg') & @src.type = 'mmreg'
-			if @dest.size and not 4
-				err 'invalid operand size'
-			end if
-			x86.store_instruction <0Fh,7Eh>,@dest,@src.rm
-		else
-			err 'invalid combination of operands'
-		end if
-	end macro
-
-	macro MMX.bit_shift_instruction ext,dest,src
-		MMX.parse_operand @dest,dest
-		MMX.parse_operand @src,src
-		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
-			if @src.size and not 8
-				err 'invalid operand size'
-			end if
-			x86.store_instruction <0Fh,ext>,@src,@dest.rm
-		else if @dest.type = 'mmreg' & @src.type = 'imm'
-			if @src.size and not 1
-				err 'invalid operand size'
-			end if
-			x86.store_instruction <0Fh,70h+(ext and 0Fh)>,@dest,((ext shr 4)-0Ch) shl 1,1,@src.imm
-		else
-			err 'invalid combination of operands'
-		end if
-	end macro
-
-	macro psrlw? dest*,src*
-		MMX.bit_shift_instruction 0D1h,dest,src
-	end macro
-
-	macro psrld? dest*,src*
-		MMX.bit_shift_instruction 0D2h,dest,src
-	end macro
-
-	macro psrlq? dest*,src*
-		MMX.bit_shift_instruction 0D3h,dest,src
-	end macro
-
-	macro psrad? dest*,src*
-		MMX.bit_shift_instruction 0E2h,dest,src
-	end macro
-
-	macro psraw? dest*,src*
-		MMX.bit_shift_instruction 0E1h,dest,src
-	end macro
-
-	macro psllw? dest*,src*
-		MMX.bit_shift_instruction 0F1h,dest,src
-	end macro
-
-	macro pslld? dest*,src*
-		MMX.bit_shift_instruction 0F2h,dest,src
-	end macro
-
-	macro psllq? dest*,src*
-		MMX.bit_shift_instruction 0F3h,dest,src
-	end macro
+	end iterate
 
 	macro emms?
 		db 0Fh,77h

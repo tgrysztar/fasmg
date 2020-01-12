@@ -1,1 +1,1 @@
-VERSION equ "isbt0"
+VERSION equ "ist2m"

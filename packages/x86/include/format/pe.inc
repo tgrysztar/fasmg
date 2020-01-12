@@ -105,13 +105,17 @@ IMAGE_REL_BASED_HIGHLOW  = 3
 IMAGE_REL_BASED_HIGHADJ  = 4
 IMAGE_REL_BASED_DIR64	 = 10
 
-macro align? boundary,value:?
-	if $ relativeto 0 | ( $ relativeto PE.RELOCATION & PE.SECTION_ALIGNMENT mod boundary = 0 )
-		db (boundary-1)-((0 scaleof $)+boundary-1) mod boundary dup value
-	else
-		err 'section not aligned enough'
-	end if
-end macro
+calminstruction align? boundary,value:?
+	check	$ relativeto 0 | ( $ relativeto PE.RELOCATION & PE.SECTION_ALIGNMENT mod boundary = 0 )
+	jyes	allowed
+	arrange value, =err 'section not aligned enough'
+	assemble value
+	exit
+    allowed:
+	compute boundary, (boundary-1)-((0 scaleof $)+boundary-1) mod boundary
+	arrange value, =db boundary =dup value
+	assemble value
+end calminstruction
 
 PE::
 
@@ -283,7 +287,7 @@ namespace PE
 
 		namespace Stub
 
-		      include '../cpu/8086.inc'
+		      include 'cpu/8086.inc'
 
 		start:
 		      push    cs
@@ -429,6 +433,32 @@ macro heap? reserve*,commit:0
 	end namespace
 end macro
 
+calminstruction calminstruction?.init? var*, val:0
+	compute val, val
+	publish var, val
+end calminstruction
+
+calminstruction calminstruction?.initsym? var*, val&
+	publish var, val
+end calminstruction
+
+calminstruction calminstruction?.unique? name
+	local counter, buffer
+	init counter
+	compute counter, counter + 1
+	arrange buffer, name#counter
+	publish name, buffer
+end calminstruction
+
+calminstruction calminstruction?.asm? line&
+	local tmp, ln, buffer
+	initsym tmp, unique ln
+	assemble tmp
+	publish ln, line
+	arrange buffer, =assemble ln
+	assemble buffer
+end calminstruction
+
 macro section?
 	namespace PE
 
@@ -440,7 +470,7 @@ macro section?
 		AREA::
 		DATA_START = $$
 		DATA_END = $-($%-$%%)
-		CheckSumBlocks equ CheckSumBlocks,AREA,DATA_START,DATA_END
+		CheckSumBlocks reequ CheckSumBlocks,AREA,DATA_START,DATA_END
 
 		SECTION_SIZE = $ - SECTION_BASE
 		store SECTION_SIZE at PE:SectionTable.VirtualSize+SECTION_INDEX*SectionTable.ENTRY_LENGTH
@@ -847,146 +877,133 @@ end macro
 macro PE.fixups
 	namespace PE
 		Fixups:
-		BLOCK_HEADER = 0
-		BLOCK_SIZE = 0
-		repeat NUMBER_OF_RELOCATIONS
-			load ADDRESS:dword from relocated_addresses:(%-1) shl 2
-			if ~ defined PAGE_RVA | ADDRESS and not 0FFFh <> PAGE_RVA
-				if BLOCK_HEADER
-					if BLOCK_SIZE and 11b
-						dw 0
-						BLOCK_SIZE = BLOCK_SIZE + 2
-					end if
-					store BLOCK_SIZE:dword at BLOCK_HEADER+4
-				end if
-				PAGE_RVA = ADDRESS and not 0FFFh
-				BLOCK_HEADER = $
-				dd PAGE_RVA
-				dd 0
-				BLOCK_SIZE = 8
-			end if
-			load TYPE:word from relocation_types:(%-1) shl 1
-			dw (ADDRESS and 0FFFh) or (TYPE shl 12)
-			BLOCK_SIZE = BLOCK_SIZE + 2
-		end repeat
-		if BLOCK_HEADER
-			if BLOCK_SIZE and 11b
-				dw 0
-				BLOCK_SIZE = BLOCK_SIZE + 2
-			end if
-			store BLOCK_SIZE:dword at BLOCK_HEADER+4
-		end if
-		restore PAGE_RVA
+		calminstruction BuildFixups
+			local	PAGE_RVA, BLOCK_HEADER, BLOCK_SIZE
+			local	INDEX, ADDRESS, TYPE, FIXUP
+			compute PAGE_RVA, -1
+			compute BLOCK_HEADER, 0
+			compute BLOCK_SIZE, 0
+			compute INDEX,0
+		    process:
+			check	INDEX = NUMBER_OF_RELOCATIONS
+			jyes	close_block
+			asm	load ADDRESS:4 from relocated_addresses:INDEX shl 2
+			check	PAGE_RVA >= 0 & ADDRESS and not 0FFFh = PAGE_RVA
+			jyes	append_to_block
+		    close_block:
+			check	BLOCK_HEADER
+			jno	start_new_block
+			check	BLOCK_SIZE and 11b
+			jno	finish_block
+			asm	dw 0
+			compute BLOCK_SIZE, BLOCK_SIZE + 2
+		    finish_block:
+			asm	store BLOCK_SIZE:4 at BLOCK_HEADER+4
+		    start_new_block:
+			check	INDEX = NUMBER_OF_RELOCATIONS
+			jyes	done
+			compute PAGE_RVA, ADDRESS and not 0FFFh
+			compute BLOCK_HEADER, $
+			asm	dd PAGE_RVA, 0
+			compute BLOCK_SIZE, 8
+		    append_to_block:
+			asm	load TYPE:2 from relocation_types:INDEX shl 1
+			compute FIXUP, (ADDRESS and 0FFFh) or (TYPE shl 12)
+			asm	dw FIXUP
+			compute BLOCK_SIZE, BLOCK_SIZE + 2
+			compute INDEX, INDEX + 1
+			jump	process
+		    done:
+		end calminstruction
+		BuildFixups
 	end namespace
 end macro
 
 if defined PE.Fixups
 
-	macro dword? value
-	    local v, o
-	    v = value
-	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
-		o = $%
-		emit dword: v - PE.RELOCATION
-		if $% > o
-		    store $-4-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-		    store IMAGE_REL_BASED_HIGHLOW:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
-		    PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
-		end if
-	    else
-		emit dword: v
-	    end if
-	end macro
+	calminstruction dword? value
+		compute value, value
+		check	value relativeto 0 | ~ value relativeto PE.RELOCATION
+		jyes	plain
+		local	offset
+		compute offset, $%
+		asm	emit 4: value - PE.RELOCATION
+		check	$% > offset
+		jno	done
+		asm	store $-4-PE.IMAGE_BASE:4 at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
+		asm	store IMAGE_REL_BASED_HIGHLOW:2 at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		compute PE.RELOCATION_INDEX, PE.RELOCATION_INDEX + 1
+	    done:
+		exit
+	    plain:
+		asm	emit 4: value
+	end calminstruction
 
-	macro qword? value
-	    local v, o
-	    v = value
-	    if ~ v relativeto 0 & v relativeto PE.RELOCATION
-		o = $%
-		emit qword: v - PE.RELOCATION
-		if $% > o
-		    store $-8-PE.IMAGE_BASE:dword at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-		    store IMAGE_REL_BASED_DIR64:word at PE.relocation_types:PE.RELOCATION_INDEX shl 1
-		    PE.RELOCATION_INDEX = PE.RELOCATION_INDEX + 1
-		end if
-	    else
-		emit qword: v
-	    end if
-	end macro
+	calminstruction qword? value
+		compute value, value
+		check	value relativeto 0 | ~ value relativeto PE.RELOCATION
+		jyes	plain
+		local	offset
+		compute offset, $%
+		asm	emit 8: value - PE.RELOCATION
+		check	$% > offset
+		jno	done
+		asm	store $-8-PE.IMAGE_BASE:4 at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
+		asm	store IMAGE_REL_BASED_DIR64:2 at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		compute PE.RELOCATION_INDEX, PE.RELOCATION_INDEX + 1
+	    done:
+		exit
+	    plain:
+		asm	emit 8: value
+	end calminstruction
 
-	macro dd? definitions&
-	    iterate value,definitions
-		match ?, value
-		    dd ?
-		else match n =dup? ?, value
-		    dd n dup ?
-		else match n =dup? (?), value
-		    dd n dup ?
-		else match n =dup? v, value
-		    repeat n
-			dword v
-		    end repeat
-		else
-		    dword value
-		end match
-	    end iterate
-	end macro
+	iterate <dd,dword>, dd,dword, dq,qword
 
-	struc dd? definitions&
-	    label . : dword
-	    iterate value,definitions
-		match ?, value
-		    dd ?
-		else match n =dup? ?, value
-		    dd n dup ?
-		else match n =dup? (?), value
-		    dd n dup ?
-		else match n =dup? v, value
-		    repeat n
-			dword v
-		    end repeat
-		else
-		    dword value
-		end match
-	    end iterate
-	end struc
+		calminstruction dd? definitions&
+			local	value, n
+		    start:
+			match	value=,definitions, definitions, ()
+			jyes	recognize
+			match	value, definitions
+			arrange definitions,
+		    recognize:
+			match	n =dup? value, value, ()
+			jyes	duplicate
+			match	?, value
+			jyes	reserve
+			arrange value, =dword value
+			assemble value
+		    next:
+			match	, definitions
+			jno	start
+			take	, definitions
+			take	definitions, definitions
+			jyes	next
+			exit
+		    reserve:
+			arrange value, =dd ?
+			assemble value
+			jump	next
+		    duplicate:
+			match	(value), value
+		    stack:
+			check	n
+			jno	next
+			take	definitions, value
+			arrange value, definitions
+			compute n, n - 1
+			jump	stack
+		end calminstruction
 
-	macro dq? definitions&
-	    iterate value,definitions
-		match ?, value
-		    dq ?
-		else match n =dup? ?, value
-		    dq n dup ?
-		else match n =dup? (?), value
-		    dq n dup ?
-		else match n =dup? v, value
-		    repeat n
-			qword v
-		    end repeat
-		else
-		    qword value
-		end match
-	    end iterate
-	end macro
+		calminstruction (label) dd? definitions&
+			local	cmd
+			arrange cmd, =label label : =dword
+			assemble cmd
+			arrange cmd, =dd definitions
+			assemble cmd
+		end calminstruction
 
-	struc dq? definitions&
-	    label . : qword
-	    iterate value,definitions
-		match ?, value
-		    dq ?
-		else match n =dup? ?, value
-		    dq n dup ?
-		else match n =dup? (?), value
-		    dq n dup ?
-		else match n =dup? v, value
-		    repeat n
-			qword v
-		    end repeat
-		else
-		    qword value
-		end match
-	    end iterate
-	end struc
+	end iterate
 
 end if
 
@@ -1002,23 +1019,42 @@ end postpone
 
 postpone ?
 	namespace PE
-		match list, CheckSumBlocks
-			CHECKSUM = 0
-			iterate <AREA,DATA_START,DATA_END>,list
-				repeat (DATA_END-DATA_START) shr 1, POSITION:0
-					load H:word from AREA:DATA_START+POSITION shl 1
-					CHECKSUM = CHECKSUM + H
-				end repeat
-				if (DATA_END-DATA_START) and 1
-					load H:byte from AREA:DATA_END-1
-					CHECKSUM = CHECKSUM + H
-				end if
-				while CHECKSUM shr 16
-					CHECKSUM = CHECKSUM shr 16 + CHECKSUM and 0FFFFh
-				end while
-			end iterate
-			CHECKSUM = CHECKSUM + $%
-			store CHECKSUM at PE:OptionalHeader.CheckSum
-		end match
+		CHECKSUM = 0
+
+		calminstruction CheckSum
+			local	AREA, DATA_START, DATA_END, POS, H
+		    get_block:
+			match	AREA=,DATA_START=,DATA_END=,CheckSumBlocks, CheckSumBlocks
+			jyes	block_ready
+			match	AREA=,DATA_START=,DATA_END, CheckSumBlocks
+			jyes	last_block
+			exit
+		    last_block:
+			arrange CheckSumBlocks,
+		    block_ready:
+			compute POS, DATA_START
+		    process_block:
+			check	POS + 2 <= DATA_END
+			jno	finish_block
+			asm	load H:2 from AREA:POS
+			compute CHECKSUM, CHECKSUM + H
+			compute POS, POS + 2
+			jump	process_block
+		    finish_block:
+			check	POS + 1 = DATA_END
+			jno	reduce_checksum
+			asm	load H:1 from AREA:POS
+			compute CHECKSUM, CHECKSUM + H
+		    reduce_checksum:
+			check	CHECKSUM shr 16
+			jno	get_block
+			compute CHECKSUM, CHECKSUM shr 16 + CHECKSUM and 0FFFFh
+			jump	reduce_checksum
+		    done:
+		end calminstruction
+
+		CheckSum
+		CHECKSUM = CHECKSUM + $%
+		store CHECKSUM at PE:OptionalHeader.CheckSum
 	end namespace
 end postpone

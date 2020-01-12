@@ -1,5 +1,5 @@
 
-if ~ definite AVX_512
+if ~ defined AVX_512
 
 	include 'avx512f.inc'
 

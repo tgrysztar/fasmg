@@ -10,11 +10,70 @@ ends
 
 ERR_CUSTOM = 1
 
+register_error_with_symbol_name:
+; in:
+;  ebx - SymbolTree_Leaf
+;  edx - error message with % character where the name of symbol should be inserted
+; out:
+;  edx - Error
+; preserves: eax, ebx, ecx, esi, edi
+	cmp	[next_pass_needed],0
+	jne	error_ignored
+	push	eax ebx ecx esi edi
+	mov	ebx,[ebx+SymbolTree_Leaf.branch]
+	mov	edi,edx
+	xor	al,al
+	or	ecx,-1
+	repne	scasb
+	mov	[message_end],edi
+	mov	esi,edx
+	mov	edx,identifier_workspace
+	mov	edi,[edx+Workspace.memory_start]
+	mov	ecx,[message_end]
+	sub	ecx,esi
+	call	reserve_workspace
+	add	edi,4
+      format_symbol_error:
+	lodsb
+	test	al,al
+	jz	symbol_error_formatted
+	cmp	al,'%'
+	je	insert_symbol_name
+	stosb
+	jmp	format_symbol_error
+      insert_symbol_name:
+	mov	al,[ebx+SymbolTree_Foliage.name_kind]
+	cmp	al,NAME_ABSTRACT
+	je	format_symbol_error
+	cmp	al,NAME_SYNTHETIC
+	je	format_symbol_error
+	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
+	add	ecx,[message_end]
+	sub	ecx,esi
+	call	reserve_workspace
+	mov	eax,esi
+	mov	esi,[ebx+SymbolTree_Foliage.name_data]
+	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
+	rep	movsb
+	mov	esi,eax
+	cmp	[ebx+SymbolTree_Foliage.name_kind],NAME_CASEINSENSITIVE
+	jne	format_symbol_error
+	mov	al,'?'
+	stosb
+	jmp	format_symbol_error
+      symbol_error_formatted:
+	mov	edx,[edx+Workspace.memory_start]
+	sub	edi,edx
+	sub	edi,4
+	mov	[edx],edi
+	or	[message_volatile],1
+	jmp	get_error_line
 register_volatile_error:
 ; in:
 ;  edx - 32-bit length followed by string data
 ; out:
 ;  edx - Error
+; preserves: eax, ebx, ecx, esi, edi
 	cmp	[next_pass_needed],0
 	jne	error_ignored
 	push	eax ebx ecx esi edi
@@ -79,6 +138,13 @@ register_error:
 	mov	ecx,[esi+SourceContext.number_of_entries]
 	imul	ecx,sizeof.SourceEntry
 	add	ecx,sizeof.SourceContext
+	cmp	[esi+ecx-sizeof.SourceEntry+SourceEntry.type],SOURCE_CALM
+	jne	error_source_context_ready
+	mov	eax,[calm_instruction_number]
+	mov	[esi+ecx-sizeof.SourceEntry+SourceEntry.line_number],eax
+	and	[error_line_start],0
+	and	[error_line_end],0
+    error_source_context_ready:
 	add	ecx,sizeof.Error
 	add	ecx,[error_line_end]
 	sub	ecx,[error_line_start]
@@ -111,6 +177,13 @@ register_error:
 	mov	ecx,[eax+SourceContext.number_of_entries]
 	imul	ecx,sizeof.SourceEntry
 	add	ecx,sizeof.SourceContext
+	cmp	[eax+ecx-sizeof.SourceEntry+SourceEntry.type],SOURCE_CALM
+	jne	volatile_error_source_context_ready
+	mov	edx,[calm_instruction_number]
+	mov	[eax+ecx-sizeof.SourceEntry+SourceEntry.line_number],edx
+	and	[error_line_start],0
+	and	[error_line_end],0
+    volatile_error_source_context_ready:
 	add	ecx,sizeof.Error
 	add	ecx,[error_line_end]
 	sub	ecx,[error_line_start]

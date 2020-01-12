@@ -42,69 +42,82 @@ end macro
 
 macro use32on64?
 
-	macro x86.encode_address_32_64 ns
-		if ns.address_registers eq esp & x86.mode = 64
-			ns.displacement = ns.displacement shl 1
-			x86.encode_address_32_64 ns
-			ns.mode = 64
-		else
-			x86.encode_address_32_64 ns
-		       ; the following allows to avoid 67h prefixes (leading to reduced code size and slightly improved performance),
-		       ; but it requires that in entire affected code there are no cases when an offset held in register would be negative:
-		       ; if ns.mode = 32 & x86.mode = 64
-		       ;	 ns.mode = 64
-		       ; end if
-		end if
-	end macro
+	define esp rsp
 
 	iterate <reg32,reg64>, eax,rax, ebx,rbx, ecx,rcx, edx,rdx, esi,rsi, edi,rdi, esp,rsp, ebp,rbp
 		promote.reg32? equ :reg64
 	end iterate
 
 	iterate instr, jmp,call
-		macro instr? arg
-			match [mem], arg
-				mov	r8d,[mem]
-				instr	r8
-			else match :reg64, promote.arg
-				instr	reg64
-			else
-				instr	arg
-			end match
-		end macro
+		calminstruction instr? arg
+			local	tmp
+			match	[tmp], arg
+			jyes	zero_extend
+			arrange tmp, =promote.arg
+			transform tmp
+			jno	regular
+			match	:arg, tmp
+		    regular:
+			arrange tmp, =instr arg
+			assemble tmp
+			exit
+		    zero_extend:
+			arrange tmp, =mov =r8d,[tmp]
+			assemble tmp
+			arrange tmp, =instr =r8
+			assemble tmp
+		end calminstruction
 	end iterate
 
-	macro push64?: arg
-		match :reg64 tail, promote.arg:
-			push	reg64
-			match more:, tail
-				push64 more
-			end match
-		else
-			mov	r8d,arg
-			push	r8
-		end match
-	end macro
+	calminstruction push? arg
+		local	tmp
+	    loop:
+		arrange tmp, =promote.arg
+		transform tmp
+		jno	regular
+		match	:tmp arg, tmp
+		jyes	promoted
+		match	:tmp, tmp
+		jno	regular
+		arrange arg,
+	    promoted:
+		arrange tmp, =push tmp
+		assemble tmp
+		match	, arg
+		jno	loop
+		exit
+	    regular:
+		arrange tmp, =mov =r8d,arg
+		assemble tmp
+		arrange tmp, =push =r8
+		assemble tmp
+		exit
+	end calminstruction
 
-	macro pop64?: arg
-		match :reg64 tail, promote.arg:
-			pop	reg64
-			match more:, tail
-				pop64 more
-			end match
-		else
-			pop	r8
-			mov	arg,r8d
-		end match
-	end macro
-
-	macro push? arg
-		push64	arg
-	end macro
-
-	macro pop? arg
-		pop64	arg
-	end macro
+	calminstruction pop? arg
+		local	tmp
+	    loop:
+		arrange tmp, =promote.arg
+		transform tmp
+		jno	regular
+		match	:tmp arg, tmp
+		jyes	promoted
+		match	:tmp, tmp
+		jno	regular
+		arrange arg,
+	    promoted:
+		arrange tmp, =pop tmp
+		assemble tmp
+		match	, arg
+		jno	loop
+		exit
+	    regular:
+		arrange tmp, =pop =r8
+		assemble tmp
+		arrange tmp, =mov arg,=r8d
+		assemble tmp
+		exit
+	end calminstruction
 
 	macro jecxz? target
 		if target-($+1) < 80h & target-($+1) >= -80h

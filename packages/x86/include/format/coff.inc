@@ -138,7 +138,7 @@ namespace COFF
 	f_opthdr	dw 0
 	f_flags 	dw F_AR32WR + F_LNNO
 
-	Sections:	rb NUMBER_OF_SECTIONS * SCNHSZ
+	Sections:	db NUMBER_OF_SECTIONS * SCNHSZ dup 0
 
 	virtual at 0
 		symbol_table:: rb NUMBER_OF_SYMBOLS * SYMESZ
@@ -272,13 +272,17 @@ macro section? declaration*
 	end namespace
 end macro
 
-macro align? boundary,value:?
-	if COFF.SECTION_ALIGN mod (boundary) = 0
-		db (boundary-1)-($-COFF.SECTION_BASE+boundary-1) mod boundary dup value
-	else
-		err 'section not aligned enough'
-	end if
-end macro
+calminstruction align? boundary,value:?
+	check	COFF.SECTION_ALIGN mod (boundary) = 0
+	jyes	allowed
+	arrange value, =err 'section not aligned enough'
+	assemble value
+	exit
+    allowed:
+	compute boundary, (boundary-1)-($-COFF.SECTION_BASE+boundary-1) mod boundary
+	arrange value, =db boundary =dup value
+	assemble value
+end calminstruction
 
 macro public? declaration*
 	namespace COFF
@@ -350,77 +354,111 @@ macro extrn? declaration*
 	end namespace
 end macro
 
-macro dword? value
-	local v, o
-	v = value
-	if ~ v relativeto 0 & v relativeto 1 elementof v & 1 elementof (1 metadataof v) relativeto COFF.relocatable
-		namespace COFF
-			o = $%
-			emit dword: 0 scaleof v
-			if $% > o
-				store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_vaddr
-				store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_symndx
-				store RELOC_ADDR32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
-				RELOCATION_INDEX = RELOCATION_INDEX + 1
-			end if
-		end namespace
-	else if ~ v relativeto 0 & (v + COFF.SECTION_BASE) relativeto 1 elementof (v + COFF.SECTION_BASE)
-		if 1 elementof (1 metadataof (v + COFF.SECTION_BASE)) relativeto COFF.relocatable
-			namespace COFF
-				o = $%
-				v = v + (SECTION_BASE + o - SECTION_OFFSET)
-				emit dword: 0 scaleof v
-				if $% > o
-					store o - SECTION_OFFSET at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_vaddr
-					store 0 scaleof (1 metadataof v) at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_symndx
-					store RELOC_REL32 at relocations : RELOCATION_INDEX * RELSZ + RELOC.r_type
-					RELOCATION_INDEX = RELOCATION_INDEX + 1
-				end if
-			end namespace
-		else
-			emit dword: v
-		end if
-	else
-		emit dword: v
-	end if
-end macro
+calminstruction calminstruction?.init? var*, val:0
+	compute val, val
+	publish var, val
+end calminstruction
 
-macro dd? definitions&
-	iterate value,definitions
-		match ?, value
-			dd ?
-		else match n =dup? ?, value
-			dd n dup ?
-		else match n =dup? (?), value
-			dd n dup ?
-		else match n =dup? v, value
-			repeat n
-				dword v
-			end repeat
-		else
-			dword value
-		end match
-	end iterate
-end macro
+calminstruction calminstruction?.initsym? var*, val&
+	publish var, val
+end calminstruction
 
-struc dd? definitions&
-	label . : dword
-	iterate value,definitions
-		match ?, value
-			dd ?
-		else match n =dup? ?, value
-			dd n dup ?
-		else match n =dup? (?), value
-			dd n dup ?
-		else match n =dup? v, value
-			repeat n
-				dword v
-			end repeat
-		else
-			dword value
-		end match
-	end iterate
-end struc
+calminstruction calminstruction?.unique? name
+	local counter, buffer
+	init counter
+	compute counter, counter + 1
+	arrange buffer, name#counter
+	publish name, buffer
+end calminstruction
+
+calminstruction calminstruction?.asm? line&
+	local tmp, ln, buffer
+	initsym tmp, unique ln
+	assemble tmp
+	publish ln, line
+	arrange buffer, =assemble ln
+	assemble buffer
+end calminstruction
+
+calminstruction dword? value
+	compute value, value
+	check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto COFF.relocatable
+	jyes	addr32
+	check	~ value relativeto 0 & (value + COFF.SECTION_BASE) relativeto 1 elementof (value + COFF.SECTION_BASE)
+	jno	plain
+	check	1 elementof (1 metadataof (value + COFF.SECTION_BASE)) relativeto COFF.relocatable
+	jyes	rel32
+    plain:
+	asm	emit 4: value
+	exit
+	local	offset, symndx, type
+    addr32:
+	compute symndx, 0 scaleof (1 metadataof value)
+	compute type, RELOC_ADDR32
+	jump	add_relocation
+    rel32:
+	compute value, value + COFF.SECTION_BASE
+	compute symndx, 0 scaleof (1 metadataof value)
+	compute type, RELOC_REL32
+	jump	add_relocation
+    add_relocation:
+	compute offset, $%
+	asm	emit 4: 0 scaleof value
+	check	$% > offset
+	jno	done
+	compute offset, offset - COFF.SECTION_OFFSET
+	local	reloc
+	compute reloc, COFF.RELOCATION_INDEX * RELSZ
+	asm	store offset at COFF.relocations : reloc + RELOC.r_vaddr
+	asm	store symndx at COFF.relocations : reloc + RELOC.r_symndx
+	asm	store type at COFF.relocations : reloc + RELOC.r_type
+	compute COFF.RELOCATION_INDEX, COFF.RELOCATION_INDEX + 1
+    done:
+end calminstruction
+
+calminstruction dd? definitions&
+	local	value, n
+    start:
+	match	value=,definitions, definitions, ()
+	jyes	recognize
+	match	value, definitions
+	arrange definitions,
+    recognize:
+	match	n =dup? value, value, ()
+	jyes	duplicate
+	match	?, value
+	jyes	reserve
+	arrange value, =dword value
+	assemble value
+    next:
+	match	, definitions
+	jno	start
+	take	, definitions
+	take	definitions, definitions
+	jyes	next
+	exit
+    reserve:
+	arrange value, =dd ?
+	assemble value
+	jump	next
+    duplicate:
+	match	(value), value
+    stack:
+	check	n
+	jno	next
+	take	definitions, value
+	arrange value, definitions
+	compute n, n - 1
+	jump	stack
+end calminstruction
+
+calminstruction (label) dd? definitions&
+	local	cmd
+	arrange cmd, =label label : =dword
+	assemble cmd
+	arrange cmd, =dd definitions
+	assemble cmd
+end calminstruction
 
 postpone
 	purge section?

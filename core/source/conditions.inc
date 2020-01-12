@@ -301,8 +301,16 @@ evaluate_logical_value:
 	retn
     evaluated_true:
 	pop	esi
-	or	al,1
+	mov	al,1
 	retn
+
+evaluate_stored_logical_value:
+; in: esi - pointer to evaluating routine followed by parsed argument sequences
+; out: al = logical value
+; preserves: esi
+	push	esi
+	lodsd
+	jmp	eax
 
 invalid_logical_value:
 	mov	edx,_invalid_expression
@@ -531,7 +539,7 @@ check_if_defined:
 	test	eax,eax
 	jnz	invalid_logical_value
 	xor	ecx,ecx
-	jmp	check_expression_element
+	jmp	check_if_expression_defined
 check_if_defined_earlier:
 	lodsd
 	test	eax,eax
@@ -539,12 +547,16 @@ check_if_defined_earlier:
 	cmp	[esi],eax
 	je	invalid_logical_value
 	mov	ecx,[current_pass]
+    check_if_expression_defined:
+	and	[outer_expression],0
     check_expression_element:
 	lodsd
 	test	eax,eax
-	jz	evaluated_true
-	cmp	al,EXPR_SYMBOL
+	jz	check_expression_end
+	cmp	al,EXPR_SYMBOL_VALUE
 	je	check_if_symbol_defined
+	cmp	al,EXPR_SYMBOL
+	je	check_if_subexpression_defined
 	cmp	al,EXPR_NUMBER
 	je	check_basic_expression_element
 	cmp	al,EXPR_STRING
@@ -554,6 +566,12 @@ check_if_defined_earlier:
 	cmp	al,EXPR_OPERATOR
 	je	check_basic_expression_element
 	jmp	invalid_logical_value
+    check_expression_end:
+	xor	esi,esi
+	xchg	esi,[outer_expression]
+	test	esi,esi
+	jnz	check_expression_element
+	jmp	evaluated_true
     check_basic_expression_element:
 	lodsd
 	jmp	check_expression_element
@@ -564,26 +582,62 @@ check_if_defined_earlier:
 	lodsd
 	test	eax,eax
 	jz	evaluated_false
+    check_symbol_value:
 	jecxz	check_expression_element
 	test	[eax+ValueDefinition.flags],VAL_INTERNAL
 	jnz	check_expression_element
 	cmp	[eax+ValueDefinition.pass],ecx
 	jne	evaluated_false
 	jmp	check_expression_element
+    check_if_subexpression_defined:
+	mov	ebx,[esi]
+	test	ebx,ebx
+	jz	evaluated_false
+	add	esi,4
+	call	get_available_value
+	mov	eax,edx
+	test	eax,eax
+	jz	evaluated_false
+	cmp	[eax+ValueDefinition.type],VALTYPE_SYMBOLIC
+	jne	check_symbol_value
+	mov	[outer_expression],esi
+	push	ecx
+	call	get_subexpression
+	pop	ecx
+	jnc	invalid_logical_value
+	jmp	check_expression_element
+    get_subexpression:
+	call	clear_line_embeddings
+	and	[embedded_context],0
+	xor	esi,esi
+	xor	ecx,ecx
+	call	embed_symbolic_value
+	mov	edi,[expression_workspace.memory_start]
+	and	[leave_opening_parentheses],0
+	call	parse_expression
+	call	get_constituent_value
+	mov	esi,[expression_workspace.memory_start]
+	retn
 
 check_if_used:
 	lodsd
 	test	eax,eax
 	jnz	invalid_logical_value
+   check_if_expression_is_used_symbol:
 	lodsd
 	cmp	al,EXPR_SYMBOL
+	je	check_for_indirect_symbol
+	cmp	al,EXPR_SYMBOL_VALUE
 	jne	invalid_logical_value
 	lodsd
 	mov	ebx,eax
 	lodsd
+   check_if_used_symbol:
 	lodsd
 	test	eax,eax
 	jnz	invalid_logical_value
+	test	ebx,ebx
+	jz	evaluated_false
 	mov	ecx,[ebx+SymbolTree_Leaf.last_use_pass]
 	jecxz	symbol_predicted_unused
 	mov	eax,[current_pass]
@@ -600,3 +654,14 @@ check_if_used:
 	and	al,not SYM_PREDICTED_USED
 	mov	[ebx+SymbolTree_Leaf.flags],al
 	jmp	evaluated_false
+   check_for_indirect_symbol:
+	lodsd
+	mov	ebx,eax
+	call	get_available_value
+	test	edx,edx
+	jz	check_if_used_symbol
+	cmp	[edx+ValueDefinition.type],VALTYPE_SYMBOLIC
+	jne	check_if_used_symbol
+	call	get_subexpression
+	jnc	invalid_logical_value
+	jmp	check_if_expression_is_used_symbol

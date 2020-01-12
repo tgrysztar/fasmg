@@ -55,8 +55,6 @@ macro _end label
 
 end macro
 
-define x86
-restore x86
-if ~ defined x86
+if ~ definite PE
 	format PE64 GUI 5.0
 end if
