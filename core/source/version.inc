@@ -1,1 +1,1 @@
-VERSION equ "ist2m"
+VERSION equ "isvh5"

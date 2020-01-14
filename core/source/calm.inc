@@ -749,21 +749,7 @@ alm_arrange:
 	inc	esi
 	mov	[name_token],esi
 	lodsd
-	xor	dh,dh
-    find_reference_modifier_in_pattern:
-	cmp	esi,[line_end]
-	je	identify_reference_in_pattern
-	cmp	byte [esi],40h
-	jne	parse_reference_modifier_in_pattern
-	add	esi,1+sizeof.RecognitionContext
-	jmp	find_reference_modifier_in_pattern
-    parse_reference_modifier_in_pattern:
-	cmp	byte [esi],'?'
-	jne	identify_reference_in_pattern
-	inc	esi
-	or	dh,RECOGNIZE_CASE_INSENSITIVE
-    identify_reference_in_pattern:
-	mov	dl,SYMCLASS_EXPRESSION
+	mov	dx,SYMCLASS_EXPRESSION
 	mov	[name_volatile],0
 	push	esi edi
 	mov	esi,eax
@@ -1329,7 +1315,7 @@ launch_calm:
 	xchg	esi,[calm_source_pointer]
 	inc	eax
 	jz	get_calm_greedy_argument
-	call	extract_parameter_value
+	call	extract_argument_value
 	jmp	calm_argument_value_cut
     get_calm_greedy_argument:
 	xor	edx,edx
@@ -1590,20 +1576,19 @@ calm_match:
     calm_match_with_pattern:
 	cmp	edi,[pattern_end]
 	je	calm_end_of_pattern
-      find_token_to_match:
-	cmp	esi,[line_end]
-	je	calm_match_done
-	mov	al,[esi]
-	cmp	al,40h
-	jne	found_token_to_match
-	inc	esi
-	mov	[matched_context],esi
-	add	esi,sizeof.RecognitionContext
-	jmp	find_token_to_match
-      found_token_to_match:
 	mov	ah,[edi]
 	cmp	ah,1Bh
 	jne	calm_exact_match
+    calm_wildcard_match:
+	and	[stored_position],0
+	add	edi,1+8
+	cmp	edi,[pattern_end]
+	je	calm_required_wildcard_match
+	cmp	byte [edi],'?'
+	je	calm_optional_wildcard_match
+    calm_required_wildcard_match:
+	cmp	esi,[line_end]
+	je	calm_match_done
 	call	calm_consume_whitespace
 	jz	calm_match_done
 	xchg	edi,ebx
@@ -1611,9 +1596,8 @@ calm_match:
 	mov	ecx,sizeof.MatchedExcerpt
 	call	reserve_workspace
 	xchg	edi,ebx
-	mov	eax,[edi+1+4]
+	mov	eax,[edi-4]
 	mov	ecx,[matched_context]
-	add	edi,1+8
 	mov	[ebx+MatchedExcerpt.symbol_leaf],eax
 	mov	[ebx+MatchedExcerpt.recognition_context],ecx
 	mov	[ebx+MatchedExcerpt.data_start],esi
@@ -1622,9 +1606,33 @@ calm_match:
 	jc	calm_match_done
 	mov	[ebx+MatchedExcerpt.data_end],esi
 	add	ebx,sizeof.MatchedExcerpt
-	and	[stored_position],0
+	jmp	calm_match_with_pattern
+    calm_optional_wildcard_match:
+	xchg	edi,ebx
+	mov	edx,expression_workspace
+	mov	ecx,sizeof.MatchedExcerpt
+	call	reserve_workspace
+	xchg	edi,ebx
+	mov	eax,[edi-4]
+	inc	edi
+	mov	ecx,[matched_context]
+	mov	[ebx+MatchedExcerpt.symbol_leaf],eax
+	mov	[ebx+MatchedExcerpt.recognition_context],ecx
+	mov	[ebx+MatchedExcerpt.data_start],esi
+	mov	[ebx+MatchedExcerpt.data_end],esi
+	add	ebx,sizeof.MatchedExcerpt
 	jmp	calm_match_with_pattern
     calm_exact_match:
+	cmp	esi,[line_end]
+	je	calm_end_of_text
+	mov	al,[esi]
+	cmp	al,40h
+	jne	found_token_to_match
+	inc	esi
+	mov	[matched_context],esi
+	add	esi,sizeof.RecognitionContext
+	jmp	calm_exact_match
+      found_token_to_match:
 	cmp	[stored_position],0
 	jne	calm_match_position_stored
 	mov	[stored_position],esi
@@ -1870,7 +1878,14 @@ calm_match:
 	jmp	calm_retract_match
     calm_end_of_text:
 	cmp	edi,[pattern_end]
+	je	calm_match_found
+	mov	ah,[edi]
+	cmp	ah,1Bh
+	je	calm_wildcard_match
+	cmp	ah,20h
 	jne	calm_match_done
+	inc	edi
+	jmp	calm_end_of_text
     calm_match_found:
 	or	[calm_result],1
 	mov	esi,ebx
@@ -1888,6 +1903,7 @@ calm_match:
 	mov	ecx,[esi+MatchedExcerpt.data_end]
 	mov	esi,[esi+MatchedExcerpt.data_start]
 	sub	ecx,esi
+	jz	calm_matched_value_ready
 	test	eax,eax
 	jz	calm_matched_value_ready
 	cmp	dword [eax],0
@@ -2026,6 +2042,8 @@ calm_jump:
 calm_assemble:
 	lodsd
 	mov	ebx,eax
+	mov	eax,[ebx+SymbolTree_Leaf.branch]
+	mov	[instruction_branch],eax
 	call	get_available_value
 	jc	calm_undefined_symbol
 	mov	al,[edx+ValueDefinition.type]
@@ -2048,6 +2066,13 @@ calm_assemble:
 	mov	[ebx+SourceEntry.local_namespace],eax
 	mov	al,[calm_result]
 	mov	[ebx-sizeof.SourceEntry+SourceEntry.saved_result],al
+	mov	ecx,[instruction_branch]
+	test	ecx,ecx
+	jz	get_line
+	mov	eax,[ecx+SymbolTree_Foliage.name_data]
+	mov	[ebx+SourceEntry.name],eax
+	mov	eax,[ecx+SymbolTree_Foliage.name_length]
+	mov	[ebx+SourceEntry.name_length],eax
 	jmp	get_line
     calm_undefined_symbol:
 	mov	edx,_undefined_symbol

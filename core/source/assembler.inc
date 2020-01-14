@@ -1999,7 +1999,12 @@ extract_piece_of_line:
 	mov	esi,eax
 	mov	[context_boundary],edi
 	jmp	extract_piece
+    extract_contextless:
+	dec	edi
+	jmp	extract_piece
     extract_current_context:
+	test	[assembly_mode],AMODE_DEFINITION
+	jnz	extract_contextless
 	call	store_current_context
     extract_piece:
 	lodsb
@@ -2103,8 +2108,11 @@ make_recognition_context_token:
     ;  edi - past the filled RecognitionContext
     ;  [context_boundary] - past the filled RecognitionContext
     ; preserves: ebx, edx
+	test	[assembly_mode],AMODE_DEFINITION
+	jnz	copy_recognition_context
 	cmp	[esi+RecognitionContext.base_namespace],0
 	je	capture_context_reset
+      copy_recognition_context:
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd

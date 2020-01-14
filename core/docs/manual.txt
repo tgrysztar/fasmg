@@ -2079,8 +2079,13 @@ by one or more names separated with commas.
         end calminstruction
 
 A symbol made local is initally assigned a defined but unusable value.
+  If a pattern in CALM instruction has a "?" character immediately following the name
+of a wildcard, it does not affect how the symbol is identified (whether the used symbol
+is case-insensitive depends on what is present in the local scope at the time
+the instruction is defined). Instead, modifying the name of a wildcard with "?" allows it
+to be matched with an empty text.
   Since the source text for "match" is in this variant given by just a single identifier,
-this syntax allows to have more arguments. An optional third argument to "match" may
+this syntax allows to have more optional arguments. A third argument to "match" may
 contain a pair of bracket characters. Any wildcard element must then be matched with
 a text that has this kind of brackets properly balanced.
 

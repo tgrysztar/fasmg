@@ -289,7 +289,7 @@ identify_parameter_symbol:
       parameter_symbol_identified:
 	retn
 
-cut_parameter_value:
+cut_argument_value:
 ; in:
 ;  esi = pointer into preprocessed line or current embedded value
 ;  edi - LineExcerpt to be filled with information about cut piece of line
@@ -325,7 +325,7 @@ cut_parameter_value:
 	call	register_error
 	retn
 
-extract_parameter_value:
+extract_argument_value:
 ; in:
 ;  esi = pointer into preprocessed line (not an embedded value)
 ;  edi - buffer for token sequence, must be large enough to hold all the remaining tokens in line and an additional context token
@@ -1739,7 +1739,7 @@ iterator_block:
 	jmp	parameter_declaration_done
       parameter_with_default_value:
 	inc	esi
-	call	cut_parameter_value
+	call	cut_argument_value
       parameter_declaration_done:
 	add	edi,sizeof.LineExcerpt
 	mov	ah,[breakpoint_token]
@@ -1766,7 +1766,7 @@ iterator_block:
 	mov	edx,expression_workspace
 	mov	ecx,sizeof.LineExcerpt
 	call	reserve_workspace
-	call	cut_parameter_value
+	call	cut_argument_value
 	add	edi,sizeof.LineExcerpt
 	inc	[number_of_values]
 	mov	ecx,[value_index]
@@ -3542,7 +3542,7 @@ use_struc:
 	xor	edx,edx
 	mov	[breakpoint_token],dl
 	call	extract_piece_of_line
-	call	store_context_reset_token
+	call	finish_extracted_parameter
 	pop	[embedded_context]
 	pop	[line_end]
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
@@ -3681,7 +3681,7 @@ use_struc:
 	call	extract_piece_of_line
 	jmp	parameter_value_ready
       standard_parameter_value:
-	call	extract_parameter_value
+	call	extract_argument_value
       parameter_value_ready:
 	mov	eax,[parameter_index]
 	shl	eax,2
@@ -3692,7 +3692,7 @@ use_struc:
 	mov	[value_type],VALTYPE_SYMBOLIC
 	cmp	edi,[assembly_workspace.memory_start]
 	je	empty_parameter_value
-	call	store_context_reset_token
+	call	finish_extracted_parameter
 	push	esi
 	mov	esi,[assembly_workspace.memory_start]
 	mov	ecx,edi
@@ -3783,6 +3783,12 @@ use_struc:
 	mov	ecx,edi
 	sub	ecx,esi
 	jmp	assign_parameter_value
+    finish_extracted_parameter:
+	test	[assembly_mode],AMODE_DEFINITION
+	jz	store_context_reset_token
+	cmp	[embedded_context],0
+	jne	store_context_reset_token
+	retn
     store_context_reset_token:
 	cmp	edi,[context_boundary]
 	je	context_reset_in_reused_token

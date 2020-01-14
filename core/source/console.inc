@@ -45,7 +45,11 @@ show_errors:
 	je	display_memory_source
 	cmp	[ebx+SourceEntry.type],SOURCE_MACRO
 	jne	display_source_name
-	mov	esi,_macro
+	mov	esi,_macro_source
+	test	[ebx+SourceEntry.flags],SRCF_PREPROCESSED
+	jz	display_source_type
+	mov	esi,_preprocessed_source
+      display_source_type:
 	xor	ecx,ecx
 	call	display_error_string
       display_source_name:
