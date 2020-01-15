@@ -12,7 +12,7 @@
 
 include 'xcalm.inc'
 
-define Listing?
+define Listing? Listing
 
 namespace Listing
 
