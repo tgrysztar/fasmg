@@ -262,7 +262,7 @@ find_output_area:
 ;  cf set when not found an area that would contain a byte at specified offset
 ;  when cf = 0:
 ;   ebx - OutputArea
-;   [file_offset] = offset relative to the beginning of the found area
+;   [file_offset] = offset relative to the beginning of the found area (upper 32 bits are zero)
 	mov	esi,[initial_output_area_entry]
 	mov	edi,[current_output_area_entry]
 	add	edi,sizeof.OutputArea
@@ -326,7 +326,6 @@ read_from_output:
 	sub	ecx,sizeof.AreaHeader
 	sub	ecx,[edx+AreaHeader.base_address_length]
 	sub	dword [file_offset],ecx
-	sbb	dword [file_offset+4],0
 	jnc	initialized_load_done
 	lea	esi,[edx+eax]
 	mov	ecx,dword [file_offset]
@@ -339,11 +338,9 @@ read_from_output:
 	sub	[value_length],ecx
 	rep	movsb
 	mov	dword [file_offset],ecx
-	mov	dword [file_offset+4],ecx
       initialized_load_done:
 	mov	ecx,[edx+AreaHeader.uninitialized_length]
 	sub	dword [file_offset],ecx
-	sbb	dword [file_offset+4],0
 	jnc	uninitialized_load_done
 	mov	ecx,dword [file_offset]
 	neg	ecx
@@ -355,7 +352,6 @@ read_from_output:
 	xor	al,al
 	rep	stosb
 	mov	dword [file_offset],ecx
-	mov	dword [file_offset+4],ecx
       uninitialized_load_done:
 	cmp	ebx,[current_output_area_entry]
 	je	output_reading_done
@@ -383,20 +379,16 @@ rewrite_output:
 	mov	edx,[edx+ValueDefinition.value]
 	sub	ecx,sizeof.AreaHeader
 	sub	ecx,[edx+AreaHeader.base_address_length]
-	xor	eax,eax
 	mov	edi,[edx+AreaHeader.uninitialized_length]
 	add	ecx,edi
-	adc	eax,eax
 	sub	dword [file_offset],ecx
-	sbb	dword [file_offset+4],eax
 	jnc	rewrite_next_area
 	mov	eax,[value_length]
 	xor	ecx,ecx
 	add	eax,edi
 	adc	ecx,ecx
 	add	eax,dword [file_offset]
-	adc	ecx,dword [file_offset+4]
-	jnz	rewrite_initialized_data
+	jnc	rewrite_initialized_data
 	cmp	eax,edi
 	jbe	rewrite_uninitialized_data
 	mov	eax,edi
@@ -427,7 +419,6 @@ rewrite_output:
 	sub	[value_length],ecx
 	rep	movsb
 	mov	dword [file_offset],ecx
-	mov	dword [file_offset+4],ecx
       rewrite_next_area:
 	cmp	ebx,[current_output_area_entry]
 	je	output_rewriting_done
@@ -539,8 +530,7 @@ get_current_address_value:
 
 get_output_length:
 ; out:
-;  edx:eax = length of current output
-;  [uninitialized_length] = length of uninitialized data following the current output
+;  edx:eax = length of current output (not counting uninitialized data)
 ; preserves: esi
 	mov	ebx,[current_output_area_entry]
 	mov	eax,dword [ebx+OutputArea.cached_offset]
@@ -550,21 +540,30 @@ get_output_length:
 	mov	edi,[edi+ValueDefinition.value]
 	sub	ecx,sizeof.AreaHeader
 	sub	ecx,[edi+AreaHeader.base_address_length]
+	jz	current_area_entirely_uninitialized
 	add	eax,ecx
 	adc	edx,0
-	test	ecx,ecx
-	mov	ecx,[edi+AreaHeader.uninitialized_length]
-	mov	dword [uninitialized_length],ecx
-	mov	dword [uninitialized_length+4],0
-	jz	current_area_entirely_uninitialized
 	retn
     current_area_entirely_uninitialized:
-	mov	ecx,dword [prior_uninitialized_length]
-	mov	ebx,dword [prior_uninitialized_length+4]
-	sub	eax,ecx
-	sbb	edx,ebx
-	add	dword [uninitialized_length],ecx
-	adc	dword [uninitialized_length+4],ebx
+	sub	eax,dword [prior_uninitialized_length]
+	sbb	edx,dword [prior_uninitialized_length+4]
+	retn
+
+get_output_position:
+; out:
+;  edx:eax = current position in the output (including uninitialized data)
+; preserves: esi
+	mov	ebx,[current_output_area_entry]
+	mov	eax,dword [ebx+OutputArea.cached_offset]
+	mov	edx,dword [ebx+OutputArea.cached_offset+4]
+	mov	edi,[ebx+OutputArea.definition]
+	mov	ecx,[edi+ValueDefinition.value_length]
+	mov	edi,[edi+ValueDefinition.value]
+	sub	ecx,sizeof.AreaHeader
+	sub	ecx,[edi+AreaHeader.base_address_length]
+	add	ecx,[edi+AreaHeader.uninitialized_length]
+	add	eax,ecx
+	adc	edx,0
 	retn
 
 create_output_path:

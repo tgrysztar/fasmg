@@ -61,8 +61,7 @@ calminstruction x86.parse_operand namespace, operand
 
 	match	pre suf, operand
 	jno	no_size_prefix
-	arrange pre, =x86.pre
-	transform pre
+	transform pre, x86
 	jno	no_size_prefix
 	match	:size, pre
 	jno	no_size_prefix
@@ -978,8 +977,7 @@ iterate <instr>, push,pop
 
 		match	head tail, operand
 		jno	plain
-		arrange head, =x86.=compact.head
-		transform head
+		transform head, x86.compact
 		jno	plain
 		match	{head}, head
 		jno	plain
@@ -987,8 +985,7 @@ iterate <instr>, push,pop
 		asmcmd	=instr head
 		match	head tail, tail
 		jno	final
-		arrange head, =x86.=compact.head
-		transform head
+		transform head, x86.compact
 		jno	error
 		match	{head}, head
 		jyes	loop
@@ -996,10 +993,9 @@ iterate <instr>, push,pop
 		asmcmd	=err 'only register operands allowed in compact syntax'
 		exit
 	    final:
-		arrange operand, =x86.=compact.tail
-		transform operand
+		transform tail, x86.compact
 		jno	error
-		match	{operand}, operand
+		match	{operand}, tail
 		jno	error
 	    plain:
 		asmcmd	=instr operand

@@ -1429,9 +1429,7 @@ calculate_parsed_expression:
 	retn
     current_position_value:
 	call	prepare_to_push_computed_value
-	call	get_output_length
-	add	eax,dword [uninitialized_length]
-	adc	edx,dword [uninitialized_length+4]
+	call	get_output_position
       push_output_position:
 	mov	edi,[value_workspace.memory_start]
 	add	edi,[value_position]

@@ -591,9 +591,6 @@ alm_local:
 alm_assemble:
 	mov	[value],calm_assemble
 	jmp	assemble_alm_operation_on_variable
-alm_transform:
-	mov	[value],calm_transform
-	jmp	assemble_alm_operation_on_variable
 alm_stringify:
 	mov	[value],calm_stringify
     assemble_alm_operation_on_variable:
@@ -1191,6 +1188,46 @@ alm_publish:
 	mov	eax,[calm_line_number]
 	stosd
 	mov	eax,[value]
+	stosd
+	mov	eax,[label_leaf]
+	stosd
+	mov	eax,ebx
+	stosd
+	mov	[calm_code_cursor],edi
+	jmp	instruction_assembled
+
+alm_transform:
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jz	unexpected_instruction
+	call	move_to_next_symbol
+	jc	missing_argument
+	and	[symbol_definition],0
+	mov	dl,SYMCLASS_EXPRESSION
+	call	identify_symbol
+	jc	invalid_identifier
+	test	ebx,ebx
+	jz	invalid_identifier
+	mov	[label_leaf],ebx
+	xor	ebx,ebx
+	call	move_to_next_symbol
+	jc	alm_transform_arguments_ready
+	cmp	al,','
+	jne	alm_transform_arguments_ready
+	inc	esi
+	mov	dl,SYMCLASS_EXPRESSION
+	call	identify_symbol
+	jc	invalid_identifier
+	test	edx,edx
+	jz	invalid_identifier
+	call	get_symbol_namespace
+    alm_transform_arguments_ready:
+	mov	edi,[calm_code_cursor]
+	mov	edx,calm_code_buffer
+	mov	ecx,8+8
+	call	reserve_workspace
+	mov	eax,[calm_line_number]
+	stosd
+	mov	eax,calm_transform
 	stosd
 	mov	eax,[label_leaf]
 	stosd
@@ -2088,10 +2125,11 @@ calm_transform:
 	lodsd
 	mov	[label_leaf],eax
 	mov	ebx,eax
+	lodsd
+	mov	[transforming_namespace],eax
 	call	get_available_value
 	jc	calm_undefined_symbol
-	mov	al,[edx+ValueDefinition.type]
-	cmp	al,VALTYPE_SYMBOLIC
+	cmp	[edx+ValueDefinition.type],VALTYPE_SYMBOLIC
 	jne	calm_invalid_value
 	push	esi
 	and	[embedded_context],0
@@ -2107,7 +2145,14 @@ calm_transform:
 	and	[symbol_definition],0
 	mov	dl,SYMCLASS_EXPRESSION
 	push	edi
+	mov	ebx,[transforming_namespace]
+	test	ebx,ebx
+	jz	transform_identify
+	call	identify_symbol_in_namespace
+	jmp	transform_identification_done
+    transform_identify:
 	call	identify_symbol
+    transform_identification_done:
 	jc	symbolic_value_transformed
 	test	edi,edi
 	jnz	ready_to_transform

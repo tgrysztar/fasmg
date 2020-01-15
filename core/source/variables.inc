@@ -222,6 +222,7 @@ expression_sequence_cursor dd ?
 expression_sequence_end dd ?
 context_boundary dd ?
 whitespace_boundary dd ?
+transforming_namespace dd ?
 
 pattern_start dd ?
 pattern_end dd ?

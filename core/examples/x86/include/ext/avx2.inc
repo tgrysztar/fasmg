@@ -26,8 +26,7 @@ if ~ defined AVX2
 
 		match	pre suf, operand
 		jno	no_size_prefix
-		arrange pre, =x86.pre
-		transform pre
+		transform pre, x86
 		jno	no_size_prefix
 		match	:size, pre
 		jno	no_size_prefix
@@ -59,8 +58,7 @@ if ~ defined AVX2
 
 		match	pre suf, address
 		jno	no_address_size_prefix
-		arrange pre, =x86.pre
-		transform pre
+		transform pre, x86
 		jno	no_address_size_prefix
 		match	:pre, pre
 		jno	no_address_size_prefix

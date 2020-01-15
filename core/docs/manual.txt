@@ -2201,9 +2201,9 @@ The above instruction allows to define a symbolic constant, something that is no
 possible with standard directives of the assembler.
   The purpose of "transform" command is to replace identifiers of symbolic variables
 (or constants) with their values in a given text, which is the same operation as done
-by "equ" directive when it prepares the value to assign. The only argument to
-"transform" should be the symbolic variable whose value is going to be processed
-this way and then replaced by the transformed text.
+by "equ" directive when it prepares the value to assign. The argument to "transform"
+should be a symbolic variable whose value is going to be processed this way and then
+replaced by the transformed text.
 
         calminstruction (var) constequ? val
                 transform val
@@ -2222,6 +2222,9 @@ has been done.
 
 The result flag is modified only by some of the commands, like "check", "match" 
 or "transform". Other commands keep it unchanged.
+  Optionally, "transform" can have two arguments, with second one specifying
+a namespace. Identifiers in the text given by the first argument are then interpreted
+as symbols in this namespace regardless of their original context.
   The "stringify" is a command that converts text of a variable into a string
 and writes it into the same variable (specified by the only argument). This operation
 is similar to one performed by "`" operator in preprocessing.
