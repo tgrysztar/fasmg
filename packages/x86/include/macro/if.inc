@@ -1,22 +1,20 @@
 
-define _if
+define _if _if
 
-define _if.if? :_if
-define _if.else? :_else
-define _if.elseif? :_elseif
-define _if.endif? :_endif
-define _if.while? :_while
-define _if.endw? :_endw
-define _if.repeat? :_repeat
-define _if.until? :_until
+define _if..if? _if
+define _if..else? _else
+define _if..elseif? _elseif
+define _if..endif? _endif
+define _if..while? _while
+define _if..endw? _endw
+define _if..repeat? _repeat
+define _if..until? _until
 
-struc (name) ? a&
-	match :cmd, _if#name?
-		cmd a
-	else
-		name a
-	end match
-end struc
+calminstruction (cmd) ? a&
+	transform cmd,_if
+	arrange cmd, cmd a
+	assemble cmd
+end calminstruction
 
 macro _if cond
 	__IF equ :

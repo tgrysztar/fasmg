@@ -44,8 +44,10 @@ macro use32on64?
 
 	define esp rsp
 
+	define promote
+
 	iterate <reg32,reg64>, eax,rax, ebx,rbx, ecx,rcx, edx,rdx, esi,rsi, edi,rdi, esp,rsp, ebp,rbp
-		promote.reg32? equ :reg64
+		promote.reg32? equ reg64
 	end iterate
 
 	iterate instr, jmp,call
@@ -53,11 +55,7 @@ macro use32on64?
 			local	tmp
 			match	[tmp], arg
 			jyes	zero_extend
-			arrange tmp, =promote.arg
-			transform tmp
-			jno	regular
-			match	:arg, tmp
-		    regular:
+			transform arg, promote
 			arrange tmp, =instr arg
 			assemble tmp
 			exit
@@ -70,23 +68,17 @@ macro use32on64?
 	end iterate
 
 	calminstruction push? arg
-		local	tmp
+		local	car, cdr
+		match	car cdr?, arg
 	    loop:
-		arrange tmp, =promote.arg
-		transform tmp
-		jno	regular
-		match	:tmp arg, tmp
-		jyes	promoted
-		match	:tmp, tmp
-		jno	regular
-		arrange arg,
-	    promoted:
-		arrange tmp, =push tmp
-		assemble tmp
-		match	, arg
-		jno	loop
+		transform car, promote
+		jno	non_reg
+		arrange car, =push car
+		assemble car
+		match	car cdr?, cdr
+		jyes	loop
 		exit
-	    regular:
+	    non_reg:
 		arrange tmp, =mov =r8d,arg
 		assemble tmp
 		arrange tmp, =push =r8
@@ -95,23 +87,17 @@ macro use32on64?
 	end calminstruction
 
 	calminstruction pop? arg
-		local	tmp
+		local	car, cdr
+		match	car cdr?, arg
 	    loop:
-		arrange tmp, =promote.arg
-		transform tmp
-		jno	regular
-		match	:tmp arg, tmp
-		jyes	promoted
-		match	:tmp, tmp
-		jno	regular
-		arrange arg,
-	    promoted:
-		arrange tmp, =pop tmp
-		assemble tmp
-		match	, arg
-		jno	loop
+		transform car, promote
+		jno	non_reg
+		arrange car, =pop car
+		assemble car
+		match	car cdr?, cdr
+		jyes	loop
 		exit
-	    regular:
+	    non_reg:
 		arrange tmp, =pop =r8
 		assemble tmp
 		arrange tmp, =mov arg,=r8d
