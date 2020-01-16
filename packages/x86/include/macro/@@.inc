@@ -1,5 +1,5 @@
 
-macro @@ tail
+macro @@ tail&
 	match label, @f?
 		label tail
 		@b?. equ @f?

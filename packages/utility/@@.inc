@@ -18,7 +18,7 @@
 
 macro @INIT name,prefix
 
-	macro name tail
+	macro name tail&
 		match label, prefix#f?
 			label tail
 			prefix#b? equ prefix#f?
