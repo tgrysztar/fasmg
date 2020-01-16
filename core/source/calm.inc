@@ -1502,7 +1502,7 @@ calm_arrange:
     arrange_by_reference:
 	mov	ebx,[esi+4]
 	call	get_available_value
-	jc	arrange_failed_reference
+	jc	arrange_missing_value
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_NUMERIC
 	je	arrange_numeric_value
@@ -1554,8 +1554,11 @@ calm_arrange:
 	jmp	arrange_token
     arrange_unsupported_value:
 	mov	edx,_invalid_symbol_value
-	call	register_error_with_symbol_name
+	jmp	arrange_failed_reference
+    arrange_missing_value:
+	mov	edx,_undefined_symbol
     arrange_failed_reference:
+	call	register_error_with_symbol_name
 	mov	al,1Ah
 	stosb
 	movsd

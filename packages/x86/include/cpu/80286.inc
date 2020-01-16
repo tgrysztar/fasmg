@@ -44,7 +44,7 @@ iterate <instr,ext,postbyte>, sldt,0,0, str,0,1, lldt,0,2, ltr,0,3, verr,0,4, ve
 		asmcmd	=err 'invalid operand'
 		exit
 	    operand_ok:
-		asmcmd	=x86.store_instruction <0Fh,ext>,=@dest,postbyte
+		asmcmd	=x86.=store_instruction <0Fh,ext>,=@dest,postbyte
 	end calminstruction
 
 end iterate
@@ -62,7 +62,7 @@ iterate <instr,postbyte>, lgdt,2, lidt,3, sgdt,0, sidt,1
 		jno	store_instruction
 		asmcmd	=err 'invalid operand size'
 	    store_instruction:
-		asmcmd	=x86.store_instruction <0Fh,1>,=@dest,postbyte
+		asmcmd	=x86.=store_instruction <0Fh,1>,=@dest,postbyte
 		exit
 	end calminstruction
 

@@ -23,7 +23,7 @@ iterate <instr,opcode>, wrmsr,<0Fh,30h>, rdtsc,<0Fh,31h>, rdmsr,<0Fh,32h>, rdpmc
 end iterate
 
 calminstruction cmpxchg8b? dest*
-	asmcmd	=x86.parse_operand =@dest,dest
+	asmcmd	=x86.=parse_operand =@dest,dest
 	check	@dest.type = 'mem'
 	jyes	operand_ok
 	asmcmd	=err 'invalid operand'

@@ -17,12 +17,12 @@ calminstruction inlinemacro?! declaration&
 	local	name
 	match	name= arguments?, declaration
 	jyes	define
-	match	name?, declaration
+	match	name arguments?, declaration
     define:
 	arrange tmp, =__inline__.name
 	arrange name, =inlinemacro.name
 	publish name, tmp
-	arrange tmp, =struc (return?) name arguments
+	arrange tmp, =struc (=return?) name arguments
 	assemble tmp
 end calminstruction
 

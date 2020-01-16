@@ -1,1 +1,1 @@
-VERSION equ "iswp1"
+VERSION equ "isxsq"

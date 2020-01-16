@@ -856,7 +856,7 @@ iterate <instr,postbyte>, not,2, neg,3, mul,4, div,6, idiv,7
 		exit
 
 	    rm_word:
-		asmcmd	=x86.=select_operand_prefix =@src,=@src.size
+		asmcmd	=x86.=select_operand_prefix =@src,=@src.=size
 		asmcmd	=x86.=store_instruction 0F7h,=@src,postbyte
 		exit
 
@@ -1423,7 +1423,7 @@ calminstruction x86.push_instruction size:0,src*
 	exit
 
     push_sreg:
-	asmcmd	=x86.store_operand_prefix size
+	asmcmd	=x86.=store_operand_prefix size
 	check	@src.rm >= 4
 	jyes	push_sreg_386
 	compute opcode, 6 + @src.rm shl 3
@@ -1445,7 +1445,7 @@ calminstruction x86.push_instruction size:0,src*
 	compute size, 2
       push_imm_size_ok:
 
-	asmcmd	=x86.store_operand_prefix size
+	asmcmd	=x86.=store_operand_prefix size
 
 	check	@src.imm eqtype 0.0
 	jno	push_imm_optimize
@@ -1518,7 +1518,7 @@ calminstruction x86.pop_instruction size:0,dest*
     pop_sreg:
 	check	@dest.rm = 1
 	jyes	invalid_operand
-	asmcmd	=x86.store_operand_prefix size
+	asmcmd	=x86.=store_operand_prefix size
 	check	@dest.rm >= 4
 	jyes	pop_sreg_386
 	compute opcode, 7 + @dest.rm shl 3
@@ -2632,7 +2632,7 @@ iterate <instr,ext,postbyte>, lldt,0,2, ltr,0,3, verr,0,4, verw,0,5, lmsw,1,6
 		asmcmd	=err 'invalid operand'
 		exit
 	    operand_ok:
-		asmcmd	=x86.store_instruction <0Fh,ext>,=@dest,postbyte
+		asmcmd	=x86.=store_instruction <0Fh,ext>,=@dest,postbyte
 	end calminstruction
 
 end iterate
@@ -2654,7 +2654,7 @@ iterate <instr,ext,postbyte>, sldt,0,0, str,0,1, smsw,1,4
 	    select_operand_prefix:
 		asmcmd	=x86.=select_operand_prefix =@dest,=@dest.=size
 	    store_instruction:
-		asmcmd	=x86.store_instruction <0Fh,ext>,=@dest,postbyte
+		asmcmd	=x86.=store_instruction <0Fh,ext>,=@dest,postbyte
 	end calminstruction
 
 end iterate
@@ -2682,7 +2682,7 @@ iterate <instr,postbyte>, lgdt,2, lidt,3, sgdt,0, sidt,1
 	    o32:
 		asmcmd	=x86.=select_operand_prefix =@dest,4
 	    store_instruction:
-		asmcmd	=x86.store_instruction <0Fh,1>,=@dest,postbyte
+		asmcmd	=x86.=store_instruction <0Fh,1>,=@dest,postbyte
 	end calminstruction
 
 end iterate

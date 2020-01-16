@@ -30,20 +30,20 @@ iterate <instr,ext>, cmpxchg,0B0h, xadd,0C0h
 end iterate
 
 calminstruction bswap? dest*
-	asmcmd	=x86.parse_operand =@dest,dest
+	asmcmd	=x86.=parse_operand =@dest,dest
 	check	@dest.type = 'reg' & @dest.size = 4
 	jyes	operand_ok
 	asmcmd	=err 'invalid operand'
 	exit
     operand_ok:
-	asmcmd	=x86.store_operand_prefix =@dest.=size
+	asmcmd	=x86.=store_operand_prefix =@dest.=size
 	local	opcode
 	compute opcode, 0C8h + @dest.rm and 111b
 	asmcmd	=db 0Fh,opcode
 end calminstruction
 
 calminstruction invlpg? dest*
-	asmcmd	=x86.parse_operand =@dest,dest
+	asmcmd	=x86.=parse_operand =@dest,dest
 	check	@dest.type = 'mem'
 	jyes	operand_ok
 	asmcmd	=err 'invalid operand'
