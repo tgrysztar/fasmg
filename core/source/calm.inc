@@ -1242,9 +1242,9 @@ alm_take:
 	call	move_to_next_symbol
 	jc	missing_argument
 	xor	ebx,ebx
+	and	[symbol_definition],0
 	cmp	al,','
 	je	alm_take_destination_ready
-	and	[symbol_definition],0
 	mov	dl,SYMCLASS_EXPRESSION
 	call	identify_symbol
 	jc	invalid_identifier

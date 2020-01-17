@@ -1,6 +1,6 @@
 
 _macro_source db 'macro ',0
-_preprocessed_source db 'sym ',0
+_preprocessed_source db 'assemble ',0
 _unnamed_source db '?',0
 _memory_source db 'eval',0
 _space db ' ',0

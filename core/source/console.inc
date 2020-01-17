@@ -94,11 +94,17 @@ show_errors:
 	mov	esi,_space
       next_source_entry:
 	pop	ebx
+      find_next_source_entry:
 	cmp	ebx,[last_source_entry]
 	je	source_context_shown
+	add	ebx,sizeof.SourceEntry
+	test	[trace_mode],TRACE_ERROR_STACK
+	jnz	show_source_entry
+	test	[ebx+SourceEntry.flags],SRCF_PREPROCESSED
+	jnz	find_next_source_entry
+      show_source_entry:
 	xor	ecx,ecx
 	call	display_error_string
-	add	ebx,sizeof.SourceEntry
 	jmp	show_source_context
       last_source_entry_line_content:
 	test	[esi+Error.flags],ERR_CUSTOM
