@@ -90,23 +90,36 @@ macro struct? name
 		namespace .
 end macro
 
-macro invoke? proc*,args&
-	match any, args
-		iterate arg, args
-			indx 1+%%-%
-			match size [mem], ?arg
-				pushd arg
-			else if arg relativeto ebp & arg - ebp
-				push eax
-				lea eax,[arg]
-				xchg eax,[esp]
-			else
-				pushd arg
-			end if
-		end iterate
-	end match
-	call [proc]
-end macro
+calminstruction invoke? proc*,args&
+	local	tmp, tmpst, stack
+	match	, args
+	jyes	call
+    collect:
+	match	tmpst=,args, args
+	take	stack, tmpst
+	jyes	collect
+    push:
+	match	tmp], args
+	jyes	regular
+	check	args relativeto ebp & args - ebp
+	jno	regular
+	arrange tmp, =push =eax
+	assemble tmp
+	arrange tmp, =lea =eax,[args]
+	assemble tmp
+	arrange tmp, =xchg =eax,[=esp]
+	assemble tmp
+	jump	next
+      regular:
+	arrange tmp, =pushd args
+	assemble tmp
+      next:
+	take	args, stack
+	jyes	push
+    call:
+	arrange tmp, =call [proc]
+	assemble tmp
+end calminstruction
 
 calminstruction mov? dest*,src*
 	local	tmp

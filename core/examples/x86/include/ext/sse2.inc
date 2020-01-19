@@ -29,14 +29,16 @@ if ~ defined SSE2
 		SSE.basic_instruction_imm8 0F2h,0C2h,8,dest,src,code
 	end macro
 
-	macro cmpsd? args&
-		match , args
-			x86.store_operand_prefix 4
-			db 0A7h
-		else
-			SSE.cmpsd args
-		end match
-	end macro
+	calminstruction cmpsd? args&
+		match	, args
+		jno	sse
+		assemble x86.o16
+		assemble x86.cmpsw
+		exit
+	    sse:
+		arrange args, =SSE.=cmpsd args
+		assemble args
+	end calminstruction
 
 	iterate <cond,code>, eq,0, lt,1, le,2, unord,3, neq,4, nlt,5, nle,6, ord,7
 		macro cmp#cond#pd? dest*,src*
@@ -112,14 +114,16 @@ if ~ defined SSE2
 		end if
 	end macro
 
-	macro movsd? args&
-		match , args
-			x86.store_operand_prefix 4
-			db 0A5h
-		else
-			SSE.movsd args
-		end match
-	end macro
+	calminstruction movsd? args&
+		match	, args
+		jno	sse
+		assemble x86.o16
+		assemble x86.movsw
+		exit
+	    sse:
+		arrange args, =SSE.=movsd args
+		assemble args
+	end calminstruction
 
 	iterate <instr,pre>, movdqa,66h, movdqu,0F3h
 		macro instr? dest*,src*

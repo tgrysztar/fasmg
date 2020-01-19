@@ -90,15 +90,23 @@ macro struct? name
 		namespace .
 end macro
 
-macro invoke? proc*,args&
-	match any, args
-		iterate arg, args
-			indx 1+%%-%
-			pushd arg
-		end iterate
-	end match
-	call [proc]
-end macro
+calminstruction invoke? proc*,args&
+	local	tmp, stack
+	match	, args
+	jyes	call
+    collect:
+	match	tmp=,args, args
+	take	stack, tmp
+	jyes	collect
+    push:
+	arrange args, =pushd args
+	assemble args
+	take	args, stack
+	jyes	push
+    call:
+	arrange proc, =call [proc]
+	assemble proc
+end calminstruction
 
 macro library? definitions&
 	PE.Imports:

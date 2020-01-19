@@ -581,7 +581,7 @@ define_label:
 	jz	current_label_ok
       current_label_confirmed:
 	mov	edi,[edx+SymbolTree_Foliage.root]
-	test	[edi+SymbolTree_Root.attributes],SYMTREE_LOCAL
+	test	[edi+SymbolTree_Root.flags],NAMESPACE_LOCAL
 	jnz	current_label_ok
 	mov	edi,[current_namespace]
 	mov	[edi+SymbolTree_Root.current_label],edx
@@ -4396,7 +4396,7 @@ load_value:
 	sub	ecx,[edx+ValueDefinition.pass]
 	cmp	ecx,1
 	ja	area_with_no_history
-	or	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK_PREDICTED
+	or	[ebx+SymbolTree_Leaf.flags],SYM_LINK_PREDICTED
 	mov	eax,[edx+ValueDefinition.value]
 	jmp	load_from_area
     invalid_source_area:

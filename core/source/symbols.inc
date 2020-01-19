@@ -32,8 +32,7 @@ ends
 struct SymbolTree_Leaf
 	class db ?			 ; SYMCLASS_#
 	flags db ?			 ; SYM_#
-	extended_flags db ?		 ; SYMX_#
-	reserved db ?
+	reserved dw ?
 	definition dd ? 		 ; pointer to ValueDefinition
 	retired_definition dd ?
 	last_use_pass dd ?
@@ -71,6 +70,7 @@ NAMESPACE_UNATTACHED = 1
 NAMESPACE_WITH_CASEINSENSITIVE_PARAMETERS = 2
 NAMESPACE_CURRENT_LABEL_TO_CONFIRM = 4
 NAMESPACE_CALM = 8
+NAMESPACE_LOCAL = 10h
 
 FOLIAGE_WITH_TOKEN = 1
 
@@ -91,9 +91,8 @@ SYM_PREDICTED = 4
 SYM_PREDICTED_DEFINED = 8
 SYM_USAGE_PREDICTED = 10h
 SYM_PREDICTED_USED = 20h
-
-SYMX_LINK = 1
-SYMX_LINK_PREDICTED = 2
+SYM_LINK = 40h
+SYM_LINK_PREDICTED = 80h
 
 VALTYPE_RESERVED = 0
 VALTYPE_SYMBOLIC = 1
@@ -675,6 +674,7 @@ get_local_namespace:
 	mov	ecx,sizeof.SymbolTree_Root + sizeof.SymbolTree_LocalNode
 	call	create_tree_element
 	or	[eax+SymbolTree_Root.attributes],SYMTREE_LOCAL
+	or	[eax+SymbolTree_Root.flags],NAMESPACE_LOCAL
 	mov	[edx+SymbolTree_Foliage.child_namespace],eax
 	mov	ebx,eax
 	retn
@@ -848,11 +848,9 @@ update_value_definition:
 	mov	ecx,[eax+ValueDefinition.pass]
 	cmp	ecx,[current_pass]
 	jne	reset_value
-	test	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
+	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT or SYM_LINK
 	jnz	constant_redefined
 	mov	edx,eax
-	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
-	jnz	constant_redefined
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED
 	jz	dynamic_value_definition_ready
@@ -886,7 +884,7 @@ create_value_definition:
 	cmp	ecx,[current_pass]
 	je	value_redefinition
     reset_value:
-	test	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
+	test	[ebx+SymbolTree_Leaf.flags],SYM_LINK
 	jnz	reset_link_value
 	mov	edx,[ebx+SymbolTree_Leaf.retired_definition]
       retire_previous_values:
@@ -908,7 +906,7 @@ create_value_definition:
 	jnz	reset_value_type
 	retn
     reset_link_value:
-	and	[ebx+SymbolTree_Leaf.extended_flags],not SYMX_LINK
+	and	[ebx+SymbolTree_Leaf.flags],not SYM_LINK
 	mov	eax,[ebx+SymbolTree_Leaf.last_use_pass]
 	cmp	eax,[current_pass]
 	jne	reset_current_link_value
@@ -944,9 +942,7 @@ create_value_definition:
     value_redefinition:
 	cmp	[eax+ValueDefinition.type],VALTYPE_ELEMENT
 	je	constant_redefined
-	test	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
-	jnz	constant_redefined
-	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
+	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT or SYM_LINK
 	jnz	constant_redefined
 	test	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	jnz	add_value_definition
@@ -1047,9 +1043,7 @@ remove_value_definition:
 ; preserves: ebx, esi, edi
 	test	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	jnz	variable_ready
-	test	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
-	jnz	cannot_apply_to_constant
-	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
+	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT or SYM_LINK
 	jnz	cannot_apply_to_constant
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED
@@ -1088,9 +1082,7 @@ remove_value_definition:
 	je	definition_moved
 	test	[edi+SymbolTree_Leaf.flags],SYM_VARIABLE
 	jnz	append_moved_definition
-	test	[edi+SymbolTree_Leaf.extended_flags],SYMX_LINK
-	jnz	cannot_apply_to_constant
-	test	[edi+SymbolTree_Leaf.flags],SYM_CONSTANT
+	test	[edi+SymbolTree_Leaf.flags],SYM_CONSTANT or SYM_LINK
 	jnz	cannot_apply_to_constant
 	or	[edi+SymbolTree_Leaf.flags],SYM_VARIABLE
 	test	[edi+SymbolTree_Leaf.flags],SYM_PREDICTED
@@ -1280,7 +1272,7 @@ update_value_link:
 	mov	ecx,[eax+ValueDefinition.pass]
 	cmp	ecx,[current_pass]
 	je	symbol_already_defined
-	test	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
+	test	[ebx+SymbolTree_Leaf.flags],SYM_LINK
 	jnz	update_established_link
     detach_and_retire_values:
 	test	eax,eax
@@ -1304,13 +1296,13 @@ update_value_link:
 	jmp	detach_retired_values
       retired_values_detached:
 	mov	[ebx+SymbolTree_Leaf.retired_definition],eax
-	or	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK
+	or	[ebx+SymbolTree_Leaf.flags],SYM_LINK
 	jmp	link_new_value
     update_established_link:
 	mov	ecx,[current_pass]
 	cmp	ecx,[ebx+SymbolTree_Leaf.last_use_pass]
 	jne	link_new_value
-	or	[ebx+SymbolTree_Leaf.extended_flags],SYMX_LINK_PREDICTED
+	or	[ebx+SymbolTree_Leaf.flags],SYM_LINK_PREDICTED
     link_new_value:
        ; cmp	 ecx,[edx+ValueDefinition.pass]
        ; jne	 internal_error
@@ -1404,7 +1396,7 @@ detect_mispredictions:
 	mov	eax,esi
 	add	eax,sizeof.SymbolTree_Foliage
     inspect_leaf:
-	test	[eax+SymbolTree_Leaf.extended_flags],SYMX_LINK_PREDICTED
+	test	[eax+SymbolTree_Leaf.flags],SYM_LINK_PREDICTED
 	jz	link_prediction_ok
 	push	eax ecx edx esi edi
 	mov	edx,[eax+SymbolTree_Leaf.definition]
@@ -1429,7 +1421,7 @@ detect_mispredictions:
     link_value_mispredicted:
 	or	[next_pass_needed],1
     reset_link_prediction:
-	and	[eax+SymbolTree_Leaf.extended_flags],not SYMX_LINK_PREDICTED
+	and	[eax+SymbolTree_Leaf.flags],not SYM_LINK_PREDICTED
 	pop	edi esi edx ecx eax
     link_prediction_ok:
 	test	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
