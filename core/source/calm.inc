@@ -75,10 +75,13 @@ define_calm_instruction:
 	mov	dl,SYMCLASS_EXPRESSION
 	mov	ebx,[new_local_namespace]
 	call	identify_symbol_in_namespace
+	mov	eax,esi
 	pop	edi esi
 	jc	invalid_argument
 	test	ebx,ebx
 	jz	invalid_argument
+	cmp	byte [eax],')'
+	jne	invalid_argument
     calm_instruction_label_argument_ok:
 	mov	[edi+CompiledMacroHeader.label_argument_leaf],ebx
 	add	edi,sizeof.CompiledMacroHeader
@@ -705,7 +708,7 @@ alm_arrange:
 	je	pattern_breakpoint
 	cmp	al,40h
 	jne	store_whitespace_in_pattern
-	add	esi,sizeof.RecognitionContext
+	call	pass_context
 	jmp	whitespace_in_pattern
     store_whitespace_in_pattern:
 	mov	byte [edi],20h
@@ -715,14 +718,24 @@ alm_arrange:
 	dec	esi
     pattern_parsed:
 	retn
+    pass_context:
+	mov	eax,esi
+	add	esi,sizeof.RecognitionContext
+	cmp	dword [eax],0
+	je	zero_context
+	mov	[embedded_context],eax
+	retn
+    zero_context:
+	and	[embedded_context],0
+	retn
     copy_pattern_data:
 	movsd
 	jmp	parse_pattern
     ignore_context_in_pattern:
-	add	esi,sizeof.RecognitionContext
+	call	pass_context
 	jmp	parse_pattern
     ignore_context_in_pattern_literal:
-	add	esi,sizeof.RecognitionContext
+	call	pass_context
     parse_pattern_literal:
 	cmp	esi,[line_end]
 	je	error_in_parsed_pattern
@@ -753,7 +766,14 @@ alm_arrange:
 	lodsd
 	mov	ecx,eax
 	xor	ebx,ebx
+	mov	eax,[embedded_context]
+	test	eax,eax
+	jz	use_current_namespace_in_pattern
+	mov	eax,[eax+RecognitionContext.base_namespace]
+	jmp	namespace_in_pattern_ok
+      use_current_namespace_in_pattern:
 	mov	eax,[current_namespace]
+      namespace_in_pattern_ok:
 	mov	[recognition_context.base_namespace],eax
 	call	recognize_symbol
 	pop	edi esi
