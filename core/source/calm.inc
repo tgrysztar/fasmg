@@ -82,6 +82,12 @@ define_calm_instruction:
 	jz	invalid_argument
 	cmp	byte [eax],')'
 	jne	invalid_argument
+	call	update_value_definition
+	push	esi edi
+	mov	[value_type],VALTYPE_RESERVED
+	xor	ecx,ecx
+	call	assign_value
+	pop	edi esi
     calm_instruction_label_argument_ok:
 	mov	[edi+CompiledMacroHeader.label_argument_leaf],ebx
 	add	edi,sizeof.CompiledMacroHeader
