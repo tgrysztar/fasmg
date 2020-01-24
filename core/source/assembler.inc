@@ -1039,7 +1039,7 @@ assemble_instruction:
 	call	get_available_value
 	jc	no_label_interceptor
 	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
-	jnz	use_struc
+	jnz	execute_labeled_instruction
 	mov	[label_interceptor],edx
 	mov	eax,[embedded_context]
 	mov	[label_instruction_context],eax
