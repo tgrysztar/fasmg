@@ -3433,6 +3433,9 @@ add_label_to_macro:
 	sub	ecx,esi
 	call	append_to_macro
 	mov	esi,[line_start]
+	cmp	esi,[line_end]
+	jne	assemble_instruction
+	call	add_line_break_to_macro
 	jmp	assemble_instruction
 add_line_break_to_macro:
 	mov	eax,[macro_buffer]
