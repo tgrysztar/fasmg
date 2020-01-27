@@ -335,6 +335,8 @@ extract_argument_value:
 ;  edi - end of the extracted sequence of tokens in provided buffer
 ;  al = initial byte of symbol at pointer, zero when no more symbols there
 ; preserves: ebx
+; note:
+;  when AMODE_DEFINITION is active, current context is not added to the extracted value
 	call	move_to_next_symbol
 	jc	extract_plain_value
 	cmp	byte [esi],'<'
@@ -899,6 +901,33 @@ restore_variables:
 	jne	invalid_argument
 	inc	esi
 	jmp	restore_symbol_value
+move_variable_values:
+	mov	dl,[edx+ValueDefinition.attribute]
+	mov	[chosen_class],dl
+	or	[symbol_definition],1
+	call	identify_symbol
+	jc	missing_argument
+	test	ebx,ebx
+	jz	invalid_identifier
+	mov	[label_leaf],ebx
+	call	move_to_next_symbol
+	jc	missing_argument
+	cmp	al,','
+	jne	invalid_argument
+	inc	esi
+	mov	dl,[chosen_class]
+	and	[symbol_definition],0
+	call	identify_symbol
+	jc	missing_argument
+	test	ebx,ebx
+	jz	invalid_identifier
+	mov	al,[ebx+SymbolTree_Leaf.class]
+	cmp	al,[chosen_class]
+	jne	instruction_assembled
+	xor	edx,edx
+	mov	edi,[label_leaf]
+	call	remove_value_definition
+	jmp	instruction_assembled
 
 label_directive:
 	or	[symbol_definition],1

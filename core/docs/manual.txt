@@ -24,7 +24,7 @@ Table of contents
 7. Conditional assembly
 8. Macroinstructions
 9. Labeled macroinstructions
-10. Symbolic variables
+10. Symbolic variables and recognition context
 11. Repeating blocks of instructions
 12. Matching parameters
 13. Output areas
@@ -870,6 +870,12 @@ the same macroinstruction gives no additional effect.
 
         measured hello, 'Hello!'        ; hello.length = 6
 
+A parameter created with "local" becomes replaced with a text that contains
+the same name as the name of parameter, but has added context information
+that causes it to be identified as belonging to the unique local namespace
+associated with the instance of macroinstruction. This kind of context 
+information is going to be discussed further in the section about
+symbolic variables.
   A symbol that is local to a macroinstruction is never considered the most
 recent label that is base for symbols starting with dot. Moreover, its
 descendant namespace is disconnected from the main tree of symbols, so if
@@ -1022,6 +1028,14 @@ encounters a line with content equal to the argument given to "comment".
                  Any text may follow here.
         ~
 
+  The "mvmacro" is an instruction that takes two arguments, both identifying
+an instruction-class symbols. The definition of a macroinstruction specified
+by the second argument is moved to the symbol identified by the first one.
+For the second symbol the effect of this command is the same as of "purge".
+This allows to effectively rename a macroinstruction, or temporarily disable it
+only to bring it back later.
+
+
 9. Labeled macroinstructions
 
 The "struc" command allows to define a labeled instruction, in form of a
@@ -1081,7 +1095,8 @@ Note that it is not necessary to use "esc" instruction to generate unpaired
 same manner unpaired "macro" or "end macro" can occur freely in a definition
 made with "struc".
   The "restruc" command is analogous to "purge", but it operates on symbols
-from the class of labeled instructions.
+from the class of labeled instructions. Similarly, the "mvstruc" command is 
+the same as "mvmacro" but for labeled instructions.
   As with "macro", it is possible to use an identifier consisting of a lone "?"
 character with "struc". It defines a special labeled macroinstruction that is
 called every time the first symbol of a line is not recognized as an instruction.
@@ -1113,7 +1128,7 @@ inserted enclosed in parentheses before the name of labeled macroinstruction:
         test SYMBOL
 
 
-10. Symbolic variables
+10. Symbolic variables and recognition context
 
 The "equ" is a built-in labeled instruction that defines symbol of expression
 class with a symbolic value. Such value can contain any text (even an empty
@@ -1136,7 +1151,7 @@ symbol analogously to the "=:" command, so the earlier value can be brought
 back with "restore" instruction. To replace the symbolic value (analogously
 to how "=" overwrites the regular value) the "reequ" command should be used
 instead of "equ".
-  The symbolic value, in addition to retaining the exact text it was defined
+  A symbolic value, in addition to retaining the exact text it was defined
 with, preserves the context in which the symbols contained in this text are
 to be interpreted. Therefore it can effectively become a reliable link to
 value of some other symbol, lasting even when it is used in a different
@@ -1151,10 +1166,11 @@ a starting dot):
                 .x = 3
                 db link         ; db 2
 
-It should be noted that the same applies to the parameters of any
-macroinstruction. If during the execution of macroinstruction the context
-changes, the identifiers within the text of parameter still refer to the
-same symbols as in the line that called this instruction:
+  It should be noted that the same process is applied to the arguments of any
+macroinstruction when they become preprocessed parameters. If during
+the execution of a macroinstruction the context changes, the identifiers
+within the text of parameters still refer to the same symbols as in the line
+that called the instruction:
 
         x = 1
         namespace x
@@ -1167,17 +1183,26 @@ same symbols as in the line that called this instruction:
         end macro
         prodx x         ; db 1*2
 
-Furthermore, the parameters defined with "local" command use the same
-mechanism to alter the context in which given name is interpreted, without
-altering the text of the name. However, such modified context is not
-relevant if the value of parameter is inserted in a middle or at the end
-of a complex identifier, because it is the structure of an identifier that
+Furthermore, parameters defined with "local" command use the same mechanism
+to alter the context in which given name is interpreted, without altering
+the text of the name. However, such modified context is not relevant
+if the value of parameter is inserted in a middle or at the end of
+a complex identifier, because it is the structure of an identifier that
 dictates how its later parts are interpreted and only the context for an
-initial part matters.
-  If the text following "equ" viewed as a sequence of symbols contains any
-identifiers of known symbolic values, each of them is replaced with the text
-of its value before creating a new one that is defined. The corresponding
-sections of text still preserve the original context, though.
+initial part matters. For example, prepending a name of a parameter with
+"#" character is going to cause the identifier to use current context instead
+of context carried by the text of that parameter, because initial context
+for the identifier is then the context associated with text "#".
+  Unlike the value of a symbolic variable, the body of a macroinstruction
+by itself carries no context (although it may contain snippets of text that
+came from replaced parameters and because of that have some context associated
+with them). Also, if a macroinstruction becomes unrolled at the time when
+another one is being defined (this can only happen when called macroinstruction
+is unconditional), no context information is added to the arguments, to aid in
+preservation of this context-lessness.
+  If the text following "equ" contains identifiers of known symbolic variables, 
+each of them is replaced with its contents and it is such processed text that
+gets assigned to the newly defined symbol.
   The "define" is a regular instruction that also creates a symbolic value,
 but as opposed to "equ" it does not evaluate symbolic variables in the
 assigned text. It should be followed by an identifier of symbol to be defined
@@ -2265,3 +2290,43 @@ whether there is an available value without affecting it.
 
 A symbol accessed as either destination or source by a "take" command can never be
 forward-referenced even if it could otherwise.
+  Defining macroinstructions in the namespace of case-insensitive "calminstruction"
+allows to add customized commands to the language of CALM instructions. However, 
+they must be defined as case-insensitive to be recognized as such.
+
+        macro calminstruction?.asmarranged? variable*, pattern&
+                arrange variable, pattern
+                assemble variable
+        end macro
+
+        calminstruction writeln? text&
+                asmarranged text, =display text,10
+        end calminstruction
+
+        writeln 'Next!'
+
+Such additional commands may even be defined as CALM instructions themselves:
+
+        calminstruction calminstruction?.initsym? variable*,value&
+                publish variable, value
+        end calminstruction
+
+        calminstruction show? text&
+                local command
+                initsym command, display text
+                stringify text
+                assemble command
+        end calminstruction
+
+        show :)
+
+The command "initsym" in this example is used to assign text to the local
+symbolic variable at the time when "show" instruction is defined.
+Similarly to "local" (and unline "stringify" and "assemble") it does not produce
+any actual code that would be executed when the "show" instruction is called.
+The arguments to "initsym" retain their original context, therefore symbols
+in the text assigned to the "command" variable are interpreted as in the local
+namespace of the "show" instruction. This allows the "display" command to access
+the "text" even though it is local to the CALM instruction and therefore normally
+visible only in the scope of the definition of "show". This is similar to the use
+of "define" to form symbolic links.

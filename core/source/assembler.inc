@@ -1982,6 +1982,7 @@ extract_piece_of_line:
 ; preserves: ebx, edx
 ; note:
 ;  when [breakpoint_token] has the same value as either dl or dh, it has no effect
+;  when AMODE_DEFINITION is active, current context is not added to the extracted value
 	and	[context_boundary],0
 	call	move_to_next_symbol
 	jc	no_piece_to_extract
