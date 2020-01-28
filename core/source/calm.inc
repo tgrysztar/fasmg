@@ -214,7 +214,7 @@ assemble_alm_instruction:
 	inc	[calm_line_number]
     identify_alm_instruction:
 	call	move_to_next_symbol
-	jc	assembly_line
+	jc	empty_line
 	call	get_alm_identifier
 	jc	unrecognized_alm_instruction
 	mov	dl,SYMCLASS_INSTRUCTION
