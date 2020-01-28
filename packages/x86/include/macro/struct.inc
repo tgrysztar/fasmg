@@ -22,7 +22,7 @@ namespace struct?
 		local i
 		compute i, 1
 
-		local field, val
+		local field, val, stack
 	    process_statement:
 		arrange field, sname.=__label#i
 		transform field
@@ -37,22 +37,42 @@ namespace struct?
 		transform tmp
 		arrange val, =__init__#field
 		transform val
-		jyes got_value
+		jyes given_value
 		arrange val, sname.=__default__#field
 		transform val
-		jno statement_ready
+		jyes got_value
+		jump statement_ready
+	    given_value:
+		take stack, field
 	    got_value:
 		arrange tmp, tmp val
 
 	    statement_ready:
 
-		local stack
 		take stack, i
 		take stack, sname
 		assemble tmp
+		take , sname
 		take sname, stack
+		take , i
 		take i, stack
 
+		take field, stack
+		jno next_statement
+		arrange tmp, sname.=__size__#field - (=$ - field)
+		compute tmp, tmp
+		check tmp = 0
+		jyes next_statement
+		check tmp > 0
+		jyes fill_up
+		stringify field
+		asm err 'value too long to fit in ',field
+		jump next_statement
+	    fill_up:
+		arrange tmp, =rb tmp
+		assemble tmp
+
+	    next_statement:
 		compute i, i + 1
 		jump	process_statement
 
@@ -172,6 +192,8 @@ namespace struct?
 		arrange sym, pname.=__default__#label
 		publish sym:, default
 		arrange definition, definition default
+		assemble definition
+		arrange definition, =__size__#label == =$ - label
 		assemble definition
 		match , a
 		jyes done
