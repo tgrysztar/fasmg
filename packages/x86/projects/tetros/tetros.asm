@@ -321,6 +321,8 @@ on_piece:
 	popf
 	ret
 
+rb 510 - ($% + signature - pieces)
+
 pieces dw 0010001000100010b
        dw 0010011000100000b
        dw 0010001001100000b
@@ -329,5 +331,4 @@ pieces dw 0010001000100010b
        dw 0100011000100000b
        dw 0010011001000000b
 
-rb 7C00h+510-$
-dw 0AA55h
+signature dw 0AA55h
