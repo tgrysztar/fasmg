@@ -3,11 +3,11 @@
 
 ; Example of use:
 ;
-; inlinemacro oddflip number
-;	 return = (number) xor 1
-; end inlinemacro
+;	inlinemacro oddflip number
+;		return = (number) xor 1
+;	end inlinemacro
 ;
-; db oddflip(3), oddflip(oddflip(0) shl 1)
+;	db oddflip(3), oddflip(oddflip(0) shl 1)
 
 include 'xcalm.inc'
 
