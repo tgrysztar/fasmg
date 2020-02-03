@@ -1817,6 +1817,111 @@ convert_symbolic_value_to_string:
 	mov	[esi],eax
 	retn
 
+compare_symbolic_values:
+; in:
+;  esi - first symbolic value
+;  edi - second symbolic value
+;  ecx = length to compare
+; out:
+;  ecx = zero when values equal, or a number of bytes following the point of difference
+;  esi - the point of difference in first value
+;  edi - the point of difference in second value
+	mov	al,[esi]
+	cmp	al,[edi]
+	jne	symbolic_values_compared
+	inc	esi
+	inc	edi
+	cmp	al,1Ah
+	je	compare_tokens_with_data
+	cmp	al,22h
+	je	compare_tokens_with_data
+	cmp	al,27h
+	je	compare_tokens_with_data
+	cmp	al,30h
+	je	compare_internal_tokens
+	cmp	al,40h
+	je	compare_context_tokens
+	loop	compare_symbolic_values
+    symbolic_values_compared:
+	retn
+    compare_tokens_with_data:
+	dec	ecx
+	mov	eax,[esi]
+	mov	edx,[edi]
+	cmp	eax,edx
+	jne	compare_token_data
+	add	esi,4
+	add	edi,4
+	sub	ecx,4
+	jnz	compare_symbolic_values
+	retn
+    compare_token_data:
+	mov	ebx,[eax]
+	cmp	ebx,[edx]
+	jne	symbolic_values_compared
+	add	eax,ebx
+	add	edx,ebx
+	xchg	esi,eax
+	xchg	edi,edx
+	xchg	ecx,ebx
+	dec	ecx
+	shr	ecx,2
+	inc	ecx
+	cmp	byte [eax-1],1Ah
+	jne	compare_token_dwords
+	inc	ecx
+	add	esi,4
+	add	edi,4
+    compare_token_dwords:
+	std
+	repe	cmpsd
+	cld
+	jne	token_data_content_differs
+	lea	esi,[eax+4]
+	lea	edi,[edx+4]
+	mov	ecx,ebx
+	sub	ecx,4
+	jnz	compare_symbolic_values
+	retn
+    token_data_content_differs:
+	mov	esi,eax
+	mov	edi,edx
+	mov	ecx,ebx
+	retn
+    compare_internal_tokens:
+	mov	eax,[esi]
+	cmp	eax,[edi]
+	jne	symbolic_values_compared
+	add	esi,4
+	add	edi,4
+	sub	ecx,1+4
+	sub	ecx,eax
+	xchg	ecx,eax
+	repe	cmpsb
+	je	internal_tokens_equal
+	inc	ecx
+	add	ecx,eax
+	retn
+    internal_tokens_equal:
+	add	ecx,eax
+	jnz	compare_symbolic_values
+	retn
+    compare_context_tokens:
+	dec	ecx
+	assert	sizeof.RecognitionContext and 11b = 0
+	mov	edx,sizeof.RecognitionContext shr 2
+    compare_contexts:
+	mov	eax,[esi]
+	cmp	eax,[edi]
+	jne	symbolic_values_compared
+	add	esi,4
+	add	edi,4
+	sub	ecx,4
+	jz	symbolic_values_compared
+	dec	edx
+	jnz	compare_contexts
+	jmp	compare_symbolic_values
+
 move_to_next_symbol:
 ; in:
 ;  esi = pointer into preprocessed line or current embedded value
@@ -1829,6 +1934,8 @@ move_to_next_symbol:
 ;   esi - next symbol
 ;   al = initial byte of the next symbol
 ; preserves: ebx, edx, edi
+; note:
+;  [embedded_context] is updated to point to a RecognitionContext that should be in force at the new position (null means current namespace context);
 	cmp	esi,[line_end]
 	jb	next_token_available
 	stc
@@ -1878,6 +1985,8 @@ warp_to_next_symbol:
 ;  when cf = 0:
 ;   al = initial byte of the next symbol
 ; preserves: ebx, edx, edi
+; note:
+;  [embedded_context] is updated to point to a RecognitionContext that should be in force at the new position (null means current namespace context);
 	call	move_to_next_symbol
 	jc	warp_through_embedding_boundary
 	retn
@@ -2145,111 +2254,6 @@ make_recognition_context_token:
 	mov	[context_boundary],edi
 	retn
 
-compare_symbolic_values:
-; in:
-;  esi - first symbolic value
-;  edi - second symbolic value
-;  ecx = length to compare
-; out:
-;  ecx = zero when values equal, or a number of bytes following the point of difference
-;  esi - the point of difference in first value
-;  edi - the point of difference in second value
-	mov	al,[esi]
-	cmp	al,[edi]
-	jne	symbolic_values_compared
-	inc	esi
-	inc	edi
-	cmp	al,1Ah
-	je	compare_tokens_with_data
-	cmp	al,22h
-	je	compare_tokens_with_data
-	cmp	al,27h
-	je	compare_tokens_with_data
-	cmp	al,30h
-	je	compare_internal_tokens
-	cmp	al,40h
-	je	compare_context_tokens
-	loop	compare_symbolic_values
-    symbolic_values_compared:
-	retn
-    compare_tokens_with_data:
-	dec	ecx
-	mov	eax,[esi]
-	mov	edx,[edi]
-	cmp	eax,edx
-	jne	compare_token_data
-	add	esi,4
-	add	edi,4
-	sub	ecx,4
-	jnz	compare_symbolic_values
-	retn
-    compare_token_data:
-	mov	ebx,[eax]
-	cmp	ebx,[edx]
-	jne	symbolic_values_compared
-	add	eax,ebx
-	add	edx,ebx
-	xchg	esi,eax
-	xchg	edi,edx
-	xchg	ecx,ebx
-	dec	ecx
-	shr	ecx,2
-	inc	ecx
-	cmp	byte [eax-1],1Ah
-	jne	compare_token_dwords
-	inc	ecx
-	add	esi,4
-	add	edi,4
-    compare_token_dwords:
-	std
-	repe	cmpsd
-	cld
-	jne	token_data_content_differs
-	lea	esi,[eax+4]
-	lea	edi,[edx+4]
-	mov	ecx,ebx
-	sub	ecx,4
-	jnz	compare_symbolic_values
-	retn
-    token_data_content_differs:
-	mov	esi,eax
-	mov	edi,edx
-	mov	ecx,ebx
-	retn
-    compare_internal_tokens:
-	mov	eax,[esi]
-	cmp	eax,[edi]
-	jne	symbolic_values_compared
-	add	esi,4
-	add	edi,4
-	sub	ecx,1+4
-	sub	ecx,eax
-	xchg	ecx,eax
-	repe	cmpsb
-	je	internal_tokens_equal
-	inc	ecx
-	add	ecx,eax
-	retn
-    internal_tokens_equal:
-	add	ecx,eax
-	jnz	compare_symbolic_values
-	retn
-    compare_context_tokens:
-	dec	ecx
-	assert	sizeof.RecognitionContext and 11b = 0
-	mov	edx,sizeof.RecognitionContext shr 2
-    compare_contexts:
-	mov	eax,[esi]
-	cmp	eax,[edi]
-	jne	symbolic_values_compared
-	add	esi,4
-	add	edi,4
-	sub	ecx,4
-	jz	symbolic_values_compared
-	dec	edx
-	jnz	compare_contexts
-	jmp	compare_symbolic_values
-
 embed_symbolic_value:
 ; in:
 ;  ebx - SymbolTree_Leaf
@@ -2293,6 +2297,13 @@ embed_symbolic_value:
 
 clear_line_embeddings:
 ; preserves: ebx, ecx, edx, esi, edi
+; note:
+;  when esi is said to point into preprocessed line or current embedded value, it must be between [line_start] and [line_end];
+;  these two pointers change upon entering a symbolic value of evaluated identifier (with embed_symbolic_value)
+;  and are restored when warp_to_next_symbol goes past the end of that embedded value;
+;  if the assembly is finished before reaching the end of line, clear_line_embeddings needs to be called
+;  to discard the stack of stored [line_start] and [line_end] boundaries before setting up a new line for the assembly;
+;  it does not reset [embedded_context], but this can be done by simply zeroing the pointer
 	xor	eax,eax
 	mov	[line_start],eax
 	mov	[line_end],eax

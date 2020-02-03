@@ -361,8 +361,8 @@ commas, and it discards the latest definition of every one of them. It is not
 considered an error to use "restore" with a symbol that has no active
 definition (either because it was never defined or because all of its
 definitions were already discarded earlier). If a symbol is treated with the
-"restore" command, it can never be forward-referenced - for this reason
-"restore" cannot be applied to constants.
+"restore" command, it becomes a variable and can never be forward-referenced.
+For this reason "restore" cannot be applied to constants.
   The "label" keyword followed by a symbol identifier is an alternative way
 of defining a label. In this basic form it is equivalent to a definition made
 with ":", but it occupies an entire line. However with this command it is
@@ -1033,7 +1033,8 @@ an instruction-class symbols. The definition of a macroinstruction specified
 by the second argument is moved to the symbol identified by the first one.
 For the second symbol the effect of this command is the same as of "purge".
 This allows to effectively rename a macroinstruction, or temporarily disable it
-only to bring it back later.
+only to bring it back later. The symbols affected by this operation become
+variables and cannot be forward-referenced.
 
 
 9. Labeled macroinstructions

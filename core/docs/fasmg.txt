@@ -799,7 +799,7 @@ outside of "match" block. One way could be to call a special macro:
                 invoker
         end struc
 
-But a simpler option is to call the original line directly and when override
+A simpler option is to call the original line directly and when override
 is needed, cause it to be ignored with help of another line interceptor
 (disposing of itself immediately after):
 
@@ -816,7 +816,7 @@ is needed, cause it to be ignored with help of another line interceptor
 However, a much better way of avoiding this kinds of pitfalls is to use
 CALM instructions instead of standard macros. There it is possible to
 process arguments and assemble the original or modified line without
-use of any control directives. CALM instruction also offer a much better
+use of any control directives. CALM instructions also offer a much better
 performance, which might be especially important in case of interceptors
 that get called for nearly every line in source text.
 
@@ -918,3 +918,185 @@ they may not even need an access to original control directives.
 However, if CALM instruction needs to assemble a directive that might not
 be accessible, the symbolic variable passed to "assemble" should be
 defined with appropriate context for the instruction symbol.
+
+
+
+How to convert a macroinstruction to CALM?
+
+A classic macroinstruction consists of lines of text that are preprocessed
+(by replacing names of parameters with their corresponding values) every time
+the instruction is called and these preprocessed lines are passed to assembly.
+For example this macroinstruction generates just a single line to be assembled,
+and it does it by replacing "number" with the text given by the only argument
+to the instruction:
+
+        macro octet value*
+                db value
+        end macro
+
+A CALM instruction can be viewed as customized preprocessor, which needs to
+be written in a special language. It is able to use various commands to
+process the arguments and generate lines to be assembled. On the basic
+level, it is also able to simulate what standard preprocessor does - with
+help of "arrange" command. After preprocessing the line, it also needs to
+explicitly pass it to the assembly with an "assemble" command:
+
+        calminstruction octet value*
+                arrange value, =db value
+                assemble value
+        end calminstruction
+
+This gives the same result as the original macroinstruction, as it performs
+the same kind of preprocessing. However, unlike the text of macroinstruction
+a pattern given to "arrange" needs to explicitly state which name tokens are
+to be replaced with their values and which ones (prepended with "=") should
+be left untouched. The tokens that are copied from the pattern are stripped of
+any context information, just like the text of macroinstruction is normally not
+carrying any (while the values that came from arguments retain the recognition
+context in which the instruction was started).
+  This is the most straightforward method of conversion and a simple sequence
+of "arrange" and "assemble" commands could be made to generate the same lines as
+by the original macroinstruction. But there is one exception - when a "local"
+command is executed by macroinstruction, it creates a preprocessed parameter
+with a special value that points to a symbol in the namespace unique to given
+instance of the instruction.
+
+        macro pointer
+                local next
+                dd next
+            next:
+        end macro
+
+In case of CALM there is no such namespace available, the local namespace of
+a CALM instruction is shared among all its instances. Therefore, if a new unique
+symbol is needed every time the instruction is called, it has to be constructed
+manually. An obvious method might be to append a unique number to the name:
+
+        global_uid = 0
+
+        calminstruction pointer
+                compute global_uid, global_uid + 1
+                local command
+                arrange command, =dd =next#global_uid
+                assemble command
+                arrange command, =next#global_uid:
+                assemble command
+        end calminstruction
+
+Here "arrange" is given a variable that has a numeric value and it has to
+replace it with a text. This works only when the value is a plan non-negative
+number, in such case "arrange" converts it to a text token that contains decimal
+representation of that number. The lines passed to assembly are therefore
+going to contains identifiers like "next#1".
+  While incrementation of the global counter could be done by preparing
+a standard assembly command like "global_uid = global_uid + 1" with "arrange"
+and passing it to assembly, "compute" command allows to do it directly in the
+CALM processor. Moreover, it is then not affected by anything that alters
+the context of assembly. If the instruction was defined as unconditional and
+used inside a skipped IF block, the "compute" would still perform its task,
+because execution of CALM commands is - just like standard preprocessing - done
+independently from the main flow of the assembly. Also, references to
+the "global_uid" always point to the same symbol - the one that was in scope
+when the CALM instruction was defined and compiled. Therefore incrementing
+the value with "compute" is more reliable and predictable.
+  In a similar manner, the assembly of line defining the label can be replaced
+with a "publish" command. Here the value of the label (which should be equal
+to the address after the line containing "dd" is assembled) needs to be computed
+first, because "publish" only performs the assignment of a value to the symbol:
+
+        global_uid = 0
+
+        calminstruction pointer
+                compute global_uid, global_uid + 1
+                local symbol, command
+                arrange symbol, =next#global_uid
+                arrange command, =dd symbol
+                assemble command
+                local address
+                compute address, $
+                publish symbol:, address
+        end calminstruction 
+
+Because the CALM instruction itself is conditional, the "publish" inside is
+effectively conditional, too. Therefore it works correctly as a replacement
+for the assembly of line with a label.
+  While a global counter has several advantages, it can be interfered with,
+so sometimes use of a local counter might be preferable. However, the local
+namespace of CALM instruction is not normally not accessible from outside, so
+it is a bit harder to give an initial value to such counter. One way could be
+to check whether the counter has already been initialized with some value using
+"take" command:
+
+        calminstruction pointer
+                local id
+                take id, id
+                jyes increment
+                compute id, 0
+            increment:
+                compute id, id + 1
+                local symbol, command
+                arrange symbol, =next#id
+                arrange command, =dd symbol
+                assemble command
+                local address
+                compute address, $
+                publish symbol:, address
+        end calminstruction 
+
+But this adds commands that are executed every time the instruction is called.
+A better solution makes use of the ability to define custom instructions
+processed during the definition of CALM instruction:
+
+        calminstruction calminstruction?.init? var*, val:0
+                compute val, val
+                publish var, val
+        end calminstruction
+
+        calminstruction pointer
+                local id
+                init id, 0
+                compute id, id + 1
+                local symbol, command
+                arrange symbol, =next#id
+                arrange command, =dd symbol
+                assemble command
+                local address
+                compute address, $
+                publish symbol:, address
+        end calminstruction 
+
+The custom statement "init" is called at the time when the CALM instruction is
+defined (it does not generate any commands to be executed by the defined
+instruction - it would itself have to use "assemble" commands to generate
+statements to be compiled). It is given the name of variable from the local
+scope of the CALM instruction, and it uses "publish" to assign an initial
+numeric value to that variable.
+  To initialize local variable with a symbolic value, even simpler custom
+instruction would suffice:
+
+        calminstruction calminstruction?.initsym? var*, val&
+                publish var, val
+        end calminstruction
+
+The text of "val" argument carries the recognition context of the definition
+of CALM instruction that contains the "initsym" statement, therefore it allows
+to prepare a text for "assemble" containing references to local symbols:
+
+        calminstruction be32? value
+                local command
+                initsym command, dd value
+                compute value, value bswap 4
+                assemble command
+        end calminstruction 
+
+Again, after this intruction is compiled, it contains just two actual commands,
+"compute" and "assemble", and the value of local symbol "command" is a text
+that is interpreted in the same local context and refers to the same symbol
+"value" as the "compute" does.
+  This example also demonstrates another advantage of CALM over standard
+macroinstructions: its strict semantics prevent various kinds of unwanted
+behavior that is allowed by a simple substitution of text. The text of "value"
+is going to be evaluated by "compute" as a numeric sub-expression, signalling
+an error on any unexpected syntax. Therefore it should be favorable to process
+arguments entirely through CALM commands and only use "assemble" for final
+simple statements.

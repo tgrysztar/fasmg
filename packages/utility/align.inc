@@ -24,7 +24,7 @@ define align? align
 
 align?.count = 0
 
-calminstruction align?.assume address*, alignment*
+calminstruction align?.assume? address*, alignment*
 	local index, symbol
 	compute address, address
 	compute alignment, alignment
