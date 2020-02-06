@@ -48,8 +48,8 @@ while ORIGIN_PARITY and not 1
 end while
 
 	xor	ax,ax
-	mov	sp,origin
 	mov	ss,ax
+	mov	sp,origin
 	mov	ds,ax
 	mov	es,ax
 	push	ax
@@ -64,6 +64,7 @@ restart:
 	mov	bp,sp
 
 	xor	ax,ax
+	cld
 	lea	di,[next]
 	stosw	; [next]
 	stosw	; [score]
