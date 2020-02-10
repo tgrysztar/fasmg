@@ -790,6 +790,10 @@ mark_symbol_as_used:
 ;  ebx - SymbolTree_Leaf
 ;  edx - ValueDefinition, null when value is unavailable but used nonetheless
 ; preserves: ebx, ecx, edx, esi, edi
+; note:
+;  normally setting SymbolTree_Leaf.last_use_pass is enough, but this function
+;  improves prediction quality of USED operator;
+;  it does not need to be used for symbols that are unlikely to be checked this way
 	mov	eax,[current_pass]
 	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	test	edx,edx
@@ -810,6 +814,18 @@ mark_symbol_as_used:
 	jmp	mark_fallback_neighbour
       used_fallbacks_marked:
 	pop	edx ebx
+	retn
+
+use_available_value:
+; same as get_available_value, but also includes operation of mark_symbol_as_used
+	mov	eax,[current_pass]
+	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
+	call	get_available_value
+	jc	use_unavailable_value
+	retn
+    use_unavailable_value:
+	call	mark_used_fallbacks
+	stc
 	retn
 
 create_constant_value_definition:

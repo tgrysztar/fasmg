@@ -11,7 +11,7 @@
 
 include 'xcalm.inc'
 
-define inlinemacro inlinemacro
+define inlinemacro? inlinemacro
 
 calminstruction inlinemacro?! declaration&
 	local	name

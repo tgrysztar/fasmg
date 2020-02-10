@@ -1162,9 +1162,8 @@ calculate_parsed_expression:
 	test	eax,eax
 	jz	invalid_identifier_in_expression
 	mov	ebx,eax
-	call	mark_symbol_as_used
 	mov	[expression_end],esi
-	call	get_available_value
+	call	use_available_value
 	jc	undefined_symbol_in_expression
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC

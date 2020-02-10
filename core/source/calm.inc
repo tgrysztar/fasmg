@@ -1527,7 +1527,7 @@ calm_arrange:
 	jmp	arrange_token
     arrange_by_reference:
 	mov	ebx,[esi+4]
-	call	get_available_value
+	call	use_available_value
 	jc	arrange_missing_value
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_NUMERIC
@@ -1613,6 +1613,8 @@ calm_match:
 	and	[calm_result],0
 	lodsd
 	mov	ebx,eax
+	mov	eax,[current_pass]
+	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	lodsd
 	mov	ecx,eax
 	lodsd
@@ -2112,6 +2114,8 @@ calm_assemble:
 	mov	[instruction_branch],eax
 	call	get_available_value
 	jc	calm_undefined_symbol
+	mov	eax,[current_pass]
+	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC
 	jne	calm_invalid_value
@@ -2312,6 +2316,8 @@ calm_publish_variable:
     calm_publish:
 	lodsd
 	mov	ebx,eax
+	mov	eax,[current_pass]
+	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	lodsd
 	mov	[label_leaf],eax
 	call	get_available_value
@@ -2335,7 +2341,7 @@ calm_publish_variable:
 	test	ebx,ebx
 	jz	calm_invalid_identifier
 	xchg	ebx,[label_leaf]
-	call	get_available_value
+	call	use_available_value
 	jc	calm_undefined_symbol
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC
