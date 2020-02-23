@@ -360,7 +360,7 @@ extract_argument_value:
       parameter_value_extracted:
 	retn
 
-get_macro_symbol:
+get_macro_definition_symbol:
 ; in:
 ;  esi = pointer into preprocessed line or current embedded value
 ;  al = initial byte of symbol at esi
@@ -405,8 +405,63 @@ get_macro_symbol:
 	or	[macro_flags],VAL_UNCONDITIONAL
     macro_symbol_ok:
 	mov	[macro_leaf],ebx
+	mov	edx,[ebx+SymbolTree_Leaf.definition]
+	test	edx,edx
+	jz	create_placeholder_value
+	test	[edx+ValueDefinition.flags],VAL_INTERNAL
+	jnz	macro_already_defined
+	mov	eax,[current_pass]
+	sub	eax,[edx+ValueDefinition.pass]
+	jz	macro_already_defined
+	cmp	eax,1
+	je	macro_symbol_ready
+    create_placeholder_value:
+    ; for VAL_UNCONDITIONAL macros this helps to detect when a macro tries to call itself,
+    ; for regular ones this section interferes with operation of SYM_PREDICTED to sometimes prevent excess passes,
+    ; any newly introduced mechanism that would expect SYM_PREDICTED to behave reliably for instruction symbol
+    ; should mark the symbol in some way and skip this section upon seeing the mark
+	call	create_value_definition
+	test	edx,edx
+	jz	macro_symbol_ready
+	mov	eax,[current_pass]
+	dec	eax
+	mov	[edx+ValueDefinition.pass],eax
+	mov	[edx+ValueDefinition.type],VALTYPE_RESERVED
+	mov	al,[macro_flags]
+	mov	[edx+ValueDefinition.flags],al
+	test	al,VAL_UNCONDITIONAL
+	jnz	macro_symbol_ready
+	or	[edx+ValueDefinition.flags],VAL_IN_USE
+	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED
+	jz	macro_symbol_ready
+	mov	edi,ebx
+	mov	ecx,[current_pass]
+      check_macro_usage:
+	cmp	ecx,[edi+SymbolTree_Leaf.last_use_pass]
+	je	macro_possibly_used_earlier
+	mov	edx,[edi+SymbolTree_Leaf.fallback_neighbour]
+	test	edx,edx
+	jz	look_up_parent_namespace_macro
+	cmp	ecx,[edx+SymbolTree_Leaf.last_use_pass]
+	je	macro_possibly_used_earlier
+      look_up_parent_namespace_macro:
+	mov	edi,[edi+SymbolTree_Leaf.fallback_parent]
+	test	edi,edi
+	jnz	check_macro_usage
+	and	[ebx+SymbolTree_Leaf.flags],not SYM_PREDICTED
+	jmp	macro_symbol_ready
+      macro_possibly_used_earlier:
+	test	al,VAL_NONRECURSIVE
+	jnz	macro_symbol_ready
+	or	[next_pass_needed],-1
+    macro_symbol_ready:
 	clc
 	retn
+    macro_already_defined:
+	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
+	jz	macro_symbol_ready
+	mov	edx,_conflicting_definition
+	call	register_error
     invalid_macro_symbol:
 	stc
 	retn
@@ -3081,58 +3136,8 @@ define_macro:
 	je	macro_with_label_parameter
     read_macro_name:
 	mov	dl,bl
-	call	get_macro_symbol
+	call	get_macro_definition_symbol
 	jc	invalid_identifier
-	mov	edx,[ebx+SymbolTree_Leaf.definition]
-	test	edx,edx
-	jz	create_placeholder_value
-	test	[edx+ValueDefinition.flags],VAL_INTERNAL
-	jnz	macro_already_defined
-	mov	eax,[current_pass]
-	sub	eax,[edx+ValueDefinition.pass]
-	jz	macro_already_defined
-	cmp	eax,1
-	je	prepare_macro
-    create_placeholder_value:
-    ; for VAL_UNCONDITIONAL macros this helps to detect when a macro tries to call itself,
-    ; for regular ones this section interferes with operation of SYM_PREDICTED to sometimes prevent excess passes,
-    ; any newly introduced mechanism that would expect SYM_PREDICTED to behave reliably for instruction symbol
-    ; should mark the symbol in some way and skip this section upon seeing the mark
-	call	create_value_definition
-	test	edx,edx
-	jz	prepare_macro
-	mov	eax,[current_pass]
-	dec	eax
-	mov	[edx+ValueDefinition.pass],eax
-	mov	[edx+ValueDefinition.type],VALTYPE_RESERVED
-	mov	al,[macro_flags]
-	mov	[edx+ValueDefinition.flags],al
-	test	al,VAL_UNCONDITIONAL
-	jnz	prepare_macro
-	or	[edx+ValueDefinition.flags],VAL_IN_USE
-	test	[ebx+SymbolTree_Leaf.flags],SYM_PREDICTED
-	jz	prepare_macro
-	mov	edi,ebx
-	mov	ecx,[current_pass]
-      check_macro_usage:
-	cmp	ecx,[edi+SymbolTree_Leaf.last_use_pass]
-	je	macro_possibly_used_earlier
-	mov	edx,[edi+SymbolTree_Leaf.fallback_neighbour]
-	test	edx,edx
-	jz	look_up_parent_namespace_macro
-	cmp	ecx,[edx+SymbolTree_Leaf.last_use_pass]
-	je	macro_possibly_used_earlier
-      look_up_parent_namespace_macro:
-	mov	edi,[edi+SymbolTree_Leaf.fallback_parent]
-	test	edi,edi
-	jnz	check_macro_usage
-	and	[ebx+SymbolTree_Leaf.flags],not SYM_PREDICTED
-	jmp	prepare_macro
-      macro_possibly_used_earlier:
-	test	al,VAL_NONRECURSIVE
-	jnz	prepare_macro
-	or	[next_pass_needed],-1
-    prepare_macro:
 	mov	[argument_start],esi
 	mov	eax,[embedded_context]
 	mov	[macro_parameters_context],eax
@@ -3146,12 +3151,6 @@ define_macro:
 	jnc	check_macro_parameters
     invalid_macro_definition:
 	mov	edx,_invalid_argument
-	call	register_error
-	jmp	assembly_line
-    macro_already_defined:
-	test	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
-	jz	prepare_macro
-	mov	edx,_conflicting_definition
 	call	register_error
 	jmp	assembly_line
     check_parameter_name:

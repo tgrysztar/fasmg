@@ -54,7 +54,7 @@ define_calm_instruction:
 	and	[argument_start],0
 	mov	dl,SYMCLASS_INSTRUCTION
     get_calm_instruction_identifier:
-	call	get_macro_symbol
+	call	get_macro_definition_symbol
 	jc	invalid_identifier
 	push	esi
 	mov	eax,ebx
