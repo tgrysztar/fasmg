@@ -2,7 +2,8 @@
 ; by Tomasz Grysztar
 
 ; Requires VGA and 80386 CPU or higher.
-; Version 1.01 was submitted in 2004 for a 512-byte OS contest.
+; Version 1.01 was submitted in 2004 for a 512-byte OS contest
+;   (https://web.archive.org/web/20040930044834/http://512.decard.net/)
 
 ; For your playing pleasure, it's a boot-sector Tetris game.
 ; Keys:
@@ -42,6 +43,7 @@ label well at 8000h
 label pics at well-2*64
 label origin at pics-(pics_wrt_bp-bp)
 
+assert origin and 1 = 0
 ORIGIN_PARITY = origin and 0FFh
 while ORIGIN_PARITY and not 1
 	ORIGIN_PARITY = (ORIGIN_PARITY shr 1) xor (ORIGIN_PARITY and 1)
