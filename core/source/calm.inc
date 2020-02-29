@@ -2336,10 +2336,13 @@ calm_publish_variable:
 	and	[symbol_definition],0
 	mov	dl,SYMCLASS_EXPRESSION
 	call	identify_symbol
+	mov	eax,esi
 	pop	edi esi
 	jc	calm_invalid_identifier
 	test	ebx,ebx
 	jz	calm_invalid_identifier
+	cmp	eax,[line_end]
+	jne	calm_invalid_identifier
 	xchg	ebx,[label_leaf]
 	call	use_available_value
 	jc	calm_undefined_symbol
