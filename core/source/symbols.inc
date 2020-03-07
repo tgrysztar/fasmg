@@ -793,7 +793,6 @@ mark_symbol_as_used:
 ; note:
 ;  normally setting SymbolTree_Leaf.last_use_pass is enough, but this function
 ;  improves prediction quality of USED operator;
-;  it does not need to be used for symbols that are unlikely to be checked this way
 	mov	eax,[current_pass]
 	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	test	edx,edx

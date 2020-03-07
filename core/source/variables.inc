@@ -280,6 +280,7 @@ first_sign db ?
 second_sign db ?
 comparator_priority db ?
 result_type db ?
+defined_element db ?
 
 source_context_affected db ?
 raw_value db ?

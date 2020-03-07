@@ -1613,8 +1613,6 @@ calm_match:
 	and	[calm_result],0
 	lodsd
 	mov	ebx,eax
-	mov	eax,[current_pass]
-	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	lodsd
 	mov	ecx,eax
 	lodsd
@@ -1624,7 +1622,7 @@ calm_match:
 	mov	[pattern_end],eax
 	lodsd
 	mov	[brackets],eax
-	call	get_available_value
+	call	use_available_value
 	jc	calm_undefined_symbol
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_RESERVED
@@ -2112,10 +2110,8 @@ calm_assemble:
 	mov	ebx,eax
 	mov	eax,[ebx+SymbolTree_Leaf.branch]
 	mov	[instruction_branch],eax
-	call	get_available_value
+	call	use_available_value
 	jc	calm_undefined_symbol
-	mov	eax,[current_pass]
-	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC
 	jne	calm_invalid_value
@@ -2316,11 +2312,9 @@ calm_publish_variable:
     calm_publish:
 	lodsd
 	mov	ebx,eax
-	mov	eax,[current_pass]
-	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	lodsd
 	mov	[label_leaf],eax
-	call	get_available_value
+	call	use_available_value
 	jc	calm_undefined_symbol
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC

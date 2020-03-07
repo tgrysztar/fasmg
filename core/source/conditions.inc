@@ -535,46 +535,45 @@ check_if_value_equal:
 	jmp	evaluated_true
 
 check_if_defined:
-	lodsd
-	test	eax,eax
-	jnz	invalid_logical_value
 	xor	ecx,ecx
 	jmp	check_if_expression_defined
 check_if_defined_earlier:
-	lodsd
-	test	eax,eax
-	jnz	invalid_logical_value
-	cmp	[esi],eax
-	je	invalid_logical_value
 	mov	ecx,[current_pass]
     check_if_expression_defined:
 	and	[outer_expression],0
+	and	[defined_element],0
+	lodsd
+	test	eax,eax
+	jnz	invalid_logical_value
     check_expression_element:
 	lodsd
 	test	eax,eax
 	jz	check_expression_end
-	cmp	al,EXPR_SYMBOL_VALUE
-	je	check_if_symbol_defined
 	cmp	al,EXPR_SYMBOL
 	je	check_if_subexpression_defined
+	cmp	al,EXPR_SYMBOL_VALUE
+	je	check_if_symbol_defined
+	or	[defined_element],1
+	add	esi,4
 	cmp	al,EXPR_NUMBER
-	je	check_basic_expression_element
+	je	check_expression_element
 	cmp	al,EXPR_STRING
-	je	check_basic_expression_element
+	je	check_expression_element
 	cmp	al,EXPR_FLOAT
-	je	check_basic_expression_element
+	je	check_expression_element
 	cmp	al,EXPR_OPERATOR
-	je	check_basic_expression_element
+	je	check_expression_element
 	jmp	invalid_logical_value
     check_expression_end:
 	xor	esi,esi
 	xchg	esi,[outer_expression]
 	test	esi,esi
 	jnz	check_expression_element
+	jecxz	checked_expression_defined
+	cmp	[defined_element],0
+	je	invalid_logical_value
+    checked_expression_defined:
 	jmp	evaluated_true
-    check_basic_expression_element:
-	lodsd
-	jmp	check_expression_element
     check_if_symbol_defined:
 	lodsd
 	test	eax,eax
@@ -583,6 +582,7 @@ check_if_defined_earlier:
 	test	eax,eax
 	jz	evaluated_false
     check_symbol_value:
+	or	[defined_element],1
 	jecxz	check_expression_element
 	test	[eax+ValueDefinition.flags],VAL_INTERNAL
 	jnz	check_expression_element
