@@ -932,7 +932,7 @@ alm_compute:
 	mov	[calm_code_cursor],edi
 	call	convert_parsed_expression
 	pop	esi
-	jc	assembly_line
+	jc	no_computable_expression
 	mov	ecx,edi
 	xchg	edi,[calm_code_cursor]
 	sub	ecx,edi

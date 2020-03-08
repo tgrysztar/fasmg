@@ -861,7 +861,7 @@ parse_expression:
 	mov	edi,[expression_end]
 	mov	edx,expression_workspace
 	mov	ecx,[operator_stack_position]
-	sub	ecx,[operator_stack]
+	sub	ecx,[operator_stack_base]
 	add	ecx,16
 	call	reserve_workspace
 	mov	[expression_end],edi
@@ -1184,6 +1184,7 @@ calculate_parsed_expression:
 	push	[calculation_position]
 	call	calculate_parsed_expression
 	pop	[calculation_position]
+	jc	invalid_subexpression
 	pop	[expression_end]
 	jmp	calculation_loop
     invalid_subexpression:
@@ -1541,23 +1542,22 @@ calculate_parsed_expression:
 	call	register_error
 	stc
 	retn
-    invalid_identifier_in_expression:
-	mov	edx,_invalid_identifier
-	call	register_error
-	jmp	unknown_result
-    invalid_number_in_expression:
-	mov	edx,_invalid_number
-	call	register_error
-	jmp	unknown_result
-    invalid_symbol_in_expression:
-	mov	edx,_invalid_symbol
-	call	register_error
-	jmp	unknown_result
     undefined_symbol_in_expression:
 	cmp	[next_pass_needed],0
 	jne	unknown_result
 	mov	edx,_undefined_symbol
 	call	register_error_with_symbol_name
+	jmp	unknown_result
+    invalid_identifier_in_expression:
+	mov	edx,_invalid_identifier
+	jmp	error_causing_unknown_result
+    invalid_number_in_expression:
+	mov	edx,_invalid_number
+	jmp	error_causing_unknown_result
+    invalid_symbol_in_expression:
+	mov	edx,_invalid_symbol
+    error_causing_unknown_result:
+	call	register_error
     unknown_result:
 	mov	eax,edi
 	mov	edi,[calculation_position]
@@ -1592,11 +1592,10 @@ calculate_parsed_expression:
 	jnz	invalid_expression
        ; clc
 	retn
+    skip_two_dwords:
+	add	esi,4
     skip_dword:
 	add	esi,4
-	jmp	skip_expression
-    skip_two_dwords:
-	add	esi,8
 	jmp	skip_expression
 
 pop_terms:
@@ -1620,6 +1619,10 @@ pop_terms:
 	clc
 	retn
       nothing_to_pop:
+	and	[edi+ExpressionTerm.metadata],0
+	and	[edi+sizeof.ExpressionTerm+ExpressionTerm.attributes],0
+	mov	[edi+ExpressionTerm.attributes],EXPR_NUMBER
+	mov	[edi+ExpressionTerm.value],zero_value
 	stc
 	retn
 

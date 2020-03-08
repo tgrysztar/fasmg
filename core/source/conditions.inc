@@ -544,7 +544,7 @@ check_if_defined_earlier:
 	and	[defined_element],0
 	lodsd
 	test	eax,eax
-	jnz	invalid_logical_value
+	jnz	checked_expression_invalid
     check_expression_element:
 	lodsd
 	test	eax,eax
@@ -563,6 +563,7 @@ check_if_defined_earlier:
 	je	check_expression_element
 	cmp	al,EXPR_OPERATOR
 	je	check_expression_element
+    checked_expression_invalid:
 	jmp	invalid_logical_value
     check_expression_end:
 	xor	esi,esi
@@ -571,7 +572,7 @@ check_if_defined_earlier:
 	jnz	check_expression_element
 	jecxz	checked_expression_defined
 	cmp	[defined_element],0
-	je	invalid_logical_value
+	je	checked_expression_invalid
     checked_expression_defined:
 	jmp	evaluated_true
     check_if_symbol_defined:

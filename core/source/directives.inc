@@ -248,6 +248,7 @@ add_block_parameter:
 	pop	edi
 	mov	[ecx+BlockParameter.symbol],ebx
 	mov	[ecx+BlockParameter.definition],edx
+	inc	[edx+ValueDefinition.reference_count]
 	mov	eax,ecx
 	xchg	eax,[edi+DirectiveBlock.parameter]
 	mov	[ecx+BlockParameter.next],eax
@@ -264,6 +265,7 @@ remove_block_parameters:
     remove_block_parameter:
 	mov	ebx,[esi+BlockParameter.symbol]
 	mov	edx,[esi+BlockParameter.definition]
+	dec	[edx+ValueDefinition.reference_count]
 	xor	edi,edi
 	call	remove_value_definition
 	mov	esi,[esi+BlockParameter.next]

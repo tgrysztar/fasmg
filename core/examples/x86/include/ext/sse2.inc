@@ -32,7 +32,7 @@ if ~ defined SSE2
 	calminstruction cmpsd? args&
 		match	, args
 		jno	sse
-		assemble x86.o16
+		assemble x86.o32
 		assemble x86.cmpsw
 		exit
 	    sse:
@@ -117,7 +117,7 @@ if ~ defined SSE2
 	calminstruction movsd? args&
 		match	, args
 		jno	sse
-		assemble x86.o16
+		assemble x86.o32
 		assemble x86.movsw
 		exit
 	    sse:
