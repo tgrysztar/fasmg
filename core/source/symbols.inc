@@ -1223,8 +1223,7 @@ assign_value:
 	push	edx
 	call	compare_symbolic_values
 	pop	edx
-	test	ecx,ecx
-	jz	value_updated
+	jecxz	value_updated
     value_changed:
 	or	[next_pass_needed],1
 	mov	eax,ecx

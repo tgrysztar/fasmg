@@ -1900,6 +1900,8 @@ compare_symbolic_values:
 	repe	cmpsb
 	je	internal_tokens_equal
 	inc	ecx
+	dec	esi
+	dec	edi
 	add	ecx,eax
 	retn
     internal_tokens_equal:

@@ -398,7 +398,7 @@ get_macro_definition_symbol:
 	jmp	macro_symbol_ok
     unconditional_interceptor:
 	mov	ebx,[interceptor_symbol]
-	cmp	bl,SYMCLASS_STRUCTURE
+	cmp	dl,SYMCLASS_STRUCTURE
 	jne	unconditional_macro
 	mov	ebx,[label_interceptor_symbol]
     unconditional_macro:
@@ -4706,7 +4706,7 @@ store_value:
 	and	[current_constituent],0
 	call	get_numeric_constant_value
 	test	edx,edx
-	jz	invalid_argument
+	jz	output_offset_out_of_range
 	push	edi
 	mov	edi,file_offset
 	mov	ecx,8
