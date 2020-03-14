@@ -1219,8 +1219,9 @@ reserve_workspace:
 	retn
     not_enough_workspace:
 	add	ecx,edi
-	jc	out_of_memory
+	jc	allocation_overflow
 	sub	ecx,[edx+Workspace.memory_start]
+	push	ecx
 	bsr	eax,ecx
 	xchg	ecx,eax
 	dec	cl
@@ -1228,6 +1229,9 @@ reserve_workspace:
 	inc	eax
 	shl	eax,cl
 	mov	ecx,eax
+	pop	eax
+	cmp	ecx,eax
+	jbe	allocation_overflow
 	cmp	edi,[edx+Workspace.memory_start]
 	je	reestablish_workspace
     expand_workspace:
@@ -1236,6 +1240,7 @@ reserve_workspace:
 	push	edx
 	call	realloc
 	pop	edx
+    update_workspace:
 	mov	[edx+Workspace.memory_start],eax
 	add	edi,eax
 	add	eax,ecx
@@ -1250,12 +1255,10 @@ reserve_workspace:
 	pop	ecx
 	call	malloc_growable
 	pop	edx
-	mov	[edx+Workspace.memory_start],eax
-	mov	edi,eax
-	add	eax,ecx
-	mov	[edx+Workspace.memory_end],eax
-	stc
-	retn
+	xor	edi,edi
+	jmp	update_workspace
+    allocation_overflow:
+	jmp	out_of_memory
 
 grow_stack:
 ; in:
@@ -1265,6 +1268,7 @@ grow_stack:
 ;  eax = new base address of memory block containing stack data
 ;  ecx = new size of memory block
 ; preserves: ebx, esi, edi
+	push	ecx
 	bsr	edx,ecx
 	xchg	ecx,edx
 	sub	cl,2
@@ -1272,6 +1276,9 @@ grow_stack:
 	inc	edx
 	shl	edx,cl
 	mov	ecx,edx
+	pop	edx
+	cmp	ecx,edx
+	jbe	allocation_overflow
 	call	realloc
 	retn
 
