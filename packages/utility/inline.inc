@@ -3,7 +3,7 @@
 
 ; Example of use:
 ;
-;	inlinemacro oddflip number
+;	inlinemacro oddflip(number)
 ;		return = (number) xor 1
 ;	end inlinemacro
 ;
@@ -15,6 +15,8 @@ define inlinemacro? inlinemacro
 
 calminstruction inlinemacro?! declaration&
 	local	name
+	match	name(arguments?), declaration
+	jyes	define
 	match	name= arguments?, declaration
 	jyes	define
 	match	name arguments?, declaration
