@@ -651,6 +651,7 @@ assembly_line:
 	mov	[symbol_required],al
 	mov	[name_volatile],al
 	mov	[preprocessed_context],eax
+	mov	[alm_statement],al
 	mov	ebx,[source_context]
 	mov	ecx,[ebx+SourceContext.number_of_entries]
 	dec	ecx
@@ -959,9 +960,7 @@ assemble_instruction:
 	jc	no_interceptor
 	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
 	jz	weak_interceptor
-	cmp	[edx+ValueDefinition.type],VALTYPE_CALM
-	je	launch_calm
-	jmp	use_macro
+	jmp	execute_instruction
       no_interceptor:
 	xor	edx,edx
       weak_interceptor:
@@ -994,10 +993,10 @@ assemble_instruction:
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_CALM
 	je	launch_calm
-	cmp	al,VALTYPE_SYMBOLIC
-	je	use_macro
 	cmp	al,VALTYPE_NATIVE_COMMAND
 	je	execute_native_instruction
+	cmp	al,VALTYPE_SYMBOLIC
+	je	use_macro
 	cmp	al,VALTYPE_RESERVED
 	jne	unrecognized_instruction
 	mov	edx,_symbolic_self_reference
@@ -1093,9 +1092,7 @@ assemble_instruction:
 	xor	eax,eax
 	mov	[embedded_context],eax
 	mov	esi,[line_start]
-	cmp	[edx+ValueDefinition.type],VALTYPE_CALM
-	je	launch_calm
-	jmp	use_macro
+	jmp	execute_instruction
     execute_label_interceptor:
 	mov	ebx,[label_interceptor_symbol]
 	mov	edx,[label_interceptor]
@@ -1314,8 +1311,8 @@ create_source_entry:
 	assert	sizeof.SourceEntry and 11b = 0
 	xor	eax,eax
 	rep	stosd
-	test	[assembly_mode],AMODE_CALM_DEFINITION
-	jz	source_entry_created
+	cmp	[alm_statement],0
+	je	source_entry_created
 	mov	[edi-sizeof.SourceEntry+SourceEntry.flags],SRCF_ALM_STATEMENT
     source_entry_created:
 	clc

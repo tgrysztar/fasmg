@@ -170,24 +170,28 @@ initialize_output:
 	mov	edx,[current_area]
 	mov	ebx,[edx+ValueDefinition.value]
 	add	ecx,[ebx+AreaHeader.uninitialized_length]
-	jc	out_of_memory
+	jc	output_out_of_memory
 	mov	eax,[edx+ValueDefinition.value_length]
 	lea	edi,[ebx+eax]
 	add	ecx,eax
-	jc	out_of_memory
+	jc	output_out_of_memory
 	mov	[edx+ValueDefinition.value_length],ecx
 	cmp	ecx,[edx+ValueDefinition.block_length]
 	jbe	area_reserve_sufficient
 	mov	eax,[edx+ValueDefinition.value]
 	sub	edi,eax
 	push	edx
+	push	ecx
 	bsr	edx,ecx
 	xchg	ecx,edx
 	dec	cl
 	shr	edx,cl
 	inc	edx
 	shl	edx,cl
-	mov	ecx,edx
+	pop	ecx
+	cmp	edx,ecx
+	jbe	output_out_of_memory
+	xchg	ecx,edx
 	call	realloc
 	pop	edx
 	mov	ebx,eax
@@ -207,6 +211,8 @@ initialize_output:
 	mov	[ebx+AreaHeader.uninitialized_length],eax
     output_buffer_ready:
 	retn
+    output_out_of_memory:
+	jmp	out_of_memory
 
 uninitialized_output:
 ; in: ecx = number of uninitialized bytes to be added to output

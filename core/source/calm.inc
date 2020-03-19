@@ -205,6 +205,7 @@ define_calm_instruction:
 	jmp	instruction_assembled
 
 assemble_alm_instruction:
+	or	[alm_statement],1
 	mov	ebx,[source_context]
 	mov	eax,[ebx+SourceContext.number_of_entries]
 	dec	eax

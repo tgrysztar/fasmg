@@ -298,5 +298,6 @@ size_specified db ?
 message_volatile db ?
 displayed_byte db ?
 
+alm_statement db ?
 calm_result db ?
 hidden_context db ?
