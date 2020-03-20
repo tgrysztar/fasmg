@@ -921,7 +921,7 @@ create_value_definition:
 	jnz	reset_value_type
 	retn
     reset_link_value:
-	and	[ebx+SymbolTree_Leaf.flags],not SYM_LINK
+	and	[ebx+SymbolTree_Leaf.flags],not (SYM_LINK or SYM_LINK_PREDICTED)
 	mov	eax,[ebx+SymbolTree_Leaf.last_use_pass]
 	cmp	eax,[current_pass]
 	jne	reset_current_link_value

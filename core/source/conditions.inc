@@ -30,7 +30,7 @@ get_condition_value:
 	mov	dl,al
 	jecxz	get_logical_operator
 	mov	ebx,[condition_stack]
-	lea	eax,[ebx+ecx]
+	lea	eax,[ebx+ecx+1]
 	cmp	eax,[condition_stack_end]
 	jbe	condition_stack_ready
 	push	ecx edx
