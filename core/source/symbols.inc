@@ -1249,12 +1249,16 @@ expand_value:
 	jc	out_of_memory
 	cmp	eax,[edx+ValueDefinition.block_length]
 	jbe	append_zero_bytes
+	push	eax
 	bsr	ecx,eax
 	dec	cl
 	shr	eax,cl
 	inc	eax
 	shl	eax,cl
 	mov	ecx,eax
+	pop	eax
+	cmp	ecx,eax
+	jbe	out_of_memory
 	mov	eax,[edx+ValueDefinition.value]
 	push	edx
 	call	realloc

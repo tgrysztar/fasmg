@@ -588,7 +588,6 @@ assembly_pass:
 	mov	[initial_output_area_entry],eax
 	mov	[predicted_shift],eax
 	mov	[display_data_length],eax
-	mov	[macro_position],eax
 	mov	[macro_end_position],eax
 	mov	[proxy_number],eax
 	mov	[output_extension],eax
@@ -1686,6 +1685,9 @@ preprocess_symbol:
 	xchg	ecx,eax
 	jmp	copy_with_preprocessed_context
     local_symbol_name:
+	mov	ecx,1+sizeof.RecognitionContext+1+4+1+sizeof.RecognitionContext
+	mov	edx,preprocessing_workspace
+	call	reserve_workspace
 	mov	al,40h
 	stosb
 	mov	eax,[local_namespace]

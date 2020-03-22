@@ -114,7 +114,6 @@ display_data_length dd ?
 macro_buffer dd ?
 macro_buffer_length dd ?
 macro_leaf dd ?
-macro_position dd ?
 macro_end_position dd ?
 
 constituent_symbol dd ?

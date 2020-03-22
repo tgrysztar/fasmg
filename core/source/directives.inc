@@ -35,8 +35,6 @@ struct RepeatData
 ends
 
 struct MacroData
-	prior_macro_leaf dd ?
-	prior_macro_position dd ?
 	nesting_counter dd ?
 ends
 
@@ -3122,12 +3120,9 @@ define_macro:
 	call	add_directive_block
 	mov	[edi+DirectiveBlock.subtype],bl
 	mov	[edi-sizeof.MacroData+MacroData.nesting_counter],1
-	mov	eax,[macro_end_position]
-	xchg	[macro_position],eax
-	mov	[edi-sizeof.MacroData+MacroData.prior_macro_position],eax
-	mov	eax,[macro_leaf]
-	mov	[edi-sizeof.MacroData+MacroData.prior_macro_leaf],eax
-	and	[macro_definition_active],0
+	xor	eax,eax
+	mov	[macro_end_position],eax
+	mov	[macro_definition_active],al
 	or	[assembly_mode],AMODE_DEFINITION
 	test	[assembly_mode],AMODE_SKIP
 	jnz	assembly_line
@@ -3361,32 +3356,23 @@ end_macro:
 	jnz	add_line_to_macro
     finish_macro_definition:
 	mov	al,[assembly_mode]
-	and	al,AMODE_POSTPONED
+	and	al,not (AMODE_SKIP or AMODE_DEFINITION)
 	or	al,[edi+DirectiveBlock.prior_assembly_mode]
 	mov	[assembly_mode],al
-	mov	ecx,[edi-sizeof.MacroData+MacroData.prior_macro_leaf]
-	xchg	ecx,[macro_leaf]
-	mov	[label_leaf],ecx
-	mov	ecx,[edi-sizeof.MacroData+MacroData.prior_macro_position]
-	xchg	ecx,[macro_position]
-	mov	eax,ecx
-	xchg	ecx,[macro_end_position]
-	sub	ecx,eax
-	add	eax,[macro_buffer]
-	mov	[value],eax
-	mov	[value_length],ecx
 	call	close_directive_block
 	test	[assembly_mode],AMODE_SKIP
 	jnz	assembly_line
 	push	esi
 	cmp	[macro_definition_active],0
 	je	macro_definition_done
-	mov	ebx,[label_leaf]
+	mov	ebx,[macro_leaf]
 	call	create_value_definition
 	test	edx,edx
 	jz	macro_definition_done
-	mov	esi,[value]
-	mov	ecx,[value_length]
+	mov	[value],eax
+	mov	[value_length],ecx
+	mov	esi,[macro_buffer]
+	mov	ecx,[macro_end_position]
 	mov	[value_type],VALTYPE_SYMBOLIC
 	call	assign_value
 	mov	al,[macro_flags]
