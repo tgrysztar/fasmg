@@ -1027,10 +1027,12 @@ create_value_definition:
 	call	mfree
 	pop	ecx
     reallocate_for_duplicate:
+	mov	edi,ecx
 	call	malloc
 	pop	edx
 	mov	[edx+ValueDefinition.value],eax
 	mov	[edx+ValueDefinition.block_length],ecx
+	mov	ecx,edi
 	mov	edi,eax
     duplicate_value:
 	mov	eax,ecx
