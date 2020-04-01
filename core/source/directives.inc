@@ -1058,20 +1058,24 @@ label_directive:
 	call	update_current_label
 	jmp	instruction_assembled
     prepare_label_value:
-	add	edi,esi
+	mov	ecx,edi
 	cmp	[metadata_length],0
 	je	label_metadata_ok
-	push	edx esi
+	add	edi,esi
+	push	edx ecx
 	mov	ecx,[metadata_length]
 	mov	edx,assembly_workspace
 	call	reserve_workspace
 	mov	esi,[auxiliary_workspace.memory_start]
 	mov	ecx,[metadata_length]
+	pop	eax
+	add	eax,ecx
 	rep	movsb
-	pop	esi edx
+	pop	edx
+	mov	ecx,eax
+	mov	esi,edi
+	sub	esi,ecx
       label_metadata_ok:
-	mov	ecx,edi
-	sub	ecx,esi
 	retn
 
 virtual_block:
