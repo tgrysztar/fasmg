@@ -196,8 +196,10 @@ section '.text' code executable
   get_arguments:
 	xor	eax,eax
 	mov	[initial_commands],eax
+	mov	[source_path],eax
 	mov	[output_path],eax
 	mov	[no_logo],al
+	mov	[verbosity_level],eax
 	mov	[maximum_number_of_passes],100
 	mov	[maximum_number_of_errors],1
 	mov	[maximum_depth_of_stack],10000

@@ -197,7 +197,7 @@ iterate <dw,word>, dw,word, dd,dword
 		local	cmd
 		arrange cmd, =label label : =word
 		assemble cmd
-		arrange cmd, =dd definitions
+		arrange cmd, =dw definitions
 		assemble cmd
 	end calminstruction
 
