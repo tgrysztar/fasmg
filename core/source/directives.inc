@@ -4050,6 +4050,7 @@ define_labeled_data:
 	call	calculate_parsed_expression
 	mov	[expression_sequence_cursor],esi
 	pop	esi
+	jc	duplicate_outputted
 	call	pop_terms
 	jc	invalid_argument
 	call	get_calculated_constant_value
