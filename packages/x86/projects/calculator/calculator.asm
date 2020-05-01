@@ -313,6 +313,6 @@ section '.rsrc' resource data readable
     dialogitem 'EDIT','',ID_HEXADECIMAL,52,30,320,12,WS_VISIBLE+WS_BORDER+WS_TABSTOP+ES_AUTOHSCROLL+ES_READONLY
     dialogitem 'STATIC','&Binary:',-1,4,44,44,8,WS_VISIBLE+SS_RIGHT
     dialogitem 'EDIT','',ID_BINARY,52,42,320,12,WS_VISIBLE+WS_BORDER+WS_TABSTOP+ES_AUTOHSCROLL+ES_READONLY
-    dialogitem 'STATIC','fasm g .',-1,320,55,30,8,WS_VISIBLE+SS_RIGHT
-    dialogitem 'STATIC','',ID_VERSION,350,55,20,8,WS_VISIBLE+SS_RIGHT
+    dialogitem 'STATIC','fasm g.',-1,326,55,30,8,WS_VISIBLE+SS_RIGHT
+    dialogitem 'STATIC','',ID_VERSION,356,55,20,8,WS_VISIBLE+SS_LEFT
   enddialog
