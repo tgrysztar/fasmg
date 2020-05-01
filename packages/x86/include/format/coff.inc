@@ -132,7 +132,7 @@ namespace COFF
 
 	f_magic 	dw I386MAGIC
 	f_nscns 	dw NUMBER_OF_SECTIONS
-	f_timdat	dd %t
+	f_timdat	dd __TIME__
 	f_symptr	dd SYMBOL_TABLE_OFFSET
 	f_nsyms 	dd NUMBER_OF_SYMBOLS
 	f_opthdr	dw 0

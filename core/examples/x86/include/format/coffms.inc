@@ -229,7 +229,7 @@ namespace COFF
 
 	Machine 		dw MACHINE
 	NumberOfSections	dw NUMBER_OF_SECTIONS
-	TimeDateStamp		dd %t
+	TimeDateStamp		dd __TIME__
 	PointerToSymbolTable	dd SYMBOL_TABLE_OFFSET
 	NumberOfSymbols 	dd NUMBER_OF_SYMBOLS
 	SizeOfOptionalHeader	dw 0

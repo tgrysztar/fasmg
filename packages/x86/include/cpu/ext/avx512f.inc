@@ -2074,7 +2074,7 @@ if ~ defined AVX_512
 			else if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem') & @src2.type = 'imm'
 				if @src2.size and not 1
 					err 'invalid operand size'
-				else if @src.size <> @dest.size
+				else if @src.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
 				if @src.type = 'mem' | `instr = 'vpsraq'

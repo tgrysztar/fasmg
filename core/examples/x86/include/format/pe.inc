@@ -308,13 +308,19 @@ namespace PE
 
 	end if
 
+	if defined Settings.Stamp
+		TIMESTAMP := Settings.Stamp
+	else
+		TIMESTAMP := __TIME__
+	end if
+
 	align 8
 
 	Header:
 	.Signature		      dw "PE",0
 	.Machine		      dw MACHINE
 	.NumberOfSections	      dw NUMBER_OF_SECTIONS
-	.TimeDateStamp		      dd %t
+	.TimeDateStamp		      dd TIMESTAMP
 	.PointerToSymbolTable	      dd 0
 	.NumberOfSymbols	      dd 0
 	.SizeOfOptionalHeader	      dw SectionTable - OptionalHeader
@@ -758,7 +764,7 @@ macro end?.resource_directory?
 				end while
 			end iterate
 			iterate dir, list
-				store %t : 4 at dir + 4
+				store __TIME__ : 4 at dir + 4
 				dir.names_counter = 0
 				repeat dir.counter, i:0
 					if dir.entry#i eqtype 0

@@ -4,6 +4,7 @@ include '../../examples/x86/include/80386.inc'
 macro format?.PE? settings
 	PE.Settings.Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE or IMAGE_FILE_32BIT_MACHINE or IMAGE_FILE_LINE_NUMS_STRIPPED or IMAGE_FILE_LOCAL_SYMS_STRIPPED
 	PE.Settings.DllCharacteristics = 0
+	PE.Settings.Stamp = +VERSION
 	local seq
 	define seq settings:
 	while 1
