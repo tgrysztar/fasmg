@@ -196,10 +196,12 @@ macro dialog label,title,x,y,cx,cy,style,exstyle:0,menu:0,fontname:'MS Sans Seri
 		else
 			du class,0
 		end if
-		if it_title eqtype 0
-			dw 0FFFFh,it_title
-		else
+		match any=,any, it_title
 			du it_title,0
+		else if it_title eqtype ''
+			du it_title,0
+		else
+			dw 0FFFFh,it_title
 		end if
 		dw 0
 		align 4
@@ -272,7 +274,7 @@ macro versioninfo label,fileos,filetype:0,filesubtype:0,lang,cp:0,values&
 	local str_data,str_size
 	str_data dd str_size
 	du 1,'040904E4',0
-	macro vdata name,value
+	macro vdata name,value&
 		local vs_data,vs_size,value_data,value_size
 		align 4
 		vs_data dw vs_size,value_size/2

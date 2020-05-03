@@ -1753,7 +1753,7 @@ iterate <instr,postbyte>, bt,4, bts,5, btr,6, btc,7
 		asmcmd	=err 'invalid operand size'
 	      bt_rm_imm_ok:
 		check	@dest.size
-		jyes	bt_rm_imm_prefix_ok
+		jno	bt_rm_imm_prefix_ok
 		asmcmd	=x86.=select_operand_prefix =@dest,=@dest.=size
 	      bt_rm_imm_prefix_ok:
 		asmcmd	=x86.=store_instruction <0Fh,0BAh>,=@dest,postbyte,1,=@src.=imm

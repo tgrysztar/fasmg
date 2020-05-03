@@ -38,39 +38,47 @@ end macro
 define
 purge define
 
-macro du? definitions&
-    iterate value,definitions
-	match ?, value
-	    dw ?
-	else match n =dup? ?, value
-	    dw n dup ?
-	else match n =dup? (?), value
-	    dw n dup ?
-	else match n =dup? v, value
-	    repeat n
-		WCHAR v
-	    end repeat
-	else
-	    WCHAR value
-	end match
-    end iterate
-end macro
+calminstruction du? definitions&
+	local	value, n
+	transform definitions
+    start:
+	match	value=,definitions, definitions, ()
+	jyes	recognize
+	match	value, definitions
+	arrange definitions,
+    recognize:
+	match	n =dup? value, value, ()
+	jyes	duplicate
+	match	?, value
+	jyes	reserve
+	arrange value, =WCHAR value
+	assemble value
+    next:
+	match	, definitions
+	jno	start
+	take	, definitions
+	take	definitions, definitions
+	jyes	next
+	exit
+    reserve:
+	arrange value, =dw ?
+	assemble value
+	jump	next
+    duplicate:
+	match	(value), value
+    stack:
+	check	n
+	jno	next
+	take	definitions, value
+	arrange value, definitions
+	compute n, n - 1
+	jump	stack
+end calminstruction
 
-struc du? definitions&
-    label . : word
-    iterate value,definitions
-	match ?, value
-	    dw ?
-	else match n =dup? ?, value
-	    dw n dup ?
-	else match n =dup? (?), value
-	    dw n dup ?
-	else match n =dup? v, value
-	    repeat n
-		WCHAR v
-	    end repeat
-	else
-	    WCHAR value
-	end match
-    end iterate
-end struc
+calminstruction (label) du? definitions&
+	local	cmd
+	arrange cmd, =label label : =word
+	assemble cmd
+	arrange cmd, =du definitions
+	assemble cmd
+end calminstruction

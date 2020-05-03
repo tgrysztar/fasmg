@@ -648,7 +648,7 @@ macro end?.data?
 	end namespace
 end macro
 
-macro resource_directory?
+macro PE.resource_directory?
 	namespace PE
 		Resource: rb RESOURCE_HEADERS_LENGTH
 		Resource.counter = 0
@@ -657,7 +657,7 @@ macro resource_directory?
 	end namespace
 end macro
 
-macro resource_data? type*,id*,lang*,codepage:0
+macro PE.resource_data? type*,id*,lang*,codepage:0
 	namespace PE
 		local _type,_id,_lang
 		_type = type
@@ -710,7 +710,7 @@ macro resource_data? type*,id*,lang*,codepage:0
 	end namespace
 end macro
 
-macro end?.resource_data?
+macro PE.end_resource_data?
 	namespace PE
 		repeat 1, i:Resource.counter
 			Resource.size#i := $ - Resource.data#i
@@ -720,7 +720,7 @@ macro end?.resource_data?
 	end namespace
 end macro
 
-macro end?.resource_directory?
+macro PE.end_resource_directory?
        namespace PE
 		RESOURCE_HEADERS_POINTER = 0
 
@@ -818,7 +818,7 @@ macro PE.resource_from path*
 		res_size := $
 	end virtual
 
-	resource_directory
+	PE.resource_directory
 
 		offset = 0
 		while offset < res_size
@@ -863,10 +863,10 @@ macro PE.resource_from path*
 
 				restore offset
 
-				resource_data type,id,lang
+				PE.resource_data type,id,lang
 					load res_data : res_data_size from res_file : offset + res_header_size
 					db res_data
-				end resource_data
+				PE.end_resource_data
 
 			end if
 
@@ -876,7 +876,7 @@ macro PE.resource_from path*
 			end if
 		end while
 
-	end resource_directory
+	PE.end_resource_directory
 
 end macro
 

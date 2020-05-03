@@ -1350,6 +1350,7 @@ detect_mispredictions:
     browse_from_root:
 	xor	eax,eax
 	mov	[ebx+SymbolTree_Root.current_label],eax
+	and	[ebx+SymbolTree_Root.flags],not NAMESPACE_CURRENT_LABEL_TO_CONFIRM
 	test	[ebx+SymbolTree_Root.attributes],SYMTREE_LOCAL
 	jnz	browse_local_tree
 	add	ebx,sizeof.SymbolTree_Root
