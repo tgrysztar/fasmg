@@ -1576,6 +1576,8 @@ iterate <instr,opcode>, ret,0C2h, retn,0C2h, retf,0CAh
 	calminstruction instr? operand
 		match	, operand
 		jyes	ret_short
+		check	operand
+		jno	ret_short
 		asmcmd	=db opcode
 		asmcmd	=dw operand
 		exit

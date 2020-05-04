@@ -4,17 +4,23 @@ include 'win32w.inc'
 include 'macro/if.inc'
 
 define _winx
-define _winx.code? :_code
-define _winx.data? :_data
-define _winx.end? :_end
+define _winx.code? _code
+define _winx.data? _data
+define _winx.end? _end
 
-struc (name) ? a&
-	match :cmd, _winx#name?
-		cmd a
-	else
-		name a
-	end match
-end struc
+calminstruction (name) ? a&
+	local cmd
+	match .cmd, name
+	jno pass
+	transform cmd, _winx
+	jno pass
+	arrange cmd, cmd a
+	assemble cmd
+	exit
+    pass:
+	arrange cmd, name a
+	assemble cmd
+end calminstruction
 
 macro _data
 	section '.data' data readable writeable

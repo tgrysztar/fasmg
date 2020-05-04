@@ -344,6 +344,10 @@ macro proc? statement&
 			define params tail
 		end match
 
+		match prologue:reglist, prologue@proc:<regs>
+			prologue name,flags,parmbytes,localbytes,reglist
+		end match
+
 		virtual at parmbase@proc
 			namespace name
 				match args, params
@@ -362,10 +366,6 @@ macro proc? statement&
 				end match
 			end namespace
 		end virtual
-
-		match prologue:reglist, prologue@proc:<regs>
-			prologue name,flags,parmbytes,localbytes,reglist
-		end match
 
 		macro ret? operand
 			match any, operand
