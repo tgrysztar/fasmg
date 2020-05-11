@@ -203,7 +203,6 @@ section '.text' code executable
 	mov	[maximum_number_of_passes],100
 	mov	[maximum_number_of_errors],1
 	mov	[maximum_depth_of_stack],10000
-	mov	[maximum_depth_of_stack],10000
 	invoke	GetCommandLine
 	mov	esi,eax
 	mov	edi,eax

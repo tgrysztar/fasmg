@@ -513,7 +513,7 @@ calminstruction x86.parse_operand namespace, operand
 	check	(x86.mode = 64 | segment_prefix = 3Eh) & base = 5 & index = 5 & scale = 1
 	jno	displacement_32bit
 	compute scale, 2
-	compute mod, 0
+	jump	index_only
       displacement_32bit:
 	compute displacement_size, 4
 	compute mod, 2

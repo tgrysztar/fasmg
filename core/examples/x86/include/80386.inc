@@ -382,7 +382,7 @@ calminstruction x86.parse_operand namespace, operand
 	jump	setup_displacement
       switch_to_index:
 	compute index, base
-	compute base,5
+	compute base, 5
 	jump	setup_displacement
       switch_to_base:
 	compute base, index
@@ -401,7 +401,7 @@ calminstruction x86.parse_operand namespace, operand
 	check	segment_prefix = 3Eh & base = 5 & index = 5 & scale = 1
 	jno	displacement_32bit
 	compute scale, 2
-	compute mod, 0
+	jump	index_only
       displacement_32bit:
 	compute displacement_size, 4
 	compute mod, 2
@@ -623,6 +623,7 @@ calminstruction x86.store_instruction opcode*,rm_operand*,reg*,imm_size:0,imm
 	arrange mode, rm_operand.=mode
 	arrange mod, rm_operand.=mod
 	arrange rm, rm_operand.=rm
+	arrange base, rm_operand.=base
 
 	arrange displacement_size, rm_operand.=displacement_size
 	arrange displacement, rm_operand.=displacement
@@ -670,7 +671,6 @@ calminstruction x86.store_instruction opcode*,rm_operand*,reg*,imm_size:0,imm
 	jno	sib_ok
 	arrange scale, rm_operand.=scale
 	arrange index, rm_operand.=index
-	arrange base, rm_operand.=base
 	compute sib, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
 	asmcmd	=db sib
     sib_ok:
