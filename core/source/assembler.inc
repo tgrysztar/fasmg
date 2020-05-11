@@ -200,7 +200,7 @@ assembly_init:
 	mov	[source_context],eax
 	mov	[source_context_maximum_length],ecx
 
-	mov	ecx,1000h
+	mov	ecx,400h
 	call	malloc_growable
 	mov	[line_embeddings],eax
 	mov	[line_embeddings_maximum_length],ecx
