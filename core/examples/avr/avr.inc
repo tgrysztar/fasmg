@@ -824,6 +824,21 @@ end macro
 
 PC? equ ($ shr 1)
 
+calminstruction (label) ? definition&
+	local command
+	match : command?, definition
+	jno other
+	match :: command?, definition
+	jyes other
+	arrange definition, =LABEL label =AT =$ =shr 1
+	assemble definition
+	assemble command
+	exit
+    other:
+	arrange definition, label definition
+	assemble definition
+end calminstruction
+
 if defined SRAM_START
 	DSEG?.$ = SRAM_START
 else
@@ -832,40 +847,49 @@ end if
 
 DSEG? = 0
 
-struc ? definition&
-	match :: anything, definition+
-		. definition
-	else match : command, definition
-		label . at $ shr 1
-		command
-	else match :, definition
-		label . at $ shr 1
-	else
-		. definition
-	end match
-end struc
+define DIRECTIVE DIRECTIVE
 
-macro ? line&
-	match .=ORG? addr, line
-		if ~ DSEG?
-			org (addr) shl 1
-		else
-			org addr
-		end if
-	else match .=EQU? name == value, line
-		name? = value
-	else match .=DSEG?, line
-		if ~ DSEG?
-			virtual at DSEG?.$
-			DSEG? = 1
-		end if
-	else match .=CSEG?, line
-		if DSEG?
-			DSEG?.$ = $
-			end virtual
-			DSEG? = 0
-		end if
+macro __ORG? addr*
+	if ~ DSEG?
+		org (addr) shl 1
 	else
-		line
+		org addr
+	end if
+end macro
+DIRECTIVE.ORG? equ __ORG
+
+macro __EQU? definition&
+	match name == value, definition
+		name? = value
 	end match
 end macro
+DIRECTIVE.EQU? equ __EQU
+
+macro __DSEG?
+	if ~ DSEG?
+		virtual at DSEG?.$
+		DSEG? = 1
+	end if
+end macro
+DIRECTIVE.DSEG? equ __DSEG
+
+macro __CSEG?
+	if DSEG?
+		DSEG?.$ = $
+		end virtual
+		DSEG? = 0
+	end if
+end macro
+DIRECTIVE.CSEG? equ __CSEG
+
+calminstruction ?! line&
+	local command
+	match .command, line
+	jno pass
+	transform command, DIRECTIVE
+	jno pass
+	assemble command
+	exit
+    pass:
+	assemble line
+end calminstruction

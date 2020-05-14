@@ -933,10 +933,10 @@ assembly_line:
 	jnz	get_line
 	jmp	pass_done
     use_preprocessed_line:
-	jecxz	macro_ended
 	test	eax,eax
 	jnz	macro_ended
-	mov	[ebx+SourceEntry.offset],ecx
+	dec	eax
+	mov	[ebx+SourceEntry.offset],eax
 	add	ecx,esi
 	mov	[line_start],esi
 	mov	[line_end],ecx
