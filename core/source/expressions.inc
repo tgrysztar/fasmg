@@ -1104,6 +1104,8 @@ calculate_parsed_expression:
 ;  cf set if expression had structural errors
 ;  esi = pointer moved past the processed sequence
 ;  edi - top of the updated stack
+;  when cf = 0:
+;   eax = non-zero if result is considered not yet known for resolving purposes
 	mov	[expression_end],esi
 	mov	eax,edi
 	sub	eax,[calculation_workspace.memory_start]
@@ -1189,6 +1191,8 @@ calculate_parsed_expression:
 	pop	[calculation_position]
 	jc	invalid_subexpression
 	pop	[expression_end]
+	test	eax,eax
+	jnz	unknown_result
 	jmp	calculation_loop
     invalid_subexpression:
 	pop	[expression_end]
@@ -1593,6 +1597,7 @@ calculate_parsed_expression:
 	je	skip_two_dwords
 	test	eax,eax
 	jnz	invalid_expression
+	inc	eax
        ; clc
 	retn
     skip_two_dwords:
