@@ -1585,7 +1585,7 @@ calm_arrange:
     arrange_missing_value:
 	mov	edx,_undefined_symbol
     arrange_failed_reference:
-	call	register_error_with_symbol_name
+	call	register_error
 	mov	al,1Ah
 	stosb
 	movsd
@@ -2143,11 +2143,11 @@ calm_assemble:
 	jmp	get_line
     calm_undefined_symbol:
 	mov	edx,_undefined_symbol
-	call	register_error_with_symbol_name
+	call	register_error
 	jmp	calm_execution_unit
     calm_invalid_value:
 	mov	edx,_invalid_symbol_value
-	call	register_error_with_symbol_name
+	call	register_error
 	jmp	calm_execution_unit
 
 calm_transform:

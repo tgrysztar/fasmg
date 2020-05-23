@@ -2,6 +2,7 @@
 struct Error
 	flags dd ?			 ; ERR_#
 	message dd ?
+	symbol dd ?
 	preprocessed_data dd ?
 	preprocessed_length dd ?
 	next dd ?			 ; pointer to another Error
@@ -10,67 +11,10 @@ ends
 
 ERR_CUSTOM = 1
 
-register_error_with_symbol_name:
-; in:
-;  ebx - SymbolTree_Leaf
-;  edx - error message with % character where the name of symbol should be inserted
-; out:
-;  edx - Error
-; preserves: eax, ebx, ecx, esi, edi
-	cmp	[next_pass_needed],0
-	jne	error_ignored
-	push	eax ebx ecx esi edi
-	mov	ebx,[ebx+SymbolTree_Leaf.branch]
-	mov	edi,edx
-	xor	al,al
-	or	ecx,-1
-	repne	scasb
-	mov	[message_end],edi
-	mov	esi,edx
-	mov	edx,identifier_workspace
-	mov	edi,[edx+Workspace.memory_start]
-	mov	ecx,[message_end]
-	sub	ecx,esi
-	call	reserve_workspace
-	add	edi,4
-      format_symbol_error:
-	lodsb
-	test	al,al
-	jz	symbol_error_formatted
-	cmp	al,'%'
-	je	insert_symbol_name
-	stosb
-	jmp	format_symbol_error
-      insert_symbol_name:
-	mov	al,[ebx+SymbolTree_Foliage.name_kind]
-	cmp	al,NAME_ABSTRACT
-	je	format_symbol_error
-	cmp	al,NAME_SYNTHETIC
-	je	format_symbol_error
-	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
-	add	ecx,[message_end]
-	sub	ecx,esi
-	call	reserve_workspace
-	mov	eax,esi
-	mov	esi,[ebx+SymbolTree_Foliage.name_data]
-	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
-	rep	movsb
-	mov	esi,eax
-	cmp	[ebx+SymbolTree_Foliage.name_kind],NAME_CASEINSENSITIVE
-	jne	format_symbol_error
-	mov	al,'?'
-	stosb
-	jmp	format_symbol_error
-      symbol_error_formatted:
-	mov	edx,[edx+Workspace.memory_start]
-	sub	edi,edx
-	sub	edi,4
-	mov	[edx],edi
-	or	[message_volatile],1
-	jmp	get_error_line
 register_volatile_error:
 ; in:
 ;  edx - 32-bit length followed by string data
+;  ebx - SymbolTree_Leaf for non-custom messages that contain % character
 ; out:
 ;  edx - Error
 ; preserves: eax, ebx, ecx, esi, edi
@@ -83,6 +27,7 @@ register_delayed_error:
 ; in:
 ;  edx - error message
 ;  esi - SourceContext
+;  ebx - SymbolTree_Leaf for non-custom messages that contain % character
 ; out:
 ;  edx - Error
 ; preserves: eax, ebx, ecx, esi, edi
@@ -96,6 +41,7 @@ register_delayed_error:
 register_error:
 ; in:
 ;  edx - error message
+;  ebx - SymbolTree_Leaf for non-custom messages that contain % character
 ; out:
 ;  edx - Error, null when error was not registered
 ; preserves: eax, ebx, ecx, esi, edi
@@ -115,6 +61,7 @@ register_error:
 	mov	[error_line_end],ecx
 	xor	esi,esi
     add_error:
+	mov	[error_symbol],ebx
 	lea	ebx,[first_error]
 	xor	ecx,ecx
     find_last_error:
@@ -152,6 +99,8 @@ register_error:
 	call	malloc
 	mov	[ebx],eax
 	mov	[eax+Error.message],edi
+	mov	ecx,[error_symbol]
+	mov	[eax+Error.symbol],ecx
 	xor	ecx,ecx
 	mov	[eax+Error.flags],ecx
 	mov	[eax+Error.next],ecx

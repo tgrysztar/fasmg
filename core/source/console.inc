@@ -152,8 +152,11 @@ show_errors:
 	xor	ecx,ecx
 	call	display_error_string
 	mov	esi,[ebx+Error.message]
+	test	[ebx+Error.flags],ERR_CUSTOM
+	jz	format_error_message
 	xor	ecx,ecx
 	call	display_error_string
+      finish_error_message:
 	mov	esi,_message_suffix
 	xor	ecx,ecx
 	call	display_error_string
@@ -161,6 +164,105 @@ show_errors:
     next_error:
 	mov	esi,[esi+Error.next]
 	jmp	display_error
+    format_error_message:
+	mov	edx,esi
+      cut_error_message:
+	lodsb
+	test	al,al
+	jz	show_error_message_segment
+	cmp	al,'%'
+	jne	cut_error_message
+      show_error_message_segment:
+	dec	esi
+	push	esi
+	xchg	ecx,esi
+	sub	ecx,edx
+	mov	esi,edx
+	call	display_error_string
+	pop	esi
+	lodsb
+	test	al,al
+	jz	finish_error_message
+	push	ebx
+	mov	ebx,[ebx+Error.symbol]
+	mov	ebx,[ebx+SymbolTree_Leaf.branch]
+	mov	edi,[identifier_workspace.memory_start]
+      compose_symbol_name:
+	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
+	mov	edx,identifier_workspace
+	mov	al,[ebx+SymbolTree_Foliage.name_kind]
+	cmp	al,NAME_CASESENSITIVE
+	je	name_segment_to_copy
+	cmp	al,NAME_ABSTRACT
+	je	name_segment_copied
+	cmp	al,NAME_SYNTHETIC
+	je	dot_label_name
+	mov	al,'?'
+	stosb
+      name_segment_to_copy:
+	add	ecx,2
+	call	reserve_workspace
+	mov	edx,[ebx+SymbolTree_Foliage.name_data]
+	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
+      copy_name_segment:
+	jecxz	name_segment_copied
+	dec	ecx
+	mov	al,[edx+ecx]
+	stosb
+	jmp	copy_name_segment
+      dot_label_name:
+	jecxz	name_segment_copied
+	push	esi
+	mov	esi,[ebx+SymbolTree_Foliage.name_data]
+	xor	eax,eax
+      read_dot_count:
+	shl	eax,8
+	lodsb
+	loop	read_dot_count
+	pop	esi
+	push	eax
+	lea	ecx,[eax+2]
+	call	reserve_workspace
+	pop	ecx
+	mov	al,'.'
+	rep	stosb
+      name_segment_copied:
+	mov	edx,[ebx+SymbolTree_Foliage.root]
+	mov	ebx,[edx+SymbolTree_Root.parent_branch]
+	test	[edx+SymbolTree_Root.flags],NAMESPACE_LOCAL or NAMESPACE_CALM
+	jnz	mark_local_symbol_name
+	test	ebx,ebx
+	jz	symbol_name_ready
+	mov	al,'.'
+	stosb
+	jmp	compose_symbol_name
+      mark_local_symbol_name:
+	mov	al,':'
+	stosb
+	test	[edx+SymbolTree_Root.flags],NAMESPACE_CALM
+	jz	symbol_name_ready
+	mov	eax,[ebx+SymbolTree_Foliage.name_data]
+	mov	ebx,[eax+SymbolTree_Leaf.branch]
+	test	ebx,ebx
+	jnz	compose_symbol_name
+      symbol_name_ready:
+	mov	ebx,[identifier_workspace.memory_start]
+	mov	ecx,edi
+	sub	ecx,ebx
+	lea	edx,[ecx-1]
+      reverse_composed_name:
+	mov	al,[ebx]
+	xchg	al,[ebx+edx]
+	mov	[ebx],al
+	inc	ebx
+	sub	edx,2
+	ja	reverse_composed_name
+	mov	ebx,[identifier_workspace.memory_start]
+	xchg	esi,ebx
+	call	display_error_string
+	xchg	esi,ebx
+	pop	ebx
+	jmp	format_error_message
 
 show_line_content:
 ; in:

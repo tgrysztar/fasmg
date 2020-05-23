@@ -51,5 +51,3 @@ _stack_limit_exceeded db "exceeded the maximum allowed depth of stack",0
 _repeated_declaration db "choice has already been declared",0
 _undefined_jump_target db "the target of the jump is not defined in this instruction",0
 _invalid_symbol_value db "the value of symbol '%' is not valid for this use",0
-
-_not_implemented_yet db "this feature is not implemented yet",0

@@ -2340,15 +2340,7 @@ else_directive:
 	jne	invalid_else
 	call	get_available_value
 	jc	invalid_else
-	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
-	jnz	execute_prefixed_directive
-	test	[assembly_mode],AMODE_SKIP
-	jnz	assembly_line
-	test	[assembly_mode],AMODE_DEFINITION
-	jnz	add_line_to_macro
-	cmp	[interceptor],0
-	jne	execute_interceptor
-	jmp	execute_prefixed_directive
+	jmp	prefixed_directive
     invalid_else:
 	mov	esi,[symbol_start]
     plain_else:
@@ -2380,15 +2372,14 @@ end_directive:
 	jne	invalid_prefixed_directive
 	call	get_available_value
 	jc	invalid_prefixed_directive
+    prefixed_directive:
 	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
 	jnz	execute_prefixed_directive
 	test	[assembly_mode],AMODE_SKIP
 	jnz	assembly_line
 	test	[assembly_mode],AMODE_DEFINITION
 	jnz	add_line_to_macro
-	cmp	[interceptor],0
-	jne	execute_interceptor
-    execute_prefixed_directive:
+      execute_prefixed_directive:
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_CALM
 	je	launch_calm
@@ -4825,7 +4816,7 @@ format_directive:
 	jne	invalid_argument
 	call	get_available_value
 	jc	invalid_argument
-	jmp	execute_prefixed_directive
+	jmp	prefixed_directive
 format_binary:
 	call	get_constituent_value
 	jc	instruction_assembled

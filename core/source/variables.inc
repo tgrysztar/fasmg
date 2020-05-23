@@ -190,6 +190,7 @@ local_path dd ?
 
 error_line_start dd ?
 error_line_end dd ?
+error_symbol dd ?
 last_source_entry dd ?
 last_file_source_entry dd ?
 preprocessed_text_end dd ?

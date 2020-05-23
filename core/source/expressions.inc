@@ -1553,7 +1553,7 @@ calculate_parsed_expression:
 	cmp	[next_pass_needed],0
 	jne	unknown_result
 	mov	edx,_undefined_symbol
-	call	register_error_with_symbol_name
+	call	register_error
 	jmp	unknown_result
     invalid_identifier_in_expression:
 	mov	edx,_invalid_identifier
