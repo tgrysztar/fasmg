@@ -186,6 +186,8 @@ show_errors:
 	push	ebx
 	mov	ebx,[ebx+Error.symbol]
 	mov	ebx,[ebx+SymbolTree_Leaf.branch]
+	test	ebx,ebx
+	jz	symbol_name_shown
 	mov	edi,[identifier_workspace.memory_start]
       compose_symbol_name:
 	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
@@ -261,6 +263,7 @@ show_errors:
 	xchg	esi,ebx
 	call	display_error_string
 	xchg	esi,ebx
+      symbol_name_shown:
 	pop	ebx
 	jmp	format_error_message
 

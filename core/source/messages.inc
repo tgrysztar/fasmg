@@ -26,8 +26,8 @@ _extra_characters_on_line db "extra characters on line",0
 _invalid_identifier db "invalid identifier",0
 _invalid_number db "invalid number",0
 _undefined_symbol db "symbol '%' is undefined or out of scope",0
-_invalid_symbol db "invalid use of symbol",0
-_conflicting_definition db "definition in conflict with already defined symbol",0
+_invalid_symbol_value db "the value of symbol '%' is not valid for this use",0
+_conflicting_definition db "definition of '%' in conflict with already defined symbol",0
 _cannot_apply_to_constant db "cannot apply this operation to constant",0
 _symbolic_self_reference db "detected a circular reference of symbolic values",0
 _unexpected_instruction db "unexpected instruction",0
@@ -50,4 +50,3 @@ _invalid_area db "invalid or inaccessible addressing area",0
 _stack_limit_exceeded db "exceeded the maximum allowed depth of stack",0
 _repeated_declaration db "choice has already been declared",0
 _undefined_jump_target db "the target of the jump is not defined in this instruction",0
-_invalid_symbol_value db "the value of symbol '%' is not valid for this use",0
