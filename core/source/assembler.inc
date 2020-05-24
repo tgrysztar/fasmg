@@ -2669,7 +2669,7 @@ identify_symbol:
       dot_label_synthesised:
 	or	[name_volatile],1
 	and	[name_token],0
-	mov	[name_kind],NAME_SYNTHETIC
+	mov	[name_kind],NAME_NUMERIC
 	mov	[symbol_class],SYMCLASS_EXPRESSION
 	or	[symbol_required],1
 	or	[symbol_expected],1

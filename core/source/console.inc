@@ -189,6 +189,8 @@ show_errors:
 	test	ebx,ebx
 	jz	symbol_name_shown
 	mov	edi,[identifier_workspace.memory_start]
+	cmp	[ebx+SymbolTree_Foliage.name_kind],NAME_NUMERIC
+	je	next_name_segment
       compose_symbol_name:
 	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
 	mov	edx,identifier_workspace
@@ -197,15 +199,16 @@ show_errors:
 	je	name_segment_to_copy
 	cmp	al,NAME_ABSTRACT
 	je	name_segment_copied
-	cmp	al,NAME_SYNTHETIC
+	cmp	al,NAME_NUMERIC
 	je	dot_label_name
 	mov	al,'?'
 	stosb
       name_segment_to_copy:
+	push	ecx
 	add	ecx,2
 	call	reserve_workspace
+	pop	ecx
 	mov	edx,[ebx+SymbolTree_Foliage.name_data]
-	mov	ecx,[ebx+SymbolTree_Foliage.name_length]
       copy_name_segment:
 	jecxz	name_segment_copied
 	dec	ecx
@@ -235,6 +238,7 @@ show_errors:
 	jnz	mark_local_symbol_name
 	test	ebx,ebx
 	jz	symbol_name_ready
+      next_name_segment:
 	mov	al,'.'
 	stosb
 	jmp	compose_symbol_name
@@ -248,21 +252,23 @@ show_errors:
 	test	ebx,ebx
 	jnz	compose_symbol_name
       symbol_name_ready:
-	mov	ebx,[identifier_workspace.memory_start]
+	push	esi
+	mov	esi,[identifier_workspace.memory_start]
+	mov	ebx,esi
 	mov	ecx,edi
 	sub	ecx,ebx
-	lea	edx,[ecx-1]
       reverse_composed_name:
+	dec	edi
+	cmp	ebx,edi
+	jae	show_composed_name
 	mov	al,[ebx]
-	xchg	al,[ebx+edx]
+	xchg	al,[edi]
 	mov	[ebx],al
 	inc	ebx
-	sub	edx,2
-	ja	reverse_composed_name
-	mov	ebx,[identifier_workspace.memory_start]
-	xchg	esi,ebx
+	jmp	reverse_composed_name
+      show_composed_name:
 	call	display_error_string
-	xchg	esi,ebx
+	pop	esi
       symbol_name_shown:
 	pop	ebx
 	jmp	format_error_message

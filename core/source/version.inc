@@ -1,1 +1,1 @@
-VERSION equ "ixp1"
+VERSION equ "ixps"
