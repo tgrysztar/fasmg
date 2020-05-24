@@ -328,7 +328,7 @@ namespace PE
 
 	OptionalHeader:
 	.Magic			      dw MAGIC
-	.MajorLinkerVersion	      db 2
+	.MajorLinkerVersion	      db 0
 	.MinorLinkerVersion	      db 0
 	.SizeOfCode		      dd 0
 	.SizeOfInitializedData	      dd 0

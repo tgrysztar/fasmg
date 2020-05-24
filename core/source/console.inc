@@ -216,14 +216,16 @@ show_errors:
 	stosb
 	jmp	copy_name_segment
       dot_label_name:
-	jecxz	name_segment_copied
 	push	esi
 	mov	esi,[ebx+SymbolTree_Foliage.name_data]
 	xor	eax,eax
       read_dot_count:
+	jecxz	dot_count_read
+	dec	ecx
 	shl	eax,8
-	lodsb
-	loop	read_dot_count
+	mov	al,[esi+ecx]
+	jmp	read_dot_count
+      dot_count_read:
 	pop	esi
 	push	eax
 	lea	ecx,[eax+2]
