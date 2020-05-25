@@ -19,69 +19,67 @@ end macro
 macro stdcall?: proc*,args&
 	local count
 	count = 0
-	match any, args
-		iterate arg, args
-			indx 1+%%-%
-			match =addr? val, arg
-				if val relativeto 0 | val relativeto $
-					push dword val
-				else
-					lea edx,[val]
-					push edx
-				end if
-			else match =double? [var], arg
-				push dword [var+4]
-				push dword [var]
-				count = count + 1
-			else match =double? val, arg
-				local low,high
-				virtual at 0
-					dq val
-					load low:dword from 0
-					load high:dword from 4
-				end virtual
-				push dword high
-				push dword low
-				count = count + 1
-			else match =invoke? func, arg
-				invoke func
-				push eax
-			else match =cinvoke? func, arg
-				cinvoke func
-				push eax
-			else match =stdcall? func, arg
-				stdcall func
-				push eax
-			else match =ccall? func, arg
-				ccall func
-				push eax
-			else match first=,rest, arg
-				stdcall?.push_string arg
-			else match size [var], arg
-				if size = 4
-					push arg
-				else
-					if size = 1
-						mov al, arg
-					else if size = 2
-						mov ax, arg
-					else
-						mov eax, arg
-					end if
-					push eax
-				end if
-			else match [var], arg
-				push dword arg
+	iterate arg, args
+		indx 1+%%-%
+		match =addr? val, arg
+			if val relativeto 0 | val relativeto $
+				push dword val
 			else
-				if arg eqtype ''
-					stdcall?.push_string arg
-				else
-					push dword arg
-				end if
-			end match
+				lea edx,[val]
+				push edx
+			end if
+		else match =double? [var], arg
+			push dword [var+4]
+			push dword [var]
 			count = count + 1
-		end iterate
-	end match
+		else match =double? val, arg
+			local low,high
+			virtual at 0
+				dq val
+				load low:dword from 0
+				load high:dword from 4
+			end virtual
+			push dword high
+			push dword low
+			count = count + 1
+		else match =invoke? func, arg
+			invoke func
+			push eax
+		else match =cinvoke? func, arg
+			cinvoke func
+			push eax
+		else match =stdcall? func, arg
+			stdcall func
+			push eax
+		else match =ccall? func, arg
+			ccall func
+			push eax
+		else match first=,rest, arg
+			stdcall?.push_string arg
+		else match size [var], arg
+			if size = 4
+				push arg
+			else
+				if size = 1
+					mov al, arg
+				else if size = 2
+					mov ax, arg
+				else
+					mov eax, arg
+				end if
+				push eax
+			end if
+		else match [var], arg
+			push dword arg
+		else
+			if arg eqtype ''
+				stdcall?.push_string arg
+			else
+				push dword arg
+			end if
+		end match
+		count = count + 1
+	end iterate
 	pcountcheck proc,count
 	call proc
 end macro
@@ -89,69 +87,67 @@ end macro
 macro ccall?: proc*,args&
 	local count
 	count = 0
-	match any, args
-		iterate arg, args
-			indx 1+%%-%
-			match =addr? val, arg
-				if val relativeto 0 | val relativeto $
-					push dword val
-				else
-					lea edx,[val]
-					push edx
-				end if
-			else match =double? [var], arg
-				push dword [var+4]
-				push dword [var]
-				count = count + 1
-			else match =double? val, arg
-				local low,high
-				virtual at 0
-					dq val
-					load low:dword from 0
-					load high:dword from 4
-				end virtual
-				push dword high
-				push dword low
-				count = count + 1
-			else match =invoke? func, arg
-				invoke func
-				push eax
-			else match =cinvoke? func, arg
-				cinvoke func
-				push eax
-			else match =stdcall? func, arg
-				stdcall func
-				push eax
-			else match =ccall? func, arg
-				ccall func
-				push eax
-			else match first=,rest, arg
-				stdcall?.push_string arg
-			else match size [var], arg
-				if size = 4
-					push arg
-				else
-					if size = 1
-						mov al, arg
-					else if size = 2
-						mov ax, arg
-					else
-						mov eax, arg
-					end if
-					push eax
-				end if
-			else match [var], arg
-				push dword arg
+	iterate arg, args
+		indx 1+%%-%
+		match =addr? val, arg
+			if val relativeto 0 | val relativeto $
+				push dword val
 			else
-				if arg eqtype ''
-					stdcall?.push_string arg
-				else
-					push dword arg
-				end if
-			end match
+				lea edx,[val]
+				push edx
+			end if
+		else match =double? [var], arg
+			push dword [var+4]
+			push dword [var]
 			count = count + 1
-		end iterate
-	end match
+		else match =double? val, arg
+			local low,high
+			virtual at 0
+				dq val
+				load low:dword from 0
+				load high:dword from 4
+			end virtual
+			push dword high
+			push dword low
+			count = count + 1
+		else match =invoke? func, arg
+			invoke func
+			push eax
+		else match =cinvoke? func, arg
+			cinvoke func
+			push eax
+		else match =stdcall? func, arg
+			stdcall func
+			push eax
+		else match =ccall? func, arg
+			ccall func
+			push eax
+		else match first=,rest, arg
+			stdcall?.push_string arg
+		else match size [var], arg
+			if size = 4
+				push arg
+			else
+				if size = 1
+					mov al, arg
+				else if size = 2
+					mov ax, arg
+				else
+					mov eax, arg
+				end if
+				push eax
+			end if
+		else match [var], arg
+			push dword arg
+		else
+			if arg eqtype ''
+				stdcall?.push_string arg
+			else
+				push dword arg
+			end if
+		end match
+		count = count + 1
+	end iterate
 	pcountcheck proc,count
 	call proc
 	if count
@@ -186,22 +182,18 @@ macro prologuedef procname,flag,parmbytes,localbytes,reglist
 			sub esp,loc
 		end if
 	end if
-	match any, reglist
-		iterate reg, reglist
-			push reg
-		end iterate
-	end match
+	iterate reg, reglist
+		push reg
+	end iterate
 end macro
 
 epilogue@proc equ epiloguedef
 
 macro epiloguedef procname,flag,parmbytes,localbytes,reglist
-	match any, reglist
-		iterate reg, reglist
-			indx %%-%+1
-			pop reg
-		end iterate
-	end match
+	iterate reg, reglist
+		indx %%-%+1
+		pop reg
+	end iterate
 	if parmbytes | localbytes
 		leave
 	end if
@@ -401,5 +393,3 @@ macro proc? statement&
 		end macro
 
 end macro
-
-

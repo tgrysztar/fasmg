@@ -64,147 +64,145 @@ macro fastcall?: proc*,args&
 		sub rsp,framesize
 	end if
 	offset = 0
-	match any, args
-		iterate arg, args
-			match =float? val, arg
-				type = 'f'
-				redefine value val
-				SSE.parse_operand @src,val
-			else match =addr? val, arg
-				type = 'a'
-				redefine value val
-				x86.parse_operand @src,[val]
-			else match =invoke? func, arg
-				frame
-				invoke func
-				end frame
-				type = 0
-				redefine value rax
-				x86.parse_operand @src,rax
-			else match =fastcall? func, arg
-				frame
-				fastcall func
-				end frame
-				type = 0
-				redefine value rax
-				x86.parse_operand @src,rax
-			else match first=,rest, arg
-				type = 's'
-				redefine value arg
-			else
-				type = 0
-				redefine value arg
-				SSE.parse_operand @src,arg
-				if @src.type = 'imm' & @src.size = 0
-					if value eqtype ''
-						type = 's'
-					end if
+	iterate arg, args
+		match =float? val, arg
+			type = 'f'
+			redefine value val
+			SSE.parse_operand @src,val
+		else match =addr? val, arg
+			type = 'a'
+			redefine value val
+			x86.parse_operand @src,[val]
+		else match =invoke? func, arg
+			frame
+			invoke func
+			end frame
+			type = 0
+			redefine value rax
+			x86.parse_operand @src,rax
+		else match =fastcall? func, arg
+			frame
+			fastcall func
+			end frame
+			type = 0
+			redefine value rax
+			x86.parse_operand @src,rax
+		else match first=,rest, arg
+			type = 's'
+			redefine value arg
+		else
+			type = 0
+			redefine value arg
+			SSE.parse_operand @src,arg
+			if @src.type = 'imm' & @src.size = 0
+				if value eqtype ''
+					type = 's'
 				end if
-			end match
-			if type = 's'
-				fastcall.inline_string value
-				type = 'a'
 			end if
-			if % < 5
-				if type = 'f'
-					if @src.size = 8 | ~ @src.size | @src.type = 'mmreg'
-						if @src.type = 'imm'
-							mov rax,value
-							movq fastcall.rf#%,rax
-						else
-							movq fastcall.rf#%,value
-						end if
-					else if @src.size = 4
-						if @src.type = 'imm'
-							mov eax,value
-							movd fastcall.rf#%,eax
-						else
-							movd fastcall.rf#%,value
-						end if
+		end match
+		if type = 's'
+			fastcall.inline_string value
+			type = 'a'
+		end if
+		if % < 5
+			if type = 'f'
+				if @src.size = 8 | ~ @src.size | @src.type = 'mmreg'
+					if @src.type = 'imm'
+						mov rax,value
+						movq fastcall.rf#%,rax
 					else
-						err 'invalid argument ',`arg
+						movq fastcall.rf#%,value
 					end if
-				else
-					if type = 'a'
-						lea fastcall.r#%,[value]
+				else if @src.size = 4
+					if @src.type = 'imm'
+						mov eax,value
+						movd fastcall.rf#%,eax
 					else
-						if @src.size = 8 | ~ @src.size
-							redefine target fastcall.r#%
-							if @src.type <> 'reg' | ~ @src.imm eq fastcall.r#%
-								mov fastcall.r#%,value
-							end if
-						else if @src.size = 4
-							redefine target fastcall.rd#%
-							if @src.type <> 'reg' | ~ @src.imm eq fastcall.rd#%
-								mov fastcall.rd#%,value
-							end if
-						else if @src.size = 2
-							redefine target fastcall.r#%
-							if @src.type <> 'reg' | ~ @src.imm eq fastcall.rw#%
-								mov fastcall.rw#%,value
-							end if
-						else if @src.size = 1
-							redefine target fastcall.rb#%
-							if @src.type <> 'reg' | ~ @src.imm eq fastcall.rb#%
-							end if
-						else
-							err 'invalid argument ',`arg
-						end if
+						movd fastcall.rf#%,value
 					end if
-				end if
-			else
-				if @src.type = 'reg'
-					mov [rsp+offset],value
-				else if @src.type = 'mem'
-					if type = 'a'
-						lea rax,[value]
-						mov [rsp+offset],rax
-					else
-						if @src.size = 8 | ~ @src.size
-							mov rax,value
-							mov [rsp+offset],rax
-						else if @src.size = 4
-							mov eax,value
-							mov [rsp+offset],eax
-						else if @src.size = 2
-							mov ax,value
-							mov [rsp+offset],ax
-						else if @src.size = 1
-							mov al,value
-							mov [rsp+offset],al
-						else
-							err 'invalid argument ',`arg
-						end if
-					end if
-				else if @src.type = 'imm'
-					if @src.size = 8 | ~ @src.size
-						if (value) relativeto 0 & (value) - 1 shl 64 >= -80000000h & (value) < 1 shl 64
-							mov rax,(value) - 1 shl 64
-							mov [rsp+offset],rax
-						else if (value) relativeto 0 & ( (value) >= 80000000h | (value) < -80000000h )
-							mov rax,value
-							mov [rsp+offset],rax
-						else
-							mov qword [rsp+offset],value
-						end if
-					else if @src.size = 4
-						mov dword [rsp+offset],value
-					else if @src.size = 2
-						mov word [rsp+offset],value
-					else if @src.size = 1
-						mov byte [rsp+offset],value
-					else
-						err 'invalid argument ',`arg
-					end if
-				else if type = 'f' & @src.type = 'mmreg' & @src.size = 16
-					movq [rsp+offset],value
 				else
 					err 'invalid argument ',`arg
 				end if
+			else
+				if type = 'a'
+					lea fastcall.r#%,[value]
+				else
+					if @src.size = 8 | ~ @src.size
+						redefine target fastcall.r#%
+						if @src.type <> 'reg' | ~ @src.imm eq fastcall.r#%
+							mov fastcall.r#%,value
+						end if
+					else if @src.size = 4
+						redefine target fastcall.rd#%
+						if @src.type <> 'reg' | ~ @src.imm eq fastcall.rd#%
+							mov fastcall.rd#%,value
+						end if
+					else if @src.size = 2
+						redefine target fastcall.r#%
+						if @src.type <> 'reg' | ~ @src.imm eq fastcall.rw#%
+							mov fastcall.rw#%,value
+						end if
+					else if @src.size = 1
+						redefine target fastcall.rb#%
+						if @src.type <> 'reg' | ~ @src.imm eq fastcall.rb#%
+						end if
+					else
+						err 'invalid argument ',`arg
+					end if
+				end if
 			end if
-			offset = offset + 8
-		end iterate
-	end match
+		else
+			if @src.type = 'reg'
+				mov [rsp+offset],value
+			else if @src.type = 'mem'
+				if type = 'a'
+					lea rax,[value]
+					mov [rsp+offset],rax
+				else
+					if @src.size = 8 | ~ @src.size
+						mov rax,value
+						mov [rsp+offset],rax
+					else if @src.size = 4
+						mov eax,value
+						mov [rsp+offset],eax
+					else if @src.size = 2
+						mov ax,value
+						mov [rsp+offset],ax
+					else if @src.size = 1
+						mov al,value
+						mov [rsp+offset],al
+					else
+						err 'invalid argument ',`arg
+					end if
+				end if
+			else if @src.type = 'imm'
+				if @src.size = 8 | ~ @src.size
+					if (value) relativeto 0 & (value) - 1 shl 64 >= -80000000h & (value) < 1 shl 64
+						mov rax,(value) - 1 shl 64
+						mov [rsp+offset],rax
+					else if (value) relativeto 0 & ( (value) >= 80000000h | (value) < -80000000h )
+						mov rax,value
+						mov [rsp+offset],rax
+					else
+						mov qword [rsp+offset],value
+					end if
+				else if @src.size = 4
+					mov dword [rsp+offset],value
+				else if @src.size = 2
+					mov word [rsp+offset],value
+				else if @src.size = 1
+					mov byte [rsp+offset],value
+				else
+					err 'invalid argument ',`arg
+				end if
+			else if type = 'f' & @src.type = 'mmreg' & @src.size = 16
+				movq [rsp+offset],value
+			else
+				err 'invalid argument ',`arg
+			end if
+		end if
+		offset = offset + 8
+	end iterate
 	pcountcheck proc,offset/8
 	if offset < 20h
 		offset = 20h
@@ -258,12 +256,10 @@ end macro
 epilogue@proc equ epiloguedef
 
 macro epiloguedef procname,flag,parmbytes,localbytes,reglist
-	match any, reglist
-		iterate reg, reglist
-			indx %%-%+1
-			pop reg
-		end iterate
-	end match
+	iterate reg, reglist
+		indx %%-%+1
+		pop reg
+	end iterate
 	leave
 	retn
 end macro

@@ -1,11 +1,9 @@
 
 macro cominvk Object,proc,args&
-	match any, args
-		iterate arg, args
-			indx 1+%%-%
-			pushd arg
-		end iterate
-	end match
+	iterate arg, args
+		indx 1+%%-%
+		pushd arg
+	end iterate
 	if ~ defined Object#.com.object
 		err `Object,' is not a COM object'
 	end if
@@ -16,12 +14,10 @@ macro cominvk Object,proc,args&
 end macro
 
 macro comcall handle,Interface,proc,args&
-	match any, args
-		iterate arg, args
-			indx 1+%%-%
-			pushd arg
-		end iterate
-	end match
+	iterate arg, args
+		indx 1+%%-%
+		pushd arg
+	end iterate
 	if ~ defined Interface#.com.interface
 		err `Interface,' is not a COM interface'
 	end if

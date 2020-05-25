@@ -861,6 +861,8 @@ DIRECTIVE.ORG? equ __ORG
 macro __EQU? definition&
 	match name == value, definition
 		name? = value
+	else
+		err 'invalid definition'
 	end match
 end macro
 DIRECTIVE.EQU? equ __EQU
@@ -882,7 +884,7 @@ macro __CSEG?
 end macro
 DIRECTIVE.CSEG? equ __CSEG
 
-calminstruction ?! line&
+calminstruction ? line&
 	local command
 	match .command, line
 	jno pass

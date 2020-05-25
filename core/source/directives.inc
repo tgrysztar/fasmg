@@ -1843,29 +1843,30 @@ iterator_block:
       iterator_parameters_declared:
 	cmp	al,','
 	jne	invalid_iterator
-	mov	eax,[number_of_parameters]
-	mov	[number_of_values],eax
-	xor	eax,eax
-	mov	[value_index],eax
-	inc	eax
-	mov	[number_of_iterations],eax
+	mov	ebx,[number_of_parameters]
+	mov	[number_of_values],ebx
+	and	[number_of_iterations],0
       collect_iterator_values:
 	inc	esi
+	call	move_to_next_symbol
+	jc	initialize_iterator
 	mov	edx,expression_workspace
 	mov	ecx,sizeof.LineExcerpt
 	call	reserve_workspace
 	call	cut_argument_value
 	add	edi,sizeof.LineExcerpt
 	inc	[number_of_values]
-	mov	ecx,[value_index]
-	sub	ecx,[number_of_parameters]
-	jc	iterator_value_collected
-	mov	[value_index],ecx
+	cmp	ebx,[number_of_parameters]
+	jne	iterator_value_collected
 	inc	[number_of_iterations]
+	xor	ebx,ebx
       iterator_value_collected:
-	inc	[value_index]
+	inc	ebx
 	cmp	al,','
 	je	collect_iterator_values
+      initialize_iterator:
+	cmp	[number_of_iterations],0
+	je	inactive_iterator_block
 	mov	dl,DBLOCK_CONTROL
 	mov	ecx,5+sizeof.RepeatData
 	call	add_directive_block

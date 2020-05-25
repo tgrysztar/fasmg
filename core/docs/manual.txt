@@ -1343,7 +1343,9 @@ corresponding value:
 
 The name of a parameter can also, like in the case of macroinstructions, be
 followed by "*" to require that the parameter has a value that is not empty,
-or ":" and a default value.
+or ":" and a default value. If an "iterate" statement ends with a comma not
+followed by anything else, it is not interpreted as an additional empty value,
+to put a blank value at the end of list an empty enclosing "<>" needs to be used.
   The "break" instruction plus both the "%" and "%%" parameters can be used
 inside the "iterate" block with the same effects as in case of "repeat".
   The "indx" is an instruction that can be only be used inside an iterated
