@@ -199,7 +199,7 @@ define_calm_instruction:
     call_instruction_begin_code:
 	mov	[calm_code_cursor],edi
 	mov	eax,[new_local_namespace]
-	mov	[current_namespace],eax
+	mov	[current_context.base_namespace],eax
 	and	[calm_line_number],0
 	mov	[calm_definition_active],1
 	jmp	instruction_assembled
@@ -401,7 +401,7 @@ assemble_alm_instruction:
 	lodsd
 	mov	ecx,eax
 	mov	edx,[case_sensitive_hash]
-	mov	ebx,[current_namespace]
+	mov	ebx,[current_context.base_namespace]
 	and	[name_kind],0
 	and	[name_token],0
 	or	[symbol_required],1
@@ -525,10 +525,10 @@ alm_end:
 	sub	esi,sizeof.UnresolvedJump
 	jmp	resolve_next_calm_jump
     calm_jumps_resolved:
-	mov	ebx,[current_namespace]
+	mov	ebx,[current_context.base_namespace]
 	mov	edx,[ebx+SymbolTree_Root.parent_branch]
 	mov	eax,[edx+SymbolTree_Foliage.root]
-	mov	[current_namespace],eax
+	mov	[current_context.base_namespace],eax
 	mov	edi,[calm_code_cursor]
 	mov	edx,calm_code_buffer
 	mov	ecx,[calm_literals_cursor]
@@ -577,7 +577,7 @@ alm_local:
 	jc	missing_argument
 	or	[symbol_definition],1
 	mov	dl,SYMCLASS_EXPRESSION
-	mov	ebx,[current_namespace]
+	mov	ebx,[current_context.base_namespace]
 	call	identify_symbol_in_namespace
 	jc	invalid_argument
 	test	ebx,ebx
@@ -779,7 +779,7 @@ alm_arrange:
 	mov	eax,[eax+RecognitionContext.base_namespace]
 	jmp	namespace_in_pattern_ok
       use_current_namespace_in_pattern:
-	mov	eax,[current_namespace]
+	mov	eax,[current_context.base_namespace]
       namespace_in_pattern_ok:
 	mov	[recognition_context.base_namespace],eax
 	call	recognize_symbol

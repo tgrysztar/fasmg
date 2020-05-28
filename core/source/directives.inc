@@ -487,7 +487,7 @@ set_namespace:
 	mov	dl,DBLOCK_NAMESPACE
 	mov	ecx,sizeof.NamespaceData
 	call	add_directive_block
-	mov	edx,[current_namespace]
+	mov	edx,[current_context.base_namespace]
 	mov	[edi-sizeof.NamespaceData+NamespaceData.prior_namespace],edx
 	mov	eax,[edx+SymbolTree_Root.current_label]
 	mov	[edi-sizeof.NamespaceData+NamespaceData.prior_label],eax
@@ -498,7 +498,7 @@ set_namespace:
 	test	ebx,ebx
 	jz	invalid_identifier
 	call	get_symbol_namespace
-	mov	[current_namespace],ebx
+	mov	[current_context.base_namespace],ebx
 	and	[ebx+SymbolTree_Root.current_label],0
 	jmp	instruction_assembled
 end_namespace:
@@ -507,7 +507,7 @@ end_namespace:
 	jc	unexpected_instruction
 	mov	edx,[edi-sizeof.NamespaceData+NamespaceData.prior_namespace]
 	mov	eax,[edi-sizeof.NamespaceData+NamespaceData.prior_label]
-	mov	[current_namespace],edx
+	mov	[current_context.base_namespace],edx
 	mov	[edx+SymbolTree_Root.current_label],eax
 	call	close_directive_block
 	jmp	instruction_assembled
@@ -640,7 +640,7 @@ define_label:
 	mov	edi,[edx+SymbolTree_Foliage.root]
 	test	[edi+SymbolTree_Root.flags],NAMESPACE_LOCAL
 	jnz	current_label_ok
-	mov	edi,[current_namespace]
+	mov	edi,[current_context.base_namespace]
 	mov	[edi+SymbolTree_Root.current_label],edx
       current_label_ok:
 	retn
@@ -2183,7 +2183,7 @@ variable_iterator_block:
 	mov	ecx,[proxy_number]
 	inc	[proxy_number]
 	mov	dl,SYMCLASS_EXPRESSION
-	mov	ebx,[current_namespace]
+	mov	ebx,[current_context.base_namespace]
 	call	get_abstract_symbol
 	xchg	edx,[esp]
 	call	update_value_link
@@ -2191,9 +2191,9 @@ variable_iterator_block:
 	pop	edi ebx
 	mov	al,40h
 	stosb
-	mov	eax,[current_namespace]
+	mov	eax,[current_context.base_namespace]
 	mov	[edi+RecognitionContext.base_namespace],eax
-	mov	[edi+RecognitionContext.current_label],edx
+	mov	[edi+RecognitionContext.base_label],edx
 	add	edi,sizeof.RecognitionContext
 	mov	al,'.'
 	stosb

@@ -34,7 +34,7 @@ proxy_number dd ?
 source_context dd ?
 source_context_maximum_length dd ?
 current_pass dd ?
-current_namespace dd ?
+current_context RecognitionContext
 local_namespace dd ?
 parameter_namespace dd ?
 

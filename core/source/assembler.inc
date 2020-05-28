@@ -32,7 +32,7 @@ ends
 
 struct RecognitionContext
 	base_namespace dd ?
-	current_label dd ?
+	base_label dd ?
 ends
 
 struct LineEmbedding
@@ -345,7 +345,7 @@ assembly_init:
 	or	[symbol_required],1
 	or	[symbol_expected],1
 	mov	eax,[root_namespace]
-	mov	[current_namespace],eax
+	mov	[current_context.base_namespace],eax
 	mov	esi,symbols
     register_internal_symbols:
 	lodsb
@@ -354,7 +354,7 @@ assembly_init:
 	lodsb
 	test	al,al
 	jz	internal_symbols_registered
-	and	[current_namespace],0
+	and	[current_context.base_namespace],0
     prepare_internal_symbol:
 	movzx	ecx,al
 
@@ -368,7 +368,7 @@ assembly_init:
 	cmp	ebx,ecx
 	jb	hash_internal_symbol
 
-	mov	ebx,[current_namespace]
+	mov	ebx,[current_context.base_namespace]
 	test	ebx,ebx
 	jz	register_internal_namespace
 	mov	al,[esi+ecx]
@@ -407,7 +407,7 @@ assembly_init:
 	mov	[eax+ValueDefinition.type],VALTYPE_RESERVED
 	mov	[eax+ValueDefinition.flags],VAL_INTERNAL
 	call	get_symbol_namespace
-	mov	[current_namespace],ebx
+	mov	[current_context.base_namespace],ebx
 	jmp	register_internal_symbols
     internal_symbols_registered:
 
@@ -573,7 +573,7 @@ assembly_pass:
 	mov	eax,[directives_stack_base]
 	mov	[directives_stack],eax
 	mov	eax,[root_namespace]
-	mov	[current_namespace],eax
+	mov	[current_context.base_namespace],eax
 	mov	edx,[counters_stack_base]
 	mov	[current_counter],edx
 	xor	eax,eax
@@ -663,11 +663,19 @@ assembly_line:
 	je	calm_virtual_machine
 	mov	eax,[ebx+SourceEntry.local_namespace]
 	mov	[parameter_namespace],eax
+	xor	edx,edx
 	test	[eax+SymbolTree_Root.flags],NAMESPACE_UNATTACHED
-	jz	local_namespace_ok
-	xor	eax,eax
+	jnz	no_local_namespace
+	mov	edx,eax
+	mov	ecx,[eax+SymbolTree_Root.current_label]
+	test	ecx,ecx
+	jnz	local_namespace_ok
+    no_local_namespace:
+	mov	eax,[current_context.base_namespace]
+	mov	ecx,[eax+SymbolTree_Root.current_label]
     local_namespace_ok:
-	mov	[local_namespace],eax
+	mov	[local_namespace],edx
+	mov	[current_context.base_label],ecx
 	cmp	[ebx+SourceEntry.type],SOURCE_MACRO
 	je	get_line_from_macro
 	and	[name_token],0
@@ -1693,7 +1701,7 @@ preprocess_symbol:
 	mov	eax,[local_namespace]
 	mov	[edi+RecognitionContext.base_namespace],eax
 	xor	eax,eax
-	mov	[edi+RecognitionContext.current_label],eax
+	mov	[edi+RecognitionContext.base_label],eax
 	add	edi,sizeof.RecognitionContext
 	mov	al,1Ah
 	stosb
@@ -2244,20 +2252,11 @@ make_recognition_context_token:
     ; out:
     ;  edi - past the filled RecognitionContext
     ;  [context_boundary] - past the filled RecognitionContext
-    ; preserves: ebx, edx
-	mov	eax,[current_namespace]
+    ; preserves: ebx, edx, esi
+	mov	eax,[current_context.base_namespace]
+	mov	ecx,[current_context.base_label]
 	mov	[edi+RecognitionContext.base_namespace],eax
-	mov	ecx,[local_namespace]
-	jecxz	context_with_no_structure_label
-	mov	ecx,[ecx+SymbolTree_Root.current_label]
-	jecxz	context_with_no_structure_label
-	mov	[edi+RecognitionContext.current_label],ecx
-	add	edi,sizeof.RecognitionContext
-	mov	[context_boundary],edi
-	retn
-      context_with_no_structure_label:
-	mov	eax,[eax+SymbolTree_Root.current_label]
-	mov	[edi+RecognitionContext.current_label],eax
+	mov	[edi+RecognitionContext.base_label],ecx
 	add	edi,sizeof.RecognitionContext
 	mov	[context_boundary],edi
 	retn
@@ -2333,6 +2332,30 @@ clear_line_embeddings:
     embedded_values_ok:
 	retn
 
+identify_symbol_in_namespace:
+; in:
+;  ebx - SymbolTree_Root
+;  esi = pointer into preprocessed line or current embedded value
+;  dl = SYMCLASS_#
+;  [symbol_definition] = non-zero when symbol needs to be identified for the purpose of definition
+; out:
+;  cf set when there were no more symbols in preprocessed line or current embedded value
+;  esi = pointer advanced past the processed identifier and following whitespace or to the first token of a different symbol
+;  ecx = number of whitespace tokens encountered immediately before the new position
+;  when cf = 0:
+;   ebx - SymbolTree_Leaf, null when no symbol was identified
+;   edx - SymbolTree_Foliage, may be null if either ebx or edi is null
+;   edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
+;   [symbol_start] - first token of identified symbol
+;   [symbol_solid] = non-zero when initial component of identifier was a name and not a dot
+; note:
+;  when ebx is null but edi is not, the identifier was malformed
+;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
+	mov	[expected_class],dl
+	xor	ecx,ecx
+	call	move_to_next_symbol
+	jnc	namespaces_ok
+	retn
 identify_symbol:
 ; in:
 ;  esi = pointer into preprocessed line or current embedded value
@@ -2352,65 +2375,27 @@ identify_symbol:
 ; note:
 ;  when ebx is null but edi is not, the identifier was malformed
 ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
-	xor	ebx,ebx
 	mov	[expected_class],dl
 	xor	ecx,ecx
 	call	move_to_next_symbol
 	jc	identification_finished
+	xor	ebx,ebx
 	mov	edx,[embedded_context]
 	test	edx,edx
-	jz	use_current_namespace
+	jnz	use_namespace
+	mov	edx,current_context
+    use_namespace:
 	mov	eax,[edx+RecognitionContext.base_namespace]
 	mov	[recognition_context.base_namespace],eax
-	mov	eax,[edx+RecognitionContext.current_label]
-	mov	[recognition_context.current_label],eax
-	jmp	namespaces_ok
-    identify_symbol_in_namespace:
-    ; in:
-    ;  ebx - SymbolTree_Root
-    ;  esi = pointer into preprocessed line or current embedded value
-    ;  dl = SYMCLASS_#
-    ;  [symbol_definition] = non-zero when symbol needs to be identified for the purpose of definition
-    ; out:
-    ;  cf set when there were no more symbols in preprocessed line or current embedded value
-    ;  esi = pointer advanced past the processed identifier and following whitespace or to the first token of a different symbol
-    ;  ecx = number of whitespace tokens encountered immediately before the new position
-    ;  when cf = 0:
-    ;	ebx - SymbolTree_Leaf, null when no symbol was identified
-    ;	edx - SymbolTree_Foliage, may be null if either ebx or edi is null
-    ;	edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
-    ;	[symbol_start] - first token of identified symbol
-    ;	[symbol_solid] = non-zero when initial component of identifier was a name and not a dot
-    ; note:
-    ;  when ebx is null but edi is not, the identifier was malformed
-    ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
-	mov	[expected_class],dl
-	xor	ecx,ecx
-	xor	edx,edx
-	call	move_to_next_symbol
-	jnc	namespaces_ok
-	retn
-    use_current_namespace:
-	mov	eax,[current_namespace]
-	mov	[recognition_context.base_namespace],eax
-	mov	edx,[local_namespace]
-	test	edx,edx
-	jz	no_structure_label
-	mov	edx,[edx+SymbolTree_Root.current_label]
-	test	edx,edx
-	jz	no_structure_label
-	mov	[recognition_context.current_label],edx
-	jmp	namespaces_ok
-    no_structure_label:
-	mov	eax,[eax+SymbolTree_Root.current_label]
-	mov	[recognition_context.current_label],eax
+	mov	eax,[edx+RecognitionContext.base_label]
+	mov	[recognition_context.base_label],eax
     namespaces_ok:
 	mov	[symbol_start],esi
 	and	[symbol_solid],0
 	cmp	[symbol_definition],0
-	setnz	dh
-	shl	dh,bsf RECOGNIZE_DEFINITION
-	mov	[recognizer_setting],dh
+	setnz	al
+	shl	al,bsf RECOGNIZE_DEFINITION
+	mov	[recognizer_setting],al
 	xor	edx,edx
 	xor	edi,edi
 	mov	al,[esi]
@@ -2596,7 +2581,7 @@ identify_symbol:
     name_after_starting_dot:
 	test	ebx,ebx
 	jnz	name_after_multiple_dot_operator
-	call	get_current_label
+	call	get_base_label
 	mov	edi,ebx
 	mov	al,[esi]
 	jmp	identify_name_after_dot
@@ -2625,7 +2610,7 @@ identify_symbol:
 	mov	edi,[recognition_context.base_namespace]
 	jmp	symbol_identified
     identify_current_label:
-	call	get_current_label
+	call	get_base_label
     get_label_symbol:
 	mov	edi,ebx
 	mov	al,[expected_class]
@@ -2645,8 +2630,8 @@ identify_symbol:
       current_label_identified:
 	clc
 	retn
-    get_current_label:
-	mov	edx,[recognition_context.current_label]
+    get_base_label:
+	mov	edx,[recognition_context.base_label]
 	test	edi,edi
 	jnz	synthesize_dot_label
 	test	edx,edx

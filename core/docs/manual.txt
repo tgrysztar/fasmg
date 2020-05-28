@@ -156,7 +156,7 @@ the middle of the name (effectively splitting it into separate tokens) such
 identifier is considered a syntactical error.
   When an identifier starts with a dot (in other words: when the name of the parent
 symbol is empty), it refers to the symbol in the namespace of the most recent 
-regular label defined before it. This allows to rewrite the above sample
+regular label defined before current line. This allows to rewrite the above sample
 like this:
 
         space:
@@ -193,7 +193,7 @@ current namespace. If no defined symbol with such name is found, it is assumed t
 the name refers to the symbol in the current namespace (and unless there is "?"
 character after such name, it is assumed that the symbol is case-sensitive).
 A definition that does not specify the namespace where the new symbol should be
-created, always makes the new symbol in the current base namespace.
+created, always makes a new symbol in the current base namespace.
 
         global = 0
         regional = 1
@@ -204,7 +204,7 @@ created, always makes the new symbol in the current base namespace.
                 global.x = global       ; global.x = 0
         end namespace
 
-The comments in the above sample show the equivalent definitions with respect
+The comments in the above sample show equivalent definitions with respect
 to the original base namespace. Note that when a name is used to specify the
 namespace, the assembler looks for a defined symbol with such name to lookup in
 its namespace, but when it is a name of a symbol to be defined, it is always

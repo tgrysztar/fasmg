@@ -534,7 +534,7 @@ get_abstract_symbol:
 	mov	[symbol_class],dl
 	test	ebx,ebx
 	jnz	scope_selected
-	mov	ebx,[current_namespace]
+	mov	ebx,[current_context.base_namespace]
     scope_selected:
 	mov	esi,eax
 	mov	edx,FNV_OFFSET
