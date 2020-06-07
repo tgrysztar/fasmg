@@ -186,6 +186,14 @@ show_errors:
 	push	ebx
 	mov	ebx,[ebx+Error.symbol]
 	mov	ebx,[ebx+SymbolTree_Leaf.branch]
+	call	show_symbol_name
+	pop	ebx
+	jmp	format_error_message
+
+show_symbol_name:
+; in:
+;  ebx - SymbolTree_Foliage, may be null
+; preserves: esi
 	test	ebx,ebx
 	jz	symbol_name_shown
 	mov	edi,[identifier_workspace.memory_start]
@@ -254,11 +262,12 @@ show_errors:
 	test	ebx,ebx
 	jnz	compose_symbol_name
       symbol_name_ready:
-	push	esi
-	mov	esi,[identifier_workspace.memory_start]
-	mov	ebx,esi
+	mov	ebx,[identifier_workspace.memory_start]
 	mov	ecx,edi
 	sub	ecx,ebx
+	jz	symbol_name_shown
+	push	esi
+	mov	esi,ebx
       reverse_composed_name:
 	dec	edi
 	cmp	ebx,edi
@@ -272,8 +281,7 @@ show_errors:
 	call	display_error_string
 	pop	esi
       symbol_name_shown:
-	pop	ebx
-	jmp	format_error_message
+	retn
 
 show_line_content:
 ; in:

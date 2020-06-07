@@ -31,8 +31,8 @@ struct SourceEntry
 ends
 
 struct RecognitionContext
-	base_namespace dd ?
-	base_label dd ?
+	base_namespace dd ?		; SymbolTree_Root
+	base_label dd ? 		; SymbolTree_Foliage
 ends
 
 struct LineEmbedding
