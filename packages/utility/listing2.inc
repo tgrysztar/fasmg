@@ -94,6 +94,8 @@ namespace Listing
 		asm	virtual Text
 		compute counter, 0
 	    print_bytes:
+		check	counter < readable_bytes
+		jno	print_uninitialized_bytes
 		compute digit, (data shr (counter shl 3 + 4)) and 0Fh
 		asm	load digit:byte from HexDigits:digit
 		asm	db digit
@@ -101,8 +103,8 @@ namespace Listing
 		asm	load digit:byte from HexDigits:digit
 		asm	db digit, ' '
 		compute counter, counter + 1
-		check	counter < readable_bytes
-		jyes	print_bytes
+		jump	print_bytes
+	    print_uninitialized_bytes:
 		asm	db bytes_in_row - readable_bytes dup '?? '
 		check	line
 		jno	line_printed
