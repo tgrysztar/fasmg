@@ -1175,7 +1175,6 @@ calculate_parsed_expression:
 	jne	identify_value_to_push
 	push	esi edi
 	call	clear_line_embeddings
-	and	[embedded_context],0
 	xor	esi,esi
 	xor	ecx,ecx
 	call	embed_symbolic_value

@@ -2133,6 +2133,7 @@ calm_assemble:
 	mov	[ebx+SourceEntry.local_namespace],eax
 	mov	al,[calm_result]
 	mov	[ebx-sizeof.SourceEntry+SourceEntry.saved_result],al
+	call	clear_line_embeddings
 	mov	ecx,[instruction_branch]
 	test	ecx,ecx
 	jz	get_line
@@ -2162,10 +2163,12 @@ calm_transform:
 	cmp	[edx+ValueDefinition.type],VALTYPE_SYMBOLIC
 	jne	calm_invalid_value
 	push	esi
-	and	[embedded_context],0
 	call	clear_line_embeddings
 	mov	esi,[edx+ValueDefinition.value]
 	mov	[line_start],esi
+	xor	eax,eax
+	mov	[embedded_context],eax
+	mov	[line_context],eax
 	mov	ecx,[edx+ValueDefinition.value_length]
 	add	ecx,esi
 	mov	[line_end],ecx
@@ -2175,6 +2178,8 @@ calm_transform:
 	and	[symbol_definition],0
 	mov	dl,SYMCLASS_EXPRESSION
 	push	edi
+	mov	eax,[embedded_context]
+	mov	[line_context],eax
 	mov	ebx,[transforming_namespace]
 	test	ebx,ebx
 	jz	transform_identify
@@ -2211,7 +2216,15 @@ calm_transform:
 	test	ebx,ebx
 	jz	symbol_transformed
 	mov	al,1
-	call	reset_hidden_context
+	xchg	al,[hidden_context]
+	test	al,al
+	jnz	reset_hidden_context
+	cmp	[line_context],0
+	je	copy_transformed_value
+    reset_hidden_context:
+	xor	edx,edx
+	call	reset_transformed_context
+    copy_transformed_value:
 	mov	ecx,ebx
 	rep	movsb
     symbol_transformed:
@@ -2219,8 +2232,6 @@ calm_transform:
 	mov	al,20h
 	rep	stosb
 	mov	esi,[line_start]
-	mov	eax,[embedded_context]
-	mov	[line_context],eax
 	jmp	transform_symbolic_value
     untransformed_literal:
 	mov	ecx,esi
@@ -2231,29 +2242,30 @@ calm_transform:
 	mov	edx,assembly_workspace
 	call	reserve_workspace
 	xor	al,al
-	call	reset_hidden_context
+	xchg	al,[hidden_context]
+	test	al,al
+	jz	copy_untransformed_literal
+	mov	edx,[line_context]
+	call	reset_transformed_context
+    copy_untransformed_literal:
 	mov	ecx,ebx
 	rep	movsb
 	jmp	transform_symbolic_value
-    reset_hidden_context:
-	xchg	al,[hidden_context]
-	test	al,al
-	jz	hidden_context_ok
-	cmp	byte [esi],40h
-	je	hidden_context_ok
+    reset_transformed_context:
 	mov	al,40h
+	cmp	[esi],al
+	je	transformed_context_ok
 	stosb
-	mov	edx,[line_context]
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	test	edx,edx
-	jz	clear_hidden_context
+	jz	clear_transformed_context
 	xchg	esi,edx
 	rep	movsd
 	mov	esi,edx
-      hidden_context_ok:
+      transformed_context_ok:
 	retn
-      clear_hidden_context:
+      clear_transformed_context:
 	xor	eax,eax
 	rep	stosd
 	retn
@@ -2321,7 +2333,6 @@ calm_publish_variable:
 	cmp	al,VALTYPE_SYMBOLIC
 	jne	calm_invalid_value
 	push	esi edi
-	and	[embedded_context],0
 	call	clear_line_embeddings
 	mov	esi,[edx+ValueDefinition.value]
 	mov	[line_start],esi

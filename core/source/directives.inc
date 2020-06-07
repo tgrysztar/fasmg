@@ -802,6 +802,7 @@ define_symbolic_variable:
 	jc	copy_symbol
 	cmp	[edx+ValueDefinition.type],VALTYPE_SYMBOLIC
 	jne	copy_symbol
+	and	[previous_symbol_end],0
 	mov	eax,[current_pass]
 	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	cmp	ebx,[label_leaf]
@@ -811,11 +812,8 @@ define_symbolic_variable:
 	je	replace_symbolic_variable
 	mov	edx,_symbolic_self_reference
 	call	register_error
-	and	[previous_symbol_end],0
 	jmp	expand_symbols
     replace_symbolic_variable:
-	xor	ebx,ebx
-	xchg	ebx,[previous_symbol_end]
 	mov	ecx,[edx+ValueDefinition.value_length]
 	test	ecx,ecx
 	jz	expand_symbols
@@ -826,14 +824,12 @@ define_symbolic_variable:
 	add	ecx,[further_whitespace]
 	mov	edx,assembly_workspace
 	call	reserve_workspace
-	test	ebx,ebx
-	jnz	copy_symbolic_value
 	mov	al,40h
 	cmp	al,[esi]
 	je	copy_symbolic_value
 	stosb
 	mov	eax,esi
-	mov	esi,recognition_context
+	mov	esi,current_context
 	assert	sizeof.RecognitionContext and 11b = 0
 	mov	ecx,sizeof.RecognitionContext shr 2
 	rep	movsd
@@ -2894,6 +2890,7 @@ match_block:
 	jmp	get_matched_token
       substitution_encountered:
 	mov	esi,[ebx+SymbolSubstitution.value_start]
+	and	[matched_context],0
 	or	[substitution_active],1
       token_in_substitution:
 	cmp	esi,[ebx+SymbolSubstitution.value_end]
@@ -3472,7 +3469,6 @@ use_struc:
 	mov	[instruction_branch],eax
 	xor	ecx,ecx
 	call	embed_symbolic_value
-	and	[embedded_context],0
     measure_macro_header:
 	lodsb
 	test	al,al

@@ -958,9 +958,7 @@ assembly_line:
 	mov	esi,[preprocessing_workspace.memory_start]
 	mov	[line_start],esi
     got_line:
-	xor	eax,eax
-	mov	[line_context],eax
-	mov	[embedded_context],eax
+	and	[line_context],0
 assemble_instruction:
 	mov	ebx,[interceptor_symbol]
 	call	get_available_value
@@ -2293,6 +2291,7 @@ embed_symbolic_value:
 	mov	[eax+LineEmbedding.previous_end],edi
 	mov	ecx,[embedded_context]
 	mov	[eax+LineEmbedding.recognition_context],ecx
+	and	[embedded_context],0
 	mov	esi,[edx+ValueDefinition.value]
 	mov	ecx,[edx+ValueDefinition.value_length]
 	add	ecx,esi
@@ -2308,12 +2307,12 @@ clear_line_embeddings:
 ;  when esi is said to point into preprocessed line or current embedded value, it must be between [line_start] and [line_end];
 ;  these two pointers change upon entering a symbolic value of evaluated identifier (with embed_symbolic_value)
 ;  and are restored when warp_to_next_symbol goes past the end of that embedded value;
-;  if the assembly is finished before reaching the end of line, clear_line_embeddings needs to be called
-;  to discard the stack of stored [line_start] and [line_end] boundaries before setting up a new line for the assembly;
-;  it does not reset [embedded_context], but this can be done by simply zeroing the pointer
+;  this function needs to be called before setting up a new line for the assembly
+;  and it discards the stack of stored [line_start] and [line_end] boundaries
 	xor	eax,eax
 	mov	[line_start],eax
 	mov	[line_end],eax
+	mov	[embedded_context],eax
 	cmp	eax,[number_of_line_embeddings]
 	je	embedded_values_ok
 	push	ecx

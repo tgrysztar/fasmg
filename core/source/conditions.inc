@@ -609,7 +609,6 @@ check_if_defined_earlier:
 	jmp	check_expression_element
     get_subexpression:
 	call	clear_line_embeddings
-	and	[embedded_context],0
 	xor	esi,esi
 	xor	ecx,ecx
 	call	embed_symbolic_value
