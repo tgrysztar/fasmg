@@ -1478,7 +1478,7 @@ calm_end:
 	mov	edx,[ebx+sizeof.SourceContext+ecx+SourceEntry.text]
 	and	[edx+ValueDefinition.flags],not VAL_IN_USE
 	dec	[edx+ValueDefinition.reference_count]
-	jmp	get_line
+	jmp	assembly_line
 
 calm_arrange:
 	lodsd
@@ -2133,15 +2133,14 @@ calm_assemble:
 	mov	[ebx+SourceEntry.local_namespace],eax
 	mov	al,[calm_result]
 	mov	[ebx-sizeof.SourceEntry+SourceEntry.saved_result],al
-	call	clear_line_embeddings
 	mov	ecx,[instruction_branch]
 	test	ecx,ecx
-	jz	get_line
+	jz	assembly_line
 	mov	eax,[ecx+SymbolTree_Foliage.name_data]
 	mov	[ebx+SourceEntry.name],eax
 	mov	eax,[ecx+SymbolTree_Foliage.name_length]
 	mov	[ebx+SourceEntry.name_length],eax
-	jmp	get_line
+	jmp	assembly_line
     calm_undefined_symbol:
 	mov	edx,_undefined_symbol
 	call	register_error
