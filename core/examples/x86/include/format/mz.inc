@@ -203,6 +203,12 @@ iterate <dw,word>, dw,word, dd,dword
 
 end iterate
 
+calminstruction align? boundary,value:?
+	compute boundary, (boundary-1)-((0 scaleof $)+boundary-1) mod boundary
+	arrange value, =db boundary =dup value
+	assemble value
+end calminstruction
+
 postpone
     if MZ.STACK_LENGTH
 	rb 0Fh - ($%+0Fh) and 0Fh

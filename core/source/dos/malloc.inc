@@ -62,11 +62,10 @@ malloc_growable:
 ; in: ecx = requested size
 ; out: eax - allocated block, ecx = allocated size, on error jumps to out_of_memory (does not return)
 ; preserves: ebx, esi, edi
-	dec	ecx
+	add	ecx,sizeof.MemoryHeader-1
+	jc	out_of_memory
 	and	ecx,(-1) shl 2
 	add	ecx,1 shl 2
-	jc	out_of_memory
-	add	ecx,sizeof.MemoryHeader
 	jc	out_of_memory
 	cmp	ecx,sizeof.FreeMemory
 	jae	malloc_size_ok
@@ -256,11 +255,10 @@ realloc:
 ; in: eax - memory block, ecx = requested size
 ; out: eax - resized block, ecx = allocated size, on error jumps to out_of_memory (does not return)
 ; preserves: ebx, esi, edi
-	dec	ecx
+	add	ecx,sizeof.MemoryHeader-1
+	jc	out_of_memory
 	and	ecx,(-1) shl 2
 	add	ecx,1 shl 2
-	jc	out_of_memory
-	add	ecx,sizeof.MemoryHeader
 	jc	out_of_memory
 	sub	eax,sizeof.MemoryHeader
 	mov	edx,[eax+MemoryHeader.size]

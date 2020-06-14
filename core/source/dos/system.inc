@@ -366,9 +366,7 @@ get_environment_variable:
 	jnz	next_variable
 	cmp	byte [gs:esi],0
 	jne	compare_variable_names
-	xor	eax,eax
-	pop	edi esi ebx
-	ret
+	mov	ah,al
     end_of_variable_name:
 	test	ah,ah
 	jnz	next_variable

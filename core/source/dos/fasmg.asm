@@ -610,6 +610,8 @@ segment main use32
   include '../tables.inc'
   include '../messages.inc'
 
+  align 4
+
   include '../variables.inc'
 
   psp_selector dw ?

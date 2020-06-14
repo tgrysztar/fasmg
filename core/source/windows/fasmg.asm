@@ -477,9 +477,11 @@ section '.rdata' data readable
   include '../tables.inc'
   include '../messages.inc'
 
-section '.bss' readable writeable
+section '.udata' readable writeable
 
   include '../variables.inc'
+
+section '.bss' readable writeable
 
   source_path dd ?
   output_path dd ?
