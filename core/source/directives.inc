@@ -388,21 +388,24 @@ get_macro_definition_symbol:
 	cmp	al,'!'
 	je	unconditional_macro
 	jmp	macro_symbol_ok
-    recursive_macro:
-	inc	esi
-	call	move_to_next_symbol
-	and	[macro_flags],not VAL_NONRECURSIVE
-	or	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
-	jmp	macro_symbol_ok
     unconditional_interceptor:
 	mov	ebx,[interceptor_symbol]
 	cmp	dl,SYMCLASS_STRUCTURE
 	jne	unconditional_macro
 	mov	ebx,[label_interceptor_symbol]
     unconditional_macro:
+	or	[macro_flags],VAL_UNCONDITIONAL
 	inc	esi
 	call	move_to_next_symbol
-	or	[macro_flags],VAL_UNCONDITIONAL
+	jc	macro_symbol_ok
+	cmp	al,':'
+	jne	macro_symbol_ok
+    recursive_macro:
+	inc	esi
+	call	move_to_next_symbol
+	and	[macro_flags],not VAL_NONRECURSIVE
+	or	[ebx+SymbolTree_Leaf.flags],SYM_CONSTANT
+	jmp	macro_symbol_ok
     macro_symbol_ok:
 	mov	[macro_leaf],ebx
 	mov	edx,[ebx+SymbolTree_Leaf.definition]
