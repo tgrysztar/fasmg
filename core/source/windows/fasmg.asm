@@ -451,6 +451,32 @@ section '.text' code executable
 
 section '.rdata' data readable
 
+data import
+
+	library kernel32,'KERNEL32.DLL'
+
+	import kernel32,\
+	       CloseHandle,'CloseHandle',\
+	       CreateFile,'CreateFileA',\
+	       ExitProcess,'ExitProcess',\
+	       GetCommandLine,'GetCommandLineA',\
+	       GetEnvironmentVariable,'GetEnvironmentVariableA',\
+	       GetStdHandle,'GetStdHandle',\
+	       GetSystemTime,'GetSystemTime',\
+	       GetTickCount,'GetTickCount',\
+	       HeapAlloc,'HeapAlloc',\
+	       HeapCreate,'HeapCreate',\
+	       HeapDestroy,'HeapDestroy',\
+	       HeapFree,'HeapFree',\
+	       HeapReAlloc,'HeapReAlloc',\
+	       HeapSize,'HeapSize',\
+	       ReadFile,'ReadFile',\
+	       SetFilePointer,'SetFilePointer',\
+	       SystemTimeToFileTime,'SystemTimeToFileTime',\
+	       WriteFile,'WriteFile',\
+	       GetLastError,'GetLastError'
+end data
+
   _logo db 'flat assembler  version g.',VERSION,13,10,0
 
   _usage db 'Usage: fasmg source [output]',13,10
@@ -477,11 +503,9 @@ section '.rdata' data readable
   include '../tables.inc'
   include '../messages.inc'
 
-section '.udata' readable writeable
+section '.bss' readable writeable
 
   include '../variables.inc'
-
-section '.bss' readable writeable
 
   source_path dd ?
   output_path dd ?
@@ -503,29 +527,3 @@ section '.bss' readable writeable
   timer dd ?
   verbosity_level dd ?
   no_logo db ?
-
-section '.idata' import data readable
-
-  library kernel32,'KERNEL32.DLL'
-
-  import kernel32,\
-	 CloseHandle,'CloseHandle',\
-	 CreateFile,'CreateFileA',\
-	 ExitProcess,'ExitProcess',\
-	 GetCommandLine,'GetCommandLineA',\
-	 GetEnvironmentVariable,'GetEnvironmentVariableA',\
-	 GetStdHandle,'GetStdHandle',\
-	 GetSystemTime,'GetSystemTime',\
-	 GetTickCount,'GetTickCount',\
-	 HeapAlloc,'HeapAlloc',\
-	 HeapCreate,'HeapCreate',\
-	 HeapDestroy,'HeapDestroy',\
-	 HeapFree,'HeapFree',\
-	 HeapReAlloc,'HeapReAlloc',\
-	 HeapSize,'HeapSize',\
-	 ReadFile,'ReadFile',\
-	 SetFilePointer,'SetFilePointer',\
-	 SystemTimeToFileTime,'SystemTimeToFileTime',\
-	 WriteFile,'WriteFile',\
-	 GetLastError,'GetLastError'
-	   

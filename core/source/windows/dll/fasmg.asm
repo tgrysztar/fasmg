@@ -207,41 +207,47 @@ section '.text' code executable
 
 section '.rdata' data readable
 
+data import
+
+	library kernel32,'KERNEL32.DLL'
+
+	import kernel32,\
+	       CloseHandle,'CloseHandle',\
+	       CreateFile,'CreateFileA',\
+	       ExitProcess,'ExitProcess',\
+	       GetEnvironmentVariable,'GetEnvironmentVariableA',\
+	       GetSystemTime,'GetSystemTime',\
+	       GetTickCount,'GetTickCount',\
+	       VirtualAlloc,'VirtualAlloc',\
+	       VirtualFree,'VirtualFree',\
+	       HeapAlloc,'HeapAlloc',\
+	       HeapCreate,'HeapCreate',\
+	       HeapDestroy,'HeapDestroy',\
+	       HeapFree,'HeapFree',\
+	       HeapReAlloc,'HeapReAlloc',\
+	       HeapSize,'HeapSize',\
+	       ReadFile,'ReadFile',\
+	       SetFilePointer,'SetFilePointer',\
+	       SystemTimeToFileTime,'SystemTimeToFileTime',\
+	       WriteFile,'WriteFile',\
+	       GetLastError,'GetLastError'
+
+end data
+
+align 4
+
+data export
+
+	export 'FASMG.DLL',\
+	       fasmg_GetVersion,'fasmg_GetVersion',\
+	       fasmg_Assemble,'fasmg_Assemble'
+
+end data
+
   include '../../tables.inc'
   include '../../messages.inc'
 
   version_string db VERSION,0
-
-section '.idata' import data readable
-
-  library kernel32,'KERNEL32.DLL'
-
-  import kernel32,\
-	 CloseHandle,'CloseHandle',\
-	 CreateFile,'CreateFileA',\
-	 ExitProcess,'ExitProcess',\
-	 GetEnvironmentVariable,'GetEnvironmentVariableA',\
-	 GetSystemTime,'GetSystemTime',\
-	 GetTickCount,'GetTickCount',\
-	 VirtualAlloc,'VirtualAlloc',\
-	 VirtualFree,'VirtualFree',\
-	 HeapAlloc,'HeapAlloc',\
-	 HeapCreate,'HeapCreate',\
-	 HeapDestroy,'HeapDestroy',\
-	 HeapFree,'HeapFree',\
-	 HeapReAlloc,'HeapReAlloc',\
-	 HeapSize,'HeapSize',\
-	 ReadFile,'ReadFile',\
-	 SetFilePointer,'SetFilePointer',\
-	 SystemTimeToFileTime,'SystemTimeToFileTime',\
-	 WriteFile,'WriteFile',\
-	 GetLastError,'GetLastError'
-
-section '.edata' export data readable
-
-  export 'FASMG.DLL',\
-	 fasmg_GetVersion,'fasmg_GetVersion',\
-	 fasmg_Assemble,'fasmg_Assemble'
 
 section '.reloc' fixups data readable discardable
 	   
