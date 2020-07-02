@@ -576,9 +576,9 @@ macro MOV? dest,src
 end macro
 
 macro MOVC? operands&
-	match =A?=,=@A? + =DPTR?, operands
+	match =A?=, =@A? + =DPTR?, operands
 		db 93h
-	else match =A?=,=@A? + =PC?, operands
+	else match =A?=, =@A? + =PC?, operands
 		db 83h
 	else
 		err "invalid operand"
