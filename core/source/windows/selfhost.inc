@@ -91,7 +91,7 @@ macro struct? name
 		namespace .
 end macro
 
-calminstruction invoke? proc*,args&
+calminstruction stdcall? proc*,args&
 	local	tmp, stack
 	match	, args
 	jyes	call
@@ -105,7 +105,7 @@ calminstruction invoke? proc*,args&
 	take	args, stack
 	jyes	push
     call:
-	arrange proc, =call [proc]
+	arrange proc, =call proc
 	assemble proc
 end calminstruction
 

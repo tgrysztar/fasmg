@@ -24,8 +24,6 @@ ends
 
 section '.text' code executable
 
-  include 'system.inc'
-
   include '../../assembler.inc'
   include '../../symbols.inc'
   include '../../expressions.inc'
@@ -62,8 +60,7 @@ section '.text' code executable
 			filetime FILETIME
 
 			memory dd ?
-			bytes_count dd ?
-			position_high dd ?
+			systmp dd ?
 
 			rb  (LocalVariables - $) and 11b
 
@@ -139,12 +136,12 @@ section '.text' code executable
 	je	new_region_for_output
 	cmp	eax,[value_length]
 	jae	copy_output
-	invoke	VirtualAlloc,[esi+MEMORY_REGION.address],[esi+MEMORY_REGION.size],MEM_COMMIT,PAGE_READWRITE
+	stdcall VirtualAlloc,[esi+MEMORY_REGION.address],[esi+MEMORY_REGION.size],MEM_COMMIT,PAGE_READWRITE
 	test	eax,eax
 	jnz	copy_output
-	invoke	VirtualFree,[esi+MEMORY_REGION.address],0,MEM_RELEASE
+	stdcall VirtualFree,[esi+MEMORY_REGION.address],0,MEM_RELEASE
    new_region_for_output:
-	invoke	VirtualAlloc,0,[esi+MEMORY_REGION.size],MEM_COMMIT,PAGE_READWRITE
+	stdcall VirtualAlloc,0,[esi+MEMORY_REGION.size],MEM_COMMIT,PAGE_READWRITE
 	test	eax,eax
 	jz	out_of_memory
 	mov	[esi+MEMORY_REGION.address],eax
@@ -205,6 +202,8 @@ section '.text' code executable
 	pop	edi esi ebx
 	retn	FUNCTION_PARAMETERS_SIZE
 
+  include 'system.inc'
+
 section '.rdata' data readable
 
 data import
@@ -212,25 +211,27 @@ data import
 	library kernel32,'KERNEL32.DLL'
 
 	import kernel32,\
-	       CloseHandle,'CloseHandle',\
-	       CreateFile,'CreateFileA',\
-	       ExitProcess,'ExitProcess',\
-	       GetEnvironmentVariable,'GetEnvironmentVariableA',\
-	       GetSystemTime,'GetSystemTime',\
-	       GetTickCount,'GetTickCount',\
-	       VirtualAlloc,'VirtualAlloc',\
-	       VirtualFree,'VirtualFree',\
-	       HeapAlloc,'HeapAlloc',\
-	       HeapCreate,'HeapCreate',\
-	       HeapDestroy,'HeapDestroy',\
-	       HeapFree,'HeapFree',\
-	       HeapReAlloc,'HeapReAlloc',\
-	       HeapSize,'HeapSize',\
-	       ReadFile,'ReadFile',\
-	       SetFilePointer,'SetFilePointer',\
-	       SystemTimeToFileTime,'SystemTimeToFileTime',\
-	       WriteFile,'WriteFile',\
-	       GetLastError,'GetLastError'
+	       __imp_CloseHandle,'CloseHandle',\
+	       __imp_CreateFile,'CreateFileA',\
+	       __imp_ExitProcess,'ExitProcess',\
+	       __imp_GetCommandLine,'GetCommandLineA',\
+	       __imp_GetEnvironmentVariable,'GetEnvironmentVariableA',\
+	       __imp_GetStdHandle,'GetStdHandle',\
+	       __imp_GetSystemTime,'GetSystemTime',\
+	       __imp_GetTickCount,'GetTickCount',\
+	       __imp_HeapAlloc,'HeapAlloc',\
+	       __imp_HeapCreate,'HeapCreate',\
+	       __imp_HeapDestroy,'HeapDestroy',\
+	       __imp_HeapFree,'HeapFree',\
+	       __imp_HeapReAlloc,'HeapReAlloc',\
+	       __imp_HeapSize,'HeapSize',\
+	       __imp_VirtualAlloc,'VirtualAlloc',\
+	       __imp_VirtualFree,'VirtualFree',\
+	       __imp_ReadFile,'ReadFile',\
+	       __imp_SetFilePointer,'SetFilePointer',\
+	       __imp_SystemTimeToFileTime,'SystemTimeToFileTime',\
+	       __imp_WriteFile,'WriteFile',\
+	       __imp_GetLastError,'GetLastError'
 
 end data
 

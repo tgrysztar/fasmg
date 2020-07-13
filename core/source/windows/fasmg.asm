@@ -44,7 +44,7 @@ section '.text' code executable
   init:
 	call	assembly_init
 
-	invoke	GetTickCount
+	call	GetTickCount
 	mov	[timer],eax
 
   assemble:
@@ -91,7 +91,7 @@ section '.text' code executable
       display_passes_suffix:
 	xor	ecx,ecx
 	call	display_string
-	invoke	GetTickCount
+	call	GetTickCount
 	sub	eax,[timer]
 	xor	edx,edx
 	add	eax,50
@@ -147,7 +147,7 @@ section '.text' code executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	invoke	ExitProcess,0
+	stdcall ExitProcess,0
 
   assembly_failed:
 
@@ -156,7 +156,7 @@ section '.text' code executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	invoke	ExitProcess,2
+	stdcall ExitProcess,2
 
   write_failed:
 	mov	ebx,_write_failed
@@ -181,7 +181,7 @@ section '.text' code executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	invoke	ExitProcess,3
+	stdcall ExitProcess,3
 
   display_usage_information:
 
@@ -191,7 +191,7 @@ section '.text' code executable
 
 	call	system_shutdown
 
-	invoke	ExitProcess,1
+	stdcall ExitProcess,1
 
   get_arguments:
 	xor	eax,eax
@@ -203,7 +203,7 @@ section '.text' code executable
 	mov	[maximum_number_of_passes],100
 	mov	[maximum_number_of_errors],1
 	mov	[maximum_depth_of_stack],10000
-	invoke	GetCommandLine
+	call	GetCommandLine
 	mov	esi,eax
 	mov	edi,eax
 	or	ecx,-1
@@ -434,8 +434,6 @@ section '.text' code executable
 	pop	ecx
 	jmp	copy_initial_command
 
-  include 'system.inc'
-
   include '../assembler.inc'
   include '../symbols.inc'
   include '../expressions.inc'
@@ -449,6 +447,8 @@ section '.text' code executable
   include '../output.inc'
   include '../console.inc'
 
+  include 'system.inc'
+
 section '.rdata' data readable
 
 data import
@@ -456,25 +456,26 @@ data import
 	library kernel32,'KERNEL32.DLL'
 
 	import kernel32,\
-	       CloseHandle,'CloseHandle',\
-	       CreateFile,'CreateFileA',\
-	       ExitProcess,'ExitProcess',\
-	       GetCommandLine,'GetCommandLineA',\
-	       GetEnvironmentVariable,'GetEnvironmentVariableA',\
-	       GetStdHandle,'GetStdHandle',\
-	       GetSystemTime,'GetSystemTime',\
-	       GetTickCount,'GetTickCount',\
-	       HeapAlloc,'HeapAlloc',\
-	       HeapCreate,'HeapCreate',\
-	       HeapDestroy,'HeapDestroy',\
-	       HeapFree,'HeapFree',\
-	       HeapReAlloc,'HeapReAlloc',\
-	       HeapSize,'HeapSize',\
-	       ReadFile,'ReadFile',\
-	       SetFilePointer,'SetFilePointer',\
-	       SystemTimeToFileTime,'SystemTimeToFileTime',\
-	       WriteFile,'WriteFile',\
-	       GetLastError,'GetLastError'
+	       __imp_CloseHandle,'CloseHandle',\
+	       __imp_CreateFile,'CreateFileA',\
+	       __imp_ExitProcess,'ExitProcess',\
+	       __imp_GetCommandLine,'GetCommandLineA',\
+	       __imp_GetEnvironmentVariable,'GetEnvironmentVariableA',\
+	       __imp_GetStdHandle,'GetStdHandle',\
+	       __imp_GetSystemTime,'GetSystemTime',\
+	       __imp_GetTickCount,'GetTickCount',\
+	       __imp_HeapAlloc,'HeapAlloc',\
+	       __imp_HeapCreate,'HeapCreate',\
+	       __imp_HeapDestroy,'HeapDestroy',\
+	       __imp_HeapFree,'HeapFree',\
+	       __imp_HeapReAlloc,'HeapReAlloc',\
+	       __imp_HeapSize,'HeapSize',\
+	       __imp_ReadFile,'ReadFile',\
+	       __imp_SetFilePointer,'SetFilePointer',\
+	       __imp_SystemTimeToFileTime,'SystemTimeToFileTime',\
+	       __imp_WriteFile,'WriteFile',\
+	       __imp_GetLastError,'GetLastError'
+
 end data
 
   _logo db 'flat assembler  version g.',VERSION,13,10,0
@@ -518,8 +519,7 @@ section '.bss' readable writeable
   stdout dd ?
   stderr dd ?
   memory dd ?
-  bytes_count dd ?
-  position_high dd ?
+  systmp dd ?
   timestamp dq ?
   systemtime SYSTEMTIME
   filetime FILETIME
@@ -527,3 +527,4 @@ section '.bss' readable writeable
   timer dd ?
   verbosity_level dd ?
   no_logo db ?
+
