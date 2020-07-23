@@ -76,41 +76,14 @@ assembly_init:
 	mov	[trace_mode],al
 
 	xor	eax,eax
-	mov	[current_pass],eax
-	mov	[first_error],eax
-
-	mov	[file_source_cache],eax
-	mov	[memory_source_cache],eax
-	mov	[file_data_cache],eax
-
-	mov	[tree_stack_base],eax
-	mov	[source_context],eax
-	mov	[line_embeddings],eax
-	mov	[directives_stack_base],eax
-	mov	[counters_stack_base],eax
-	mov	[operator_stack_base],eax
-	mov	[condition_stack_base],eax
-	mov	[assembly_stack_base],eax
-
-	mov	[preprocessing_workspace.memory_start],eax
-	mov	[assembly_workspace.memory_start],eax
-	mov	[identifier_workspace.memory_start],eax
-	mov	[value_workspace.memory_start],eax
-	mov	[expression_workspace.memory_start],eax
-	mov	[calculation_workspace.memory_start],eax
-	mov	[auxiliary_workspace.memory_start],eax
-	mov	[calm_code_buffer.memory_start],eax
-	mov	[calm_literals_buffer.memory_start],eax
-	mov	[calm_auxiliary_buffer.memory_start],eax
-
-	mov	[display_buffer],eax
-	mov	[macro_buffer],eax
-	mov	[temporary_terms],eax
-	mov	[temporary_floats],eax
-	mov	[operator_table],eax
-
+	mov	edi,variables
+	mov	ecx,(variables_end - variables) shr 2
+	rep	stosd
+    if (variables_end - variables) and 11b
+	mov	cl,(variables_end - variables) and 11b
+	rep	stosb
+    end if
 	mov	edi,characters
-	xor	eax,eax
       prepare_characters:
 	stosb
 	inc	al
@@ -141,14 +114,6 @@ assembly_init:
 	mov	[include_paths],eax
 	mov	edi,eax
 	call	get_environment_variable
-
-	xor	eax,eax
-	mov	[storage_blocks],eax
-	mov	[storage_free_space_length],eax
-	mov	[tree_blocks],eax
-	mov	[tree_reserve_length],eax
-	mov	[value_definition_chain],eax
-	mov	[retired_definition],eax
 
 	mov	cl,10
 	call	create_string_map
@@ -189,110 +154,28 @@ assembly_init:
 	or	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
 	mov	[label_interceptor_symbol],eax
 
-	mov	ecx,100h
+	mov	ecx,400
 	call	malloc_growable
 	mov	[tree_stack_base],eax
 	add	eax,ecx
 	mov	[tree_stack_end],eax
 
-	mov	ecx,1000h
+	mov	ecx,4000
 	call	malloc_growable
 	mov	[source_context],eax
 	mov	[source_context_maximum_length],ecx
 
-	mov	ecx,400h
+	mov	ecx,1000
 	call	malloc_growable
 	mov	[line_embeddings],eax
 	mov	[line_embeddings_maximum_length],ecx
 
-	mov	ecx,140h
-	call	malloc_growable
-	mov	[output_areas_list],eax
-	mov	edi,eax
-	add	eax,ecx
-	mov	[output_areas_list_end],eax
-	xor	eax,eax
-	shr	ecx,2
-	rep	stosd
-	mov	[number_of_line_embeddings],eax
-	mov	[virtual_area],eax
-
-	mov	ecx,1000h
-	call	malloc_growable
-	mov	[directives_stack_base],eax
-	add	eax,ecx
-	mov	[directives_stack_end],eax
-
-	mov	ecx,1000h
-	call	malloc_growable
-	mov	[counters_stack_base],eax
-	add	eax,ecx
-	mov	[counters_stack_end],eax
-
-	mov	ecx,100h
-	call	malloc_growable
-	mov	[operator_stack_base],eax
-	add	eax,ecx
-	mov	[operator_stack_end],eax
-
-	mov	ecx,10h
-	call	malloc_growable
-	mov	[condition_stack_base],eax
-	add	eax,ecx
-	mov	[condition_stack_end],eax
-
-	mov	ecx,100h
-	call	malloc_growable
-	mov	[assembly_stack_base],eax
-	add	eax,ecx
-	mov	[assembly_stack_end],eax
-
-	mov	edx,preprocessing_workspace
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	edx,assembly_workspace
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	edx,identifier_workspace
-	mov	ecx,100h
-	call	allocate_workspace
-
-	mov	edx,auxiliary_workspace
-	mov	ecx,100h
-	call	allocate_workspace
-
-	mov	edx,value_workspace
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	edx,expression_workspace
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	edx,calculation_workspace
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	edx,calm_code_buffer
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	edx,calm_literals_buffer
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	edx,calm_auxiliary_buffer
-	mov	ecx,1000h
-	call	allocate_workspace
-
-	mov	ecx,100h
+	mov	ecx,1000
 	call	malloc_growable
 	mov	[display_buffer],eax
 	mov	[display_buffer_length],ecx
 
-	mov	ecx,100h
+	mov	ecx,1000
 	call	malloc_growable
 	mov	[macro_buffer],eax
 	mov	[macro_buffer_length],ecx
@@ -305,6 +188,78 @@ assembly_init:
 	mov	ecx,4*sizeof.FloatData
 	call	malloc_fixed
 	mov	[temporary_floats],eax
+
+	mov	ecx,400
+	call	malloc_growable
+	mov	[output_areas_list],eax
+	mov	edi,eax
+	add	eax,ecx
+	mov	[output_areas_list_end],eax
+	xor	eax,eax
+	shr	ecx,2
+	rep	stosd
+	mov	[number_of_line_embeddings],eax
+	mov	[virtual_area],eax
+
+	mov	ecx,1000
+	call	malloc_growable
+	mov	[directives_stack_base],eax
+	add	eax,ecx
+	mov	[directives_stack_end],eax
+
+	mov	ecx,1000
+	call	malloc_growable
+	mov	[counters_stack_base],eax
+	add	eax,ecx
+	mov	[counters_stack_end],eax
+
+	mov	ecx,400
+	call	malloc_growable
+	mov	[operator_stack_base],eax
+	add	eax,ecx
+	mov	[operator_stack_end],eax
+
+	mov	ecx,400
+	call	malloc_growable
+	mov	[condition_stack_base],eax
+	add	eax,ecx
+	mov	[condition_stack_end],eax
+
+	mov	ecx,400
+	call	malloc_growable
+	mov	[assembly_stack_base],eax
+	add	eax,ecx
+	mov	[assembly_stack_end],eax
+
+	mov	edx,preprocessing_workspace
+	call	initialize_workspace
+
+	mov	edx,assembly_workspace
+	call	initialize_workspace
+
+	mov	edx,identifier_workspace
+	call	initialize_workspace
+
+	mov	edx,auxiliary_workspace
+	call	initialize_workspace
+
+	mov	edx,value_workspace
+	call	initialize_workspace
+
+	mov	edx,expression_workspace
+	call	initialize_workspace
+
+	mov	edx,calculation_workspace
+	call	initialize_workspace
+
+	mov	edx,calm_code_buffer
+	call	initialize_workspace
+
+	mov	edx,calm_literals_buffer
+	call	initialize_workspace
+
+	mov	edx,calm_auxiliary_buffer
+	call	initialize_workspace
 
 	mov	ecx,256*4
 	call	malloc_fixed
@@ -1190,12 +1145,12 @@ instruction_assembled:
 	stc
 	retn
 
-allocate_workspace:
+initialize_workspace:
 ; in:
 ;  edx - Workspace
-;  ecx = size of initial reserve
 ; preserves: ebx, edx, esi, edi
 	push	edx
+	mov	ecx,1000h
 	call	malloc_growable
 	pop	edx
 	mov	[edx+Workspace.memory_start],eax

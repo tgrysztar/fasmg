@@ -434,8 +434,8 @@ section '.text' code executable
 	pop	ecx
 	jmp	copy_initial_command
 
-  include '../assembler.inc'
   include '../symbols.inc'
+  include '../assembler.inc'
   include '../expressions.inc'
   include '../conditions.inc'
   include '../floats.inc'
