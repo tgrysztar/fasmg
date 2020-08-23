@@ -66,9 +66,11 @@ PF_R	    = 4
 PF_MASKOS   = 0x0ff00000
 PF_MASKPROC = 0xf0000000
 
-macro align boundary,value:?
-	db (boundary-1)-($-ELF.DYNAMIC+boundary-1) mod boundary dup value
-end macro
+calminstruction align? boundary,value:?
+	compute boundary, (boundary-1)-($-ELF.DYNAMIC+boundary-1) mod boundary
+	arrange value, =db boundary =dup value
+	assemble value
+end calminstruction
 
 ELF::
 

@@ -294,13 +294,13 @@ macro format?.MachO? variant
 	match , variant
 		format binary as 'o'
 		MachO.Settings.FileType equ MH_OBJECT
-		format?.include 'format/macho.inc'
-		format?.include 'p6.inc'
+		include 'format/macho.inc'
+		include 'p6.inc'
 		use32
 	else match =executable?, variant
 		MachO.Settings.BaseAddress = 0x1000
-		format?.include 'format/macho.inc'
-		format?.include 'p6.inc'
+		include 'format/macho.inc'
+		include 'p6.inc'
 		use32
 	else
 		err 'invalid argument'
@@ -313,13 +313,13 @@ macro format?.MachO64? variant
 	match , variant
 		format binary as 'o'
 		MachO.Settings.FileType equ MH_OBJECT
-		format?.include 'format/macho.inc'
-		format?.include 'x64.inc'
+		include 'format/macho.inc'
+		include 'x64.inc'
 		use64
 	else match =executable?, variant
 		MachO.Settings.BaseAddress = 0x100000000
-		format?.include 'format/macho.inc'
-		format?.include 'x64.inc'
+		include 'format/macho.inc'
+		include 'x64.inc'
 		use64
 	else
 		err 'invalid argument'

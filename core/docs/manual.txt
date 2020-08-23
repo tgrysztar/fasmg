@@ -955,6 +955,10 @@ account when counting the nested "macro" and "end macro" pairs.
                 db `x
         end macro
 
+If "esc" is placed inside a nested definition, it is not processed out until
+the innermost macroinstruction becomes defined. This allows a definition
+containing "esc" to be placed inside another macroinstruction without having
+to repeat "esc" for every nesting level.
   When an identifer of macroinstruction in its definition is followed by "!"
 character, it defines an unconditional macroinstruction. This is a special
 kind of instruction class symbol, which is evaluated even in places where the
@@ -1073,7 +1077,7 @@ the macroinstruction it labeled.
 macroinstructions, like in this sample:
 
         macro struct? definition&
-                struc definition
+                esc struc definition
                         label . : .%top - .
                         namespace .
         end macro
@@ -1081,7 +1085,7 @@ macroinstructions, like in this sample:
         macro ends?!
                                 %top:
                         end namespace
-                end struc
+                esc end struc
         end macro
 
         struct POINT vx:?,vy:?
@@ -1091,10 +1095,6 @@ macroinstructions, like in this sample:
 
         my POINT 10,20
 
-Note that it is not necessary to use "esc" instruction to generate unpaired
-"struc" or "end struc" through a macroinstruction defined with "macro". In the
-same manner unpaired "macro" or "end macro" can occur freely in a definition
-made with "struc".
   The "restruc" command is analogous to "purge", but it operates on symbols
 from the class of labeled instructions. Similarly, the "mvstruc" command is 
 the same as "mvmacro" but for labeled instructions.

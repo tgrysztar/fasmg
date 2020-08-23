@@ -3270,8 +3270,14 @@ define_macro:
 	call	find_directive_block
        ; jc	 internal_error
 	cmp	bl,[edi+DirectiveBlock.subtype]
-	jne	add_line_to_macro
+	jne	add_nested_macro_block
 	inc	[edi-sizeof.MacroData+MacroData.nesting_counter]
+	jmp	add_line_to_macro
+    add_nested_macro_block:
+	mov	ecx,sizeof.MacroData
+	call	add_directive_block
+	mov	[edi+DirectiveBlock.subtype],bl
+	mov	[edi-sizeof.MacroData+MacroData.nesting_counter],1
 	jmp	add_line_to_macro
     macro_with_label_parameter:
 	cmp	bl,SYMCLASS_STRUCTURE
@@ -3343,16 +3349,28 @@ end_macro:
 	call	find_directive_block
 	jc	unexpected_instruction
 	cmp	bl,[edi+DirectiveBlock.subtype]
+	je	close_macro_definition
+	; handle improper nesting, for partial backward-compatibility:
+	cmp	bl,SYMCLASS_INSTRUCTION
 	jne	add_line_to_macro
+	call	close_directive_block
+	mov	dl,DBLOCK_MACRO
+	call	find_directive_block
+	jc	unexpected_instruction
+       ; cmp	 [edi+DirectiveBlock.subtype],SYMCLASS_INSTRUCTION
+       ; jne	 internal_error
+    close_macro_definition:
 	dec	[edi-sizeof.MacroData+MacroData.nesting_counter]
 	jnz	add_line_to_macro
-    finish_macro_definition:
 	mov	al,[assembly_mode]
 	and	al,not (AMODE_SKIP or AMODE_DEFINITION)
 	or	al,[edi+DirectiveBlock.prior_assembly_mode]
 	mov	[assembly_mode],al
 	call	close_directive_block
-	test	[assembly_mode],AMODE_SKIP
+	mov	al,[assembly_mode]
+	test	al,AMODE_DEFINITION
+	jne	add_line_to_macro
+	test	al,AMODE_SKIP
 	jnz	assembly_line
 	push	esi
 	cmp	[macro_definition_active],0
@@ -3379,6 +3397,8 @@ escape_directive:
 	jc	unexpected_instruction
 	cmp	[edi-sizeof.MacroData+MacroData.nesting_counter],1
 	ja	add_line_to_macro
+	test	[edi+DirectiveBlock.prior_assembly_mode],AMODE_DEFINITION
+	jnz	add_line_to_macro
 	cmp	[embedded_context],0
 	je	escape_context_ok
 	push	esi

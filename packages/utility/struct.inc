@@ -30,14 +30,14 @@ macro struct? name
 					err 'unnamed values not supported'
 				end match
 			end iterate
-		end struc
+		esc end struc
 		virtual at 0
 			name name
 			sizeof.name = $
 		end virtual
 		purge ends?
 	end macro
-	struc name args@struct&
+	esc struc name args@struct&
 		label . : sizeof.name
 		namespace .
 end macro
