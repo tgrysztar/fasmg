@@ -1475,12 +1475,16 @@ processed macroinstruction but in the context of the source text that called it.
 
         macro irpv?! statement&
                 display 'IRPV wrapper'
-                outscope irpv statement
+                esc outscope irpv statement
         end macro
 
 This allows not only to safely wrap some control directives in macroinstructions,
 but also to create additional customized language constructions that define
-parameters for a block of text.
+parameters for a block of text. Because "outscope" needs to be present in the
+text of a specific macroinstruction that requires it, it is recommended to use
+it in conjunction with "esc" as in the example above, this ensures that it is
+handled the same way even when the entire definition is put inside another
+macroinstruction.
 
 
 12. Matching parameters
@@ -2325,7 +2329,7 @@ Such additional commands may even be defined as CALM instructions themselves:
 
 The command "initsym" in this example is used to assign text to the local
 symbolic variable at the time when "show" instruction is defined.
-Similarly to "local" (and unline "stringify" and "assemble") it does not produce
+Similarly to "local" (and unlike "stringify" and "assemble") it does not produce
 any actual code that would be executed when the "show" instruction is called.
 The arguments to "initsym" retain their original context, therefore symbols
 in the text assigned to the "command" variable are interpreted as in the local

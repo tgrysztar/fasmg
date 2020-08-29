@@ -4,7 +4,9 @@ struct DirectiveBlock
 	subtype db ?			; CTRL_# for DBLOCK_CONTROL
 	flags db ?			; CTRLF_# for DBLOCK_CONTROL
 	prior_assembly_mode db ?
+	prior_special_parameters db ?
 	prior_counter_position dd ?
+	parameter_namespace dd ?
 	parameter dd ?			; pointer to first BlockParameter
 	length_of_data dd ?
 ends
@@ -119,6 +121,10 @@ add_directive_block:
 	mov	[edi+DirectiveBlock.type],dl
 	mov	al,[assembly_mode]
 	mov	[edi+DirectiveBlock.prior_assembly_mode],al
+	mov	ecx,[parameter_namespace]
+	mov	[edi+DirectiveBlock.parameter_namespace],ecx
+	mov	al,[ecx+SymbolTree_Root.parameters]
+	mov	[edi+DirectiveBlock.prior_special_parameters],al
 	xor	eax,eax
 	mov	[edi+DirectiveBlock.subtype],al
 	mov	[edi+DirectiveBlock.flags],al
@@ -173,6 +179,9 @@ close_control_directive_block:
 	mov	eax,[edi+DirectiveBlock.prior_counter_position]
 	add	eax,[counters_stack_base]
 	mov	[current_counter],eax
+	mov	ecx,[edi+DirectiveBlock.parameter_namespace]
+	mov	al,[edi+DirectiveBlock.prior_special_parameters]
+	mov	[ecx+SymbolTree_Root.parameters],al
     close_directive_block:
     ; in: edi - DirectiveBlock
     ; preserves: esi
@@ -1271,6 +1280,7 @@ include_source:
 	call	create_parameter_namespace
 	mov	[edx+SymbolTree_Root.chain],eax
       new_parameter_namespace_ok:
+	and	[eax+SymbolTree_Root.parameters],0
 	mov	[ebx+SourceEntry.local_namespace],eax
 	pop	esi
 	jmp	instruction_assembled
@@ -1505,6 +1515,8 @@ conditionally_repeated_block:
 	stosb
 	stosb
 	mov	[current_counter],ebx
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER
 	test	esi,esi
 	jz	assembly_line
 	jmp	instruction_assembled
@@ -1523,6 +1535,8 @@ conditionally_repeated_block:
 	call	allocate_counter
 	mov	byte [ebx],0
 	mov	[current_counter],ebx
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],0
 	test	esi,esi
 	jz	assembly_line
 	jmp	instruction_assembled
@@ -1667,6 +1681,8 @@ repeated_block:
 	stosb
 	stosb
 	mov	[current_counter],ebx
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER + SPECPARM_LIMIT
     define_named_counters:
 	xor	al,al
 	xchg	al,[current_constituent]
@@ -1896,6 +1912,8 @@ iterator_block:
 	mov	[current_counter],edi
 	stosb
 	stosb
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER + SPECPARM_LIMIT
 	xor	eax,eax
       create_iterator_sequences:
 	mov	[parameter_index],eax
@@ -2121,6 +2139,8 @@ variable_iterator_block:
 	mov	[current_counter],edi
 	stosb
 	stosb
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER + SPECPARM_LIMIT
 	mov	edi,[assembly_workspace.memory_start]
 	mov	ecx,[number_of_values]
 	mov	edx,ecx
@@ -3751,6 +3771,7 @@ use_struc:
 	inc	[edx+ValueDefinition.reference_count]
 	mov	eax,[new_local_namespace]
 	mov	[local_namespace],eax
+	and	[eax+SymbolTree_Root.parameters],0
 	mov	[ebx+SourceEntry.local_namespace],eax
 	mov	ecx,[instruction_branch]
 	test	ecx,ecx
