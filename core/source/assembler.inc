@@ -1456,8 +1456,6 @@ preprocess_symbol:
     current_limit_value:
 	test	[ebx+SymbolTree_Root.parameters],SPECPARM_LIMIT
 	jz	no_parameter_recognized
-	mov	ebx,[preprocessing_workspace.memory_start]
-	add	ebx,[symbol_value_start]
 	mov	dl,DBLOCK_CONTROL
 	call	find_directive_block
 	jc	no_block_with_limit
@@ -1467,13 +1465,14 @@ preprocess_symbol:
 	call	find_next_directive_block
 	jnc	find_block_with_limit
       no_block_with_limit:
-	mov	edi,ebx
 	jmp	no_parameter_recognized
       found_breakable_block:
 	test	[edi+DirectiveBlock.flags],CTRLF_HAS_REPEAT_DATA
 	jz	no_block_with_limit
-	xchg	ebx,edi
+	mov	ebx,edi
 	sub	ebx,sizeof.RepeatData
+	mov	edi,[preprocessing_workspace.memory_start]
+	add	edi,[symbol_value_start]
 	mov	ecx,[ebx+RepeatData.limit_length]
 	add	ecx,6
 	mov	edx,preprocessing_workspace

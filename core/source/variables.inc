@@ -247,7 +247,6 @@ variables:
     assembly_mode db ?
     next_pass_needed db ?
     shift_tracking db ?
-    trace_mode db ?
 
     name_kind db ?
     name_volatile db ?
@@ -306,3 +305,5 @@ variables:
     hidden_context db ?
 
 variables_end:
+
+    trace_mode db ?
