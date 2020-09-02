@@ -581,6 +581,7 @@ assembly_pass:
 	mov	[ebx+SourceEntry.name],esi
 	mov	[ebx+SourceEntry.text],eax
 	mov	eax,[root_parameter_namespace]
+	and	[eax+SymbolTree_Root.parameters],0
 	mov	[local_parameter_namespace],eax
 	mov	[ebx+SourceEntry.local_namespace],eax
 	mov	ebx,[source_context]
@@ -1390,7 +1391,7 @@ preprocess_symbol:
 	jnc	parameter_found
 	mov	[name_kind],NAME_CASEINSENSITIVE
 	mov	ebx,[parameter_namespace]
-	test	[ebx+SymbolTree_Root.flags],NAMESPACE_WITH_CASEINSENSITIVE_PARAMETERS
+	test	[ebx+SymbolTree_Root.attributes],SYMTREE_WITH_CASEINSENSITIVE_PARAMETERS
 	jz	no_local_parameter_recognized
 	mov	edx,[case_insensitive_hash]
 	call	scan_namespace
@@ -1427,6 +1428,8 @@ preprocess_symbol:
 	jne	no_parameter_recognized
 	jmp	[edx+ValueDefinition.value]
     current_counter_value:
+	test	[ebx+SymbolTree_Root.parameters],SPECPARM_COUNTER
+	jz	no_parameter_recognized
 	mov	esi,[current_counter]
 	cmp	byte [esi],0
 	je	no_parameter_recognized
@@ -1451,8 +1454,8 @@ preprocess_symbol:
 	inc	dword [edx]
 	jmp	parameter_replaced
     current_limit_value:
-	mov	ebx,[preprocessing_workspace.memory_start]
-	add	ebx,[symbol_value_start]
+	test	[ebx+SymbolTree_Root.parameters],SPECPARM_LIMIT
+	jz	no_parameter_recognized
 	mov	dl,DBLOCK_CONTROL
 	call	find_directive_block
 	jc	no_block_with_limit
@@ -1462,13 +1465,14 @@ preprocess_symbol:
 	call	find_next_directive_block
 	jnc	find_block_with_limit
       no_block_with_limit:
-	mov	edi,ebx
 	jmp	no_parameter_recognized
       found_breakable_block:
 	test	[edi+DirectiveBlock.flags],CTRLF_HAS_REPEAT_DATA
 	jz	no_block_with_limit
-	xchg	ebx,edi
+	mov	ebx,edi
 	sub	ebx,sizeof.RepeatData
+	mov	edi,[preprocessing_workspace.memory_start]
+	add	edi,[symbol_value_start]
 	mov	ecx,[ebx+RepeatData.limit_length]
 	add	ecx,6
 	mov	edx,preprocessing_workspace

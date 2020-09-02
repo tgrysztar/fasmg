@@ -1,11 +1,12 @@
 
 struct SymbolTree_Root
-	attributes db ? 		 ; SYMTREE_#
-	flags db ?			 ; NAMESPACE_#
-	reserved dw ?
-	parent_branch dd ?		 ; pointer to namespace SymbolTree_Foliage
-	current_label dd ?		 ; pointer to selected SymbolTree_Foliage
-	chain dd ?			 ; pointer to another SymbolTree_Root
+	attributes db ? 		; SYMTREE_#
+	flags db ?			; NAMESPACE_#
+	parameters db ? 		; SPECPARM_#
+	reserved db ?
+	parent_branch dd ?		; pointer to namespace SymbolTree_Foliage
+	current_label dd ?		; pointer to selected SymbolTree_Foliage
+	chain dd ?			; pointer to another SymbolTree_Root
       ; root_node SymbolTree_Node
 ends
 
@@ -18,41 +19,41 @@ struct SymbolTree_LocalNode
 ends
 
 struct SymbolTree_Foliage
-	name_kind db ?			 ; NAME_#
-	flags db ?			 ; FOLIAGE_#
+	name_kind db ?			; NAME_#
+	flags db ?			; FOLIAGE_#
 	reserved dw ?
 	name_length dd ?
 	name_data dd ?
-	root dd ?			 ; pointer to SymbolTree_Root
-	next dd ?			 ; pointer to another SymbolTree_Foliage
-	child_namespace dd ?		 ; pointer to descendant SymbolTree_Root
+	root dd ?			; pointer to SymbolTree_Root
+	next dd ?			; pointer to another SymbolTree_Foliage
+	child_namespace dd ?		; pointer to descendant SymbolTree_Root
       ; first_leaf SymbolTree_Leaf
 ends
 
 struct SymbolTree_Leaf
-	class db ?			 ; SYMCLASS_#
-	flags db ?			 ; SYM_#
+	class db ?			; SYMCLASS_#
+	flags db ?			; SYM_#
 	reserved dw ?
-	definition dd ? 		 ; pointer to ValueDefinition
+	definition dd ? 		; pointer to ValueDefinition
 	retired_definition dd ?
 	last_use_pass dd ?
-	next dd ?			 ; pointer to another SymbolTree_Leaf within SymbolTree_Foliage
-	branch dd ?			 ; pointer to SymbolTree_Foliage
-	fallback_neighbour dd ? 	 ; pointer to another SymbolTree_Leaf
-	fallback_parent dd ?		 ; pointer to another SymbolTree_Leaf
+	next dd ?			; pointer to another SymbolTree_Leaf within SymbolTree_Foliage
+	branch dd ?			; pointer to SymbolTree_Foliage
+	fallback_neighbour dd ? 	; pointer to another SymbolTree_Leaf
+	fallback_parent dd ?		; pointer to another SymbolTree_Leaf
 ends
 
 struct ValueDefinition
-	type db ?			 ; VALTYPE_#
-	flags db ?			 ; VAL_#
+	type db ?			; VALTYPE_#
+	flags db ?			; VAL_#
 	attribute db ?
 	reserved db ?
 	pass dd ?
 	value dd ?
 	value_length dd ?
 	block_length dd ?
-	reference_count dd ?		 ; number of distinct references to current value
-	previous dd ?			 ; pointer to another ValueDefinition
+	reference_count dd ?		; number of distinct references to current value
+	previous dd ?			; pointer to another ValueDefinition
 	interlink dd ?
 ends
 
@@ -65,12 +66,15 @@ FNV_PRIME = 16777619
 FNV_OFFSET = 2166136261
 
 SYMTREE_LOCAL = 1
+SYMTREE_WITH_CASEINSENSITIVE_PARAMETERS = 2
 
 NAMESPACE_UNATTACHED = 1
-NAMESPACE_WITH_CASEINSENSITIVE_PARAMETERS = 2
-NAMESPACE_CURRENT_LABEL_TO_CONFIRM = 4
-NAMESPACE_CALM = 8
-NAMESPACE_LOCAL = 10h
+NAMESPACE_CURRENT_LABEL_TO_CONFIRM = 2
+NAMESPACE_CALM = 10h
+NAMESPACE_LOCAL = 20h
+
+SPECPARM_COUNTER = 1
+SPECPARM_LIMIT = 2
 
 FOLIAGE_WITH_TOKEN = 1
 
@@ -471,7 +475,7 @@ scan_namespace:
 	cmp	[name_kind],NAME_CASEINSENSITIVE
 	jne	namespace_flags_updated
 	mov	eax,[edx+SymbolTree_Foliage.root]
-	or	[eax+SymbolTree_Root.flags],NAMESPACE_WITH_CASEINSENSITIVE_PARAMETERS
+	or	[eax+SymbolTree_Root.attributes],SYMTREE_WITH_CASEINSENSITIVE_PARAMETERS
     namespace_flags_updated:
 	mov	[ebx+SymbolTree_Leaf.branch],edx
 	cmp	[symbol_expected],0

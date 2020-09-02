@@ -4,7 +4,9 @@ struct DirectiveBlock
 	subtype db ?			; CTRL_# for DBLOCK_CONTROL
 	flags db ?			; CTRLF_# for DBLOCK_CONTROL
 	prior_assembly_mode db ?
+	prior_special_parameters db ?
 	prior_counter_position dd ?
+	parameter_namespace dd ?
 	parameter dd ?			; pointer to first BlockParameter
 	length_of_data dd ?
 ends
@@ -119,6 +121,10 @@ add_directive_block:
 	mov	[edi+DirectiveBlock.type],dl
 	mov	al,[assembly_mode]
 	mov	[edi+DirectiveBlock.prior_assembly_mode],al
+	mov	ecx,[parameter_namespace]
+	mov	[edi+DirectiveBlock.parameter_namespace],ecx
+	mov	al,[ecx+SymbolTree_Root.parameters]
+	mov	[edi+DirectiveBlock.prior_special_parameters],al
 	xor	eax,eax
 	mov	[edi+DirectiveBlock.subtype],al
 	mov	[edi+DirectiveBlock.flags],al
@@ -173,6 +179,9 @@ close_control_directive_block:
 	mov	eax,[edi+DirectiveBlock.prior_counter_position]
 	add	eax,[counters_stack_base]
 	mov	[current_counter],eax
+	mov	ecx,[edi+DirectiveBlock.parameter_namespace]
+	mov	al,[edi+DirectiveBlock.prior_special_parameters]
+	mov	[ecx+SymbolTree_Root.parameters],al
     close_directive_block:
     ; in: edi - DirectiveBlock
     ; preserves: esi
@@ -1271,6 +1280,7 @@ include_source:
 	call	create_parameter_namespace
 	mov	[edx+SymbolTree_Root.chain],eax
       new_parameter_namespace_ok:
+	and	[eax+SymbolTree_Root.parameters],0
 	mov	[ebx+SourceEntry.local_namespace],eax
 	pop	esi
 	jmp	instruction_assembled
@@ -1505,6 +1515,8 @@ conditionally_repeated_block:
 	stosb
 	stosb
 	mov	[current_counter],ebx
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER
 	test	esi,esi
 	jz	assembly_line
 	jmp	instruction_assembled
@@ -1523,6 +1535,8 @@ conditionally_repeated_block:
 	call	allocate_counter
 	mov	byte [ebx],0
 	mov	[current_counter],ebx
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],0
 	test	esi,esi
 	jz	assembly_line
 	jmp	instruction_assembled
@@ -1667,6 +1681,8 @@ repeated_block:
 	stosb
 	stosb
 	mov	[current_counter],ebx
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER + SPECPARM_LIMIT
     define_named_counters:
 	xor	al,al
 	xchg	al,[current_constituent]
@@ -1896,6 +1912,8 @@ iterator_block:
 	mov	[current_counter],edi
 	stosb
 	stosb
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER + SPECPARM_LIMIT
 	xor	eax,eax
       create_iterator_sequences:
 	mov	[parameter_index],eax
@@ -2121,6 +2139,8 @@ variable_iterator_block:
 	mov	[current_counter],edi
 	stosb
 	stosb
+	mov	ecx,[parameter_namespace]
+	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER + SPECPARM_LIMIT
 	mov	edi,[assembly_workspace.memory_start]
 	mov	ecx,[number_of_values]
 	mov	edx,ecx
@@ -3270,8 +3290,14 @@ define_macro:
 	call	find_directive_block
        ; jc	 internal_error
 	cmp	bl,[edi+DirectiveBlock.subtype]
-	jne	add_line_to_macro
+	jne	add_nested_macro_block
 	inc	[edi-sizeof.MacroData+MacroData.nesting_counter]
+	jmp	add_line_to_macro
+    add_nested_macro_block:
+	mov	ecx,sizeof.MacroData
+	call	add_directive_block
+	mov	[edi+DirectiveBlock.subtype],bl
+	mov	[edi-sizeof.MacroData+MacroData.nesting_counter],1
 	jmp	add_line_to_macro
     macro_with_label_parameter:
 	cmp	bl,SYMCLASS_STRUCTURE
@@ -3343,16 +3369,28 @@ end_macro:
 	call	find_directive_block
 	jc	unexpected_instruction
 	cmp	bl,[edi+DirectiveBlock.subtype]
+	je	close_macro_definition
+	; handle improper nesting, for partial backward-compatibility:
+	cmp	bl,SYMCLASS_INSTRUCTION
 	jne	add_line_to_macro
+	call	close_directive_block
+	mov	dl,DBLOCK_MACRO
+	call	find_directive_block
+	jc	unexpected_instruction
+       ; cmp	 [edi+DirectiveBlock.subtype],SYMCLASS_INSTRUCTION
+       ; jne	 internal_error
+    close_macro_definition:
 	dec	[edi-sizeof.MacroData+MacroData.nesting_counter]
 	jnz	add_line_to_macro
-    finish_macro_definition:
 	mov	al,[assembly_mode]
 	and	al,not (AMODE_SKIP or AMODE_DEFINITION)
 	or	al,[edi+DirectiveBlock.prior_assembly_mode]
 	mov	[assembly_mode],al
 	call	close_directive_block
-	test	[assembly_mode],AMODE_SKIP
+	mov	al,[assembly_mode]
+	test	al,AMODE_DEFINITION
+	jne	add_line_to_macro
+	test	al,AMODE_SKIP
 	jnz	assembly_line
 	push	esi
 	cmp	[macro_definition_active],0
@@ -3379,6 +3417,8 @@ escape_directive:
 	jc	unexpected_instruction
 	cmp	[edi-sizeof.MacroData+MacroData.nesting_counter],1
 	ja	add_line_to_macro
+	test	[edi+DirectiveBlock.prior_assembly_mode],AMODE_DEFINITION
+	jnz	add_line_to_macro
 	cmp	[embedded_context],0
 	je	escape_context_ok
 	push	esi
@@ -3731,6 +3771,7 @@ use_struc:
 	inc	[edx+ValueDefinition.reference_count]
 	mov	eax,[new_local_namespace]
 	mov	[local_namespace],eax
+	and	[eax+SymbolTree_Root.parameters],0
 	mov	[ebx+SourceEntry.local_namespace],eax
 	mov	ecx,[instruction_branch]
 	test	ecx,ecx

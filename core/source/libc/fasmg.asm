@@ -473,7 +473,7 @@ section '.data'
   include '../tables.inc'
   include '../messages.inc'
 
-section '.bss' writeable
+section '.bss' writeable align 4
 
   include '../variables.inc'
 

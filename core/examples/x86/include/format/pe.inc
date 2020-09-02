@@ -189,6 +189,12 @@ namespace PE
 		FILE_ALIGNMENT := 512
 	end if
 
+	if defined Settings.LegacyHeaders
+		LEGACY_HEADERS := Settings.LegacyHeaders
+	else
+		LEGACY_HEADERS := 1
+	end if
+
 	NUMBER_OF_DIRECTORIES := 16
 
 	if defined Settings.Stub
@@ -494,28 +500,31 @@ macro section?
 			SECTION_CHARACTERISTICS = SECTION_CHARACTERISTICS or IMAGE_SCN_CNT_UNINITIALIZED_DATA
 			store SECTION_CHARACTERISTICS at PE:SectionTable.Characteristics+SECTION_INDEX*SectionTable.ENTRY_LENGTH
 		end if
-		if SECTION_CHARACTERISTICS and IMAGE_SCN_CNT_CODE & RAW_DATA_SIZE > 0
-			load CODE_SIZE from PE:OptionalHeader.SizeOfCode
-			if CODE_SIZE = 0
-				load CODE_BASE from PE:SectionTable.VirtualAddress+SECTION_INDEX*SectionTable.ENTRY_LENGTH
-				store CODE_BASE at PE:OptionalHeader.BaseOfCode
+
+		if LEGACY_HEADERS
+			if SECTION_CHARACTERISTICS and IMAGE_SCN_CNT_CODE & RAW_DATA_SIZE > 0
+				load CODE_SIZE from PE:OptionalHeader.SizeOfCode
+				if CODE_SIZE = 0
+					load CODE_BASE from PE:SectionTable.VirtualAddress+SECTION_INDEX*SectionTable.ENTRY_LENGTH
+					store CODE_BASE at PE:OptionalHeader.BaseOfCode
+				end if
+				CODE_SIZE = CODE_SIZE + RAW_DATA_SIZE
+				store CODE_SIZE at PE:OptionalHeader.SizeOfCode
 			end if
-			CODE_SIZE = CODE_SIZE + RAW_DATA_SIZE
-			store CODE_SIZE at PE:OptionalHeader.SizeOfCode
-		end if
-		if SECTION_CHARACTERISTICS and IMAGE_SCN_CNT_INITIALIZED_DATA & RAW_DATA_SIZE > 0
-			load DATA_SIZE from PE:OptionalHeader.SizeOfInitializedData
-			if DATA_SIZE = 0 & MAGIC <> 0x20B
-				load DATA_BASE from PE:SectionTable.VirtualAddress+SECTION_INDEX*SectionTable.ENTRY_LENGTH
-				store DATA_BASE at PE:OptionalHeader.BaseOfData
+			if SECTION_CHARACTERISTICS and IMAGE_SCN_CNT_INITIALIZED_DATA & RAW_DATA_SIZE > 0
+				load DATA_SIZE from PE:OptionalHeader.SizeOfInitializedData
+				if DATA_SIZE = 0 & MAGIC <> 0x20B
+					load DATA_BASE from PE:SectionTable.VirtualAddress+SECTION_INDEX*SectionTable.ENTRY_LENGTH
+					store DATA_BASE at PE:OptionalHeader.BaseOfData
+				end if
+				DATA_SIZE = DATA_SIZE + RAW_DATA_SIZE
+				store DATA_SIZE at PE:OptionalHeader.SizeOfInitializedData
 			end if
-			DATA_SIZE = DATA_SIZE + RAW_DATA_SIZE
-			store DATA_SIZE at PE:OptionalHeader.SizeOfInitializedData
-		end if
-		if SECTION_CHARACTERISTICS and IMAGE_SCN_CNT_UNINITIALIZED_DATA
-			load BSS_SIZE from PE:OptionalHeader.SizeOfUninitializedData
-			BSS_SIZE = BSS_SIZE + SECTION_SIZE
-			store BSS_SIZE at PE:OptionalHeader.SizeOfUninitializedData
+			if SECTION_CHARACTERISTICS and IMAGE_SCN_CNT_UNINITIALIZED_DATA
+				load BSS_SIZE from PE:OptionalHeader.SizeOfUninitializedData
+				BSS_SIZE = BSS_SIZE + SECTION_SIZE
+				store BSS_SIZE at PE:OptionalHeader.SizeOfUninitializedData
+			end if
 		end if
 
 		if DEFINED_SECTION | SECTION_SIZE > 0

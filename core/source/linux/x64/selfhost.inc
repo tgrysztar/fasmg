@@ -28,14 +28,14 @@ end macro
 macro struct? name
 	macro ends?!
 			end namespace
-		end struc
+		esc end struc
 		virtual at 0
 			name name
 			sizeof.name = $
 		end virtual
 		purge ends?
 	end macro
-	struc name
+	esc struc name
 		label . : sizeof.name
 		namespace .
 end macro

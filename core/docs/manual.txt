@@ -955,6 +955,10 @@ account when counting the nested "macro" and "end macro" pairs.
                 db `x
         end macro
 
+If "esc" is placed inside a nested definition, it is not processed out until
+the innermost macroinstruction becomes defined. This allows a definition
+containing "esc" to be placed inside another macroinstruction without having
+to repeat "esc" for every nesting level.
   When an identifer of macroinstruction in its definition is followed by "!"
 character, it defines an unconditional macroinstruction. This is a special
 kind of instruction class symbol, which is evaluated even in places where the
@@ -1073,7 +1077,7 @@ the macroinstruction it labeled.
 macroinstructions, like in this sample:
 
         macro struct? definition&
-                struc definition
+                esc struc definition
                         label . : .%top - .
                         namespace .
         end macro
@@ -1081,7 +1085,7 @@ macroinstructions, like in this sample:
         macro ends?!
                                 %top:
                         end namespace
-                end struc
+                esc end struc
         end macro
 
         struct POINT vx:?,vy:?
@@ -1091,10 +1095,6 @@ macroinstructions, like in this sample:
 
         my POINT 10,20
 
-Note that it is not necessary to use "esc" instruction to generate unpaired
-"struc" or "end struc" through a macroinstruction defined with "macro". In the
-same manner unpaired "macro" or "end macro" can occur freely in a definition
-made with "struc".
   The "restruc" command is analogous to "purge", but it operates on symbols
 from the class of labeled instructions. Similarly, the "mvstruc" command is 
 the same as "mvmacro" but for labeled instructions.
@@ -1475,12 +1475,16 @@ processed macroinstruction but in the context of the source text that called it.
 
         macro irpv?! statement&
                 display 'IRPV wrapper'
-                outscope irpv statement
+                esc outscope irpv statement
         end macro
 
 This allows not only to safely wrap some control directives in macroinstructions,
 but also to create additional customized language constructions that define
-parameters for a block of text.
+parameters for a block of text. Because "outscope" needs to be present in the
+text of a specific macroinstruction that requires it, it is recommended to use
+it in conjunction with "esc" as in the example above, this ensures that it is
+handled the same way even when the entire definition is put inside another
+macroinstruction.
 
 
 12. Matching parameters
@@ -2325,7 +2329,7 @@ Such additional commands may even be defined as CALM instructions themselves:
 
 The command "initsym" in this example is used to assign text to the local
 symbolic variable at the time when "show" instruction is defined.
-Similarly to "local" (and unline "stringify" and "assemble") it does not produce
+Similarly to "local" (and unlike "stringify" and "assemble") it does not produce
 any actual code that would be executed when the "show" instruction is called.
 The arguments to "initsym" retain their original context, therefore symbols
 in the text assigned to the "command" variable are interpreted as in the local
