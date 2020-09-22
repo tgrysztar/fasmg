@@ -568,11 +568,10 @@ create_tree_element:
 ; in: ecx = length of element
 ; out: eax - pointer to allocated and zeroed memory
 ; preserves: ebx, ecx, edx, esi, edi
-	cmp	ecx,[tree_reserve_length]
-	ja	expand_tree_reserve
+	sub	[tree_reserve_length],ecx
+	jc	expand_tree_reserve
 	mov	eax,[tree_reserve]
 	add	[tree_reserve],ecx
-	sub	[tree_reserve_length],ecx
 	retn
     expand_tree_reserve:
 	push	ecx edx edi

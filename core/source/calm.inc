@@ -1442,10 +1442,8 @@ launch_calm:
 	mov	ecx,[instruction_branch]
 	test	ecx,ecx
 	jz	instruction_assembled
-	mov	eax,[ecx+SymbolTree_Foliage.name_data]
-	mov	[ebx+SourceEntry.name],eax
-	mov	eax,[ecx+SymbolTree_Foliage.name_length]
-	mov	[ebx+SourceEntry.name_length],eax
+	mov	[ebx+SourceEntry.name],ecx
+	or	[ebx+SourceEntry.name_length],-1
 	jmp	instruction_assembled
     calm_exceeded_stack_limit:
 	mov	edx,_stack_limit_exceeded
@@ -2136,10 +2134,8 @@ calm_assemble:
 	mov	ecx,[instruction_branch]
 	test	ecx,ecx
 	jz	assembly_line
-	mov	eax,[ecx+SymbolTree_Foliage.name_data]
-	mov	[ebx+SourceEntry.name],eax
-	mov	eax,[ecx+SymbolTree_Foliage.name_length]
-	mov	[ebx+SourceEntry.name_length],eax
+	mov	[ebx+SourceEntry.name],ecx
+	or	[ebx+SourceEntry.name_length],-1
 	jmp	assembly_line
     calm_undefined_symbol:
 	mov	edx,_undefined_symbol

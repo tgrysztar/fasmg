@@ -57,7 +57,14 @@ show_errors:
 	test	esi,esi
 	jz	unnamed_source
 	mov	ecx,[ebx+SourceEntry.name_length]
+	cmp	ecx,-1
+	je	display_source_symbol
 	call	display_error_string
+	jmp	display_line_number
+      display_source_symbol:
+	xchg	ebx,esi
+	call	show_symbol_name
+	mov	ebx,esi
 	jmp	display_line_number
       unnamed_source:
 	mov	esi,_unnamed_source
@@ -183,11 +190,23 @@ show_errors:
 	lodsb
 	test	al,al
 	jz	finish_error_message
+	lodsb
+	cmp	al,'s'
+	je	insert_string_into_error_message
+	cmp	al,'i'
+	jne	format_error_message
 	push	ebx
 	mov	ebx,[ebx+Error.symbol]
 	mov	ebx,[ebx+SymbolTree_Leaf.branch]
 	call	show_symbol_name
 	pop	ebx
+	jmp	format_error_message
+      insert_string_into_error_message:
+	push	esi
+	mov	esi,[ebx+Error.symbol]
+	xor	ecx,ecx
+	call	display_error_string
+	pop	esi
 	jmp	format_error_message
 
 show_symbol_name:

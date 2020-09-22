@@ -16,8 +16,8 @@ _custom_error_prefix db 'Custom error: ',0
 _message_suffix db '.'
 _new_line db LINE_FEED,0
 
-_source_file_not_found db "source file not found",0
-_error_reading_file db "error reading file",0
+_source_file_not_found db "source file '%s' not found",0
+_error_reading_file db "error reading file '%s'",0
 _missing_end_quote db "missing end quote",0
 _illegal_instruction db "illegal instruction",0
 _invalid_argument db "invalid argument",0
@@ -25,9 +25,9 @@ _missing_argument db "missing argument",0
 _extra_characters_on_line db "extra characters on line",0
 _invalid_identifier db "invalid identifier",0
 _invalid_number db "invalid number",0
-_undefined_symbol db "symbol '%' is undefined or out of scope",0
-_invalid_symbol_value db "the value of symbol '%' is not valid for this use",0
-_conflicting_definition db "definition of '%' in conflict with already defined symbol",0
+_undefined_symbol db "symbol '%i' is undefined or out of scope",0
+_invalid_symbol_value db "the value of symbol '%i' is not valid for this use",0
+_conflicting_definition db "definition of '%i' in conflict with already defined symbol",0
 _cannot_apply_to_constant db "cannot apply this operation to constant",0
 _symbolic_self_reference db "detected a circular reference of symbolic values",0
 _unexpected_instruction db "unexpected instruction",0

@@ -1135,6 +1135,7 @@ instruction_assembled:
 	sub	al,1
 	retn
     main_source_file_not_found:
+	mov	ebx,esi
 	mov	edx,_source_file_not_found
 	call	register_error
     no_source_to_assemble:

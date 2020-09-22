@@ -1,6 +1,4 @@
 
-LINE_FEED equ 13,10
-
 system_init:
 	stdcall HeapCreate,0,20000h,0
 	mov	[memory],eax
@@ -155,8 +153,19 @@ display_string:
 ;  esi - string
 ;  ecx = string length, zero for ASCIIZ string
 ; preserves: ebx, esi
-	cmp	[stdout],0
-	je	hidden_display
+	push	ebx
+	mov	ebx,[stdout]
+	jmp	write_string
+display_error_string:
+; in:
+;  esi - string
+;  ecx = string length, zero for ASCIIZ string
+; preserves: ebx, esi
+	push	ebx
+	mov	ebx,[stderr]
+   write_string:
+	test	ebx,ebx
+	jz	hidden_display
 	test	ecx,ecx
 	jnz	write_string_to_stdout
 	xor	al,al
@@ -180,26 +189,7 @@ display_string:
    final_write_to_stdout:
 	stdcall WriteFile,[stdout],edx,ecx,systmp,0
    hidden_display:
-	retn
-
-display_error_string:
-; in:
-;  esi - string
-;  ecx = string length, zero for ASCIIZ string
-; preserves: ebx, esi
-	cmp	[stderr],0
-	je	hidden_error
-	test	ecx,ecx
-	jnz	write_string_to_stderr
-	xor	al,al
-	mov	edi,esi
-	or	ecx,-1
-	repne	scasb
-	neg	ecx
-	sub	ecx,2
-   write_string_to_stderr:
-	stdcall WriteFile,[stderr],esi,ecx,systmp,0
-   hidden_error:
+	pop	ebx
 	retn
 
 get_environment_variable:

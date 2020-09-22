@@ -76,6 +76,7 @@ read_source:
 	mov	ebx,[file_source_cache]
 	call	put_into_map
     get_erroneous_source:
+	mov	ebx,esi
 	mov	edx,_error_reading_file
 	call	register_error
 	mov	eax,zero_value
@@ -332,6 +333,7 @@ read_file_data:
 ;  [data_length] = length of data
 ; out:
 ;  cf set when read failed
+; preserves: esi
 	mov	[file_data],ebx
 	lea	eax,[ebx+FileData.cache]
 	mov	[file_cache_pointer],eax

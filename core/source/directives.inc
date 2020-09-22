@@ -1216,6 +1216,7 @@ include_source:
 	call	read_source
 	test	eax,eax
 	jnz	include_read
+	mov	ebx,esi
 	mov	esi,[include_paths]
     try_include_paths:
 	lodsb
@@ -3776,10 +3777,8 @@ use_struc:
 	mov	ecx,[instruction_branch]
 	test	ecx,ecx
 	jz	instruction_assembled
-	mov	eax,[ecx+SymbolTree_Foliage.name_data]
-	mov	[ebx+SourceEntry.name],eax
-	mov	eax,[ecx+SymbolTree_Foliage.name_length]
-	mov	[ebx+SourceEntry.name_length],eax
+	mov	[ebx+SourceEntry.name],ecx
+	or	[ebx+SourceEntry.name_length],-1
 	jmp	instruction_assembled
     stack_limit_exceeded:
 	mov	edx,_stack_limit_exceeded
@@ -4273,6 +4272,7 @@ include_data:
 	pop	esi
 	jmp	instruction_assembled
     data_file_not_found:
+	mov	ebx,esi
 	mov	edx,_source_file_not_found
 	call	register_error
 	pop	esi
@@ -4303,6 +4303,7 @@ include_data:
 	pop	esi
 	jmp	instruction_assembled
     file_data_not_read:
+	mov	ebx,esi
 	mov	edx,_error_reading_file
 	call	register_error
 	pop	esi

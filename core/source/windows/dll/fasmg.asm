@@ -17,10 +17,59 @@ _ equ }
 
 include '../../version.inc'
 
+LINE_FEED equ 13,10
+
 struct MEMORY_REGION
 	address dd ?
 	size dd ?
 ends
+
+
+section '.rdata' data readable
+
+data import
+
+	library kernel32,'KERNEL32.DLL'
+
+	import kernel32,\
+	       __imp_CloseHandle,'CloseHandle',\
+	       __imp_CreateFile,'CreateFileA',\
+	       __imp_ExitProcess,'ExitProcess',\
+	       __imp_GetCommandLine,'GetCommandLineA',\
+	       __imp_GetEnvironmentVariable,'GetEnvironmentVariableA',\
+	       __imp_GetStdHandle,'GetStdHandle',\
+	       __imp_GetSystemTime,'GetSystemTime',\
+	       __imp_GetTickCount,'GetTickCount',\
+	       __imp_HeapAlloc,'HeapAlloc',\
+	       __imp_HeapCreate,'HeapCreate',\
+	       __imp_HeapDestroy,'HeapDestroy',\
+	       __imp_HeapFree,'HeapFree',\
+	       __imp_HeapReAlloc,'HeapReAlloc',\
+	       __imp_HeapSize,'HeapSize',\
+	       __imp_VirtualAlloc,'VirtualAlloc',\
+	       __imp_VirtualFree,'VirtualFree',\
+	       __imp_ReadFile,'ReadFile',\
+	       __imp_SetFilePointer,'SetFilePointer',\
+	       __imp_SystemTimeToFileTime,'SystemTimeToFileTime',\
+	       __imp_WriteFile,'WriteFile',\
+	       __imp_GetLastError,'GetLastError'
+
+end data
+
+align 4
+
+data export
+
+	export 'FASMG.DLL',\
+	       fasmg_GetVersion,'fasmg_GetVersion',\
+	       fasmg_Assemble,'fasmg_Assemble'
+
+end data
+
+  include '../../tables.inc'
+  include '../../messages.inc'
+
+  version_string db VERSION,0
 
 section '.text' code executable
 
@@ -203,52 +252,6 @@ section '.text' code executable
 	retn	FUNCTION_PARAMETERS_SIZE
 
   include 'system.inc'
-
-section '.rdata' data readable
-
-data import
-
-	library kernel32,'KERNEL32.DLL'
-
-	import kernel32,\
-	       __imp_CloseHandle,'CloseHandle',\
-	       __imp_CreateFile,'CreateFileA',\
-	       __imp_ExitProcess,'ExitProcess',\
-	       __imp_GetCommandLine,'GetCommandLineA',\
-	       __imp_GetEnvironmentVariable,'GetEnvironmentVariableA',\
-	       __imp_GetStdHandle,'GetStdHandle',\
-	       __imp_GetSystemTime,'GetSystemTime',\
-	       __imp_GetTickCount,'GetTickCount',\
-	       __imp_HeapAlloc,'HeapAlloc',\
-	       __imp_HeapCreate,'HeapCreate',\
-	       __imp_HeapDestroy,'HeapDestroy',\
-	       __imp_HeapFree,'HeapFree',\
-	       __imp_HeapReAlloc,'HeapReAlloc',\
-	       __imp_HeapSize,'HeapSize',\
-	       __imp_VirtualAlloc,'VirtualAlloc',\
-	       __imp_VirtualFree,'VirtualFree',\
-	       __imp_ReadFile,'ReadFile',\
-	       __imp_SetFilePointer,'SetFilePointer',\
-	       __imp_SystemTimeToFileTime,'SystemTimeToFileTime',\
-	       __imp_WriteFile,'WriteFile',\
-	       __imp_GetLastError,'GetLastError'
-
-end data
-
-align 4
-
-data export
-
-	export 'FASMG.DLL',\
-	       fasmg_GetVersion,'fasmg_GetVersion',\
-	       fasmg_Assemble,'fasmg_Assemble'
-
-end data
-
-  include '../../tables.inc'
-  include '../../messages.inc'
-
-  version_string db VERSION,0
 
 section '.reloc' fixups data readable discardable
 	   

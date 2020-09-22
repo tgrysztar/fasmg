@@ -14,7 +14,7 @@ ERR_CUSTOM = 1
 register_volatile_error:
 ; in:
 ;  edx - 32-bit length followed by string data
-;  ebx - SymbolTree_Leaf for non-custom messages that contain % character
+;  ebx - data for message formatting (only relevant for non-custom messages that contain % character)
 ; out:
 ;  edx - Error
 ; preserves: eax, ebx, ecx, esi, edi
@@ -27,7 +27,7 @@ register_delayed_error:
 ; in:
 ;  edx - error message
 ;  esi - SourceContext
-;  ebx - SymbolTree_Leaf for non-custom messages that contain % character
+;  ebx - data for message formatting (only relevant for non-custom messages that contain % character)
 ; out:
 ;  edx - Error
 ; preserves: eax, ebx, ecx, esi, edi
@@ -41,7 +41,7 @@ register_delayed_error:
 register_error:
 ; in:
 ;  edx - error message
-;  ebx - SymbolTree_Leaf for non-custom messages that contain % character
+;  ebx - data for message formatting (only relevant for non-custom messages that contain % character)
 ; out:
 ;  edx - Error, null when error was not registered
 ; preserves: eax, ebx, ecx, esi, edi
