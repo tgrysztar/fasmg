@@ -183,11 +183,11 @@ display_error_string:
 	sub	ecx,eax
 	add	eax,edx
 	push	eax ecx
-	stdcall WriteFile,[stdout],edx,51200,systmp,0
+	stdcall WriteFile,ebx,edx,51200,systmp,0
 	pop	ecx edx
 	jmp	write_portion_to_stdout
    final_write_to_stdout:
-	stdcall WriteFile,[stdout],edx,ecx,systmp,0
+	stdcall WriteFile,ebx,edx,ecx,systmp,0
    hidden_display:
 	pop	ebx
 	retn
