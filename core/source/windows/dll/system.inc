@@ -1,11 +1,13 @@
 
+LINE_FEED equ 13,10
+
 system_init:
-	stdcall HeapCreate,0,20000h,0
+	invoke	HeapCreate,0,20000h,0
 	mov	[memory],eax
 	test	eax,eax
 	jz	out_of_memory
-	stdcall GetSystemTime,systemtime
-	stdcall SystemTimeToFileTime,systemtime,filetime
+	invoke	GetSystemTime,systemtime
+	invoke	SystemTimeToFileTime,systemtime,filetime
 	mov	ebx,[filetime.dwLowDateTime]
 	mov	eax,[filetime.dwHighDateTime]
 	sub	ebx,116444736000000000 and 0FFFFFFFFh
@@ -22,7 +24,7 @@ system_init:
 system_shutdown:
 	cmp	[memory],0
 	je	memory_released
-	stdcall HeapDestroy,[memory]
+	invoke	HeapDestroy,[memory]
     memory_released:
 	retn
 
@@ -35,12 +37,12 @@ malloc_growable:
 ; note:
 ;  use of malloc_fixed hints that block will be kept as is until the end of assembly
 ;  use of malloc_growable hints that block is likely to be resized
-	stdcall HeapAlloc,[memory],0,ecx
+	invoke	HeapAlloc,[memory],0,ecx
 	test	eax,eax
 	jz	out_of_memory
     memory_allocated:
 	push	eax
-	stdcall HeapSize,[memory],0,eax
+	invoke	HeapSize,[memory],0,eax
 	mov	ecx,eax
 	pop	eax
 	cmp	ecx,-1
@@ -50,7 +52,7 @@ realloc:
 ; in: eax - memory block, ecx = requested size
 ; out: eax - resized block, ecx = allocated size, on error jumps to out_of_memory (does not return)
 ; preserves: ebx, esi, edi
-	stdcall HeapReAlloc,[memory],0,eax,ecx
+	invoke	HeapReAlloc,[memory],0,eax,ecx
 	test	eax,eax
 	jnz	memory_allocated
 	jmp	out_of_memory
@@ -63,7 +65,7 @@ mfree:
 	jz	interface_error
 	cmp	eax,-1
 	je	interface_error
-	stdcall HeapFree,[memory],0,eax
+	invoke	HeapFree,[memory],0,eax
 	test	eax,eax
 	jz	interface_error
 	clc
@@ -76,7 +78,7 @@ open:
 ; in: edx - path to file
 ; out: ebx = file handle, cf set on error
 ; preserves: esi, edi
-	stdcall CreateFile,edx,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,0,0
+	invoke	CreateFile,edx,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,0,0
 	cmp	eax,-1
 	je	interface_error
 	mov	ebx,eax
@@ -86,7 +88,7 @@ create:
 ; in: edx - path to file
 ; out: ebx = file handle, cf set on error
 ; preserves: esi, edi
-	stdcall CreateFile,edx,GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
+	invoke	CreateFile,edx,GENERIC_WRITE,0,0,CREATE_ALWAYS,0,0
 	cmp	eax,-1
 	je	interface_error
 	mov	ebx,eax
@@ -97,7 +99,7 @@ write:
 ; out: cf set on error
 ; preserves: ebx, esi, edi
 	push	ecx
-	stdcall WriteFile,ebx,edx,ecx,systmp,0
+	invoke	WriteFile,ebx,edx,ecx,systmp,0
 	pop	ecx
 	test	eax,eax
 	jz	interface_error
@@ -110,7 +112,7 @@ read:
 ; out: cf set on error
 ; preserves: ebx, esi, edi
 	push	ecx
-	stdcall ReadFile,ebx,edx,ecx,systmp,0
+	invoke	ReadFile,ebx,edx,ecx,systmp,0
 	pop	ecx
 	test	eax,eax
 	jz	interface_error
@@ -121,7 +123,7 @@ read:
 close:
 ; in: ebx = file handle
 ; preserves: ebx, esi, edi
-	stdcall CloseHandle,ebx
+	invoke	CloseHandle,ebx
 	retn
 lseek:
 ; in: ebx = file handle, cl = method, edx:eax = offset
@@ -129,10 +131,10 @@ lseek:
 ; preserves: ebx, esi, edi
 	movzx	ecx,cl
 	mov	[systmp],edx
-	stdcall SetFilePointer,ebx,eax,systmp,ecx
+	invoke	SetFilePointer,ebx,eax,systmp,ecx
 	cmp	eax,-1
 	jne	lseek_ok
-	stdcall GetLastError
+	invoke	GetLastError
 	test	eax,eax
 	jnz	interface_error
 	not	eax
@@ -183,11 +185,11 @@ display_error_string:
 	sub	ecx,eax
 	add	eax,edx
 	push	eax ecx
-	stdcall WriteFile,ebx,edx,51200,systmp,0
+	invoke	WriteFile,ebx,edx,51200,systmp,0
 	pop	ecx edx
 	jmp	write_portion_to_stdout
    final_write_to_stdout:
-	stdcall WriteFile,ebx,edx,ecx,systmp,0
+	invoke	WriteFile,ebx,edx,ecx,systmp,0
    hidden_display:
 	pop	ebx
 	retn
@@ -201,7 +203,7 @@ get_environment_variable:
 ;  eax = length of value
 ; preserves: ebx, esi, edi
 	push	ecx
-	stdcall GetEnvironmentVariable,esi,edi,ecx
+	invoke	GetEnvironmentVariable,esi,edi,ecx
 	pop	ecx
 	cmp	eax,ecx
 	jae	environment_variable_ready
@@ -209,46 +211,3 @@ get_environment_variable:
    environment_variable_ready:
 	inc	eax
 	retn
-
-CloseHandle:
-	jmp	[__imp_CloseHandle]
-CreateFile:
-	jmp	[__imp_CreateFile]
-ExitProcess:
-	jmp	[__imp_ExitProcess]
-GetCommandLine:
-	jmp	[__imp_GetCommandLine]
-GetEnvironmentVariable:
-	jmp	[__imp_GetEnvironmentVariable]
-GetStdHandle:
-	jmp	[__imp_GetStdHandle]
-GetSystemTime:
-	jmp	[__imp_GetSystemTime]
-GetTickCount:
-	jmp	[__imp_GetTickCount]
-HeapAlloc:
-	jmp	[__imp_HeapAlloc]
-HeapCreate:
-	jmp	[__imp_HeapCreate]
-HeapDestroy:
-	jmp	[__imp_HeapDestroy]
-HeapFree:
-	jmp	[__imp_HeapFree]
-HeapReAlloc:
-	jmp	[__imp_HeapReAlloc]
-HeapSize:
-	jmp	[__imp_HeapSize]
-VirtualAlloc:
-	jmp	[__imp_VirtualAlloc]
-VirtualFree:
-	jmp	[__imp_VirtualFree]
-ReadFile:
-	jmp	[__imp_ReadFile]
-SetFilePointer:
-	jmp	[__imp_SetFilePointer]
-SystemTimeToFileTime:
-	jmp	[__imp_SystemTimeToFileTime]
-WriteFile:
-	jmp	[__imp_WriteFile]
-GetLastError:
-	jmp	[__imp_GetLastError]

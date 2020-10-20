@@ -17,64 +17,9 @@ _ equ }
 
 include '../version.inc'
 
-LINE_FEED equ 13,10
-
-section '.rdata' data readable
-
-data import
-
-	library kernel32,'KERNEL32.DLL'
-
-	import kernel32,\
-	       __imp_CloseHandle,'CloseHandle',\
-	       __imp_CreateFile,'CreateFileA',\
-	       __imp_ExitProcess,'ExitProcess',\
-	       __imp_GetCommandLine,'GetCommandLineA',\
-	       __imp_GetEnvironmentVariable,'GetEnvironmentVariableA',\
-	       __imp_GetStdHandle,'GetStdHandle',\
-	       __imp_GetSystemTime,'GetSystemTime',\
-	       __imp_GetTickCount,'GetTickCount',\
-	       __imp_HeapAlloc,'HeapAlloc',\
-	       __imp_HeapCreate,'HeapCreate',\
-	       __imp_HeapDestroy,'HeapDestroy',\
-	       __imp_HeapFree,'HeapFree',\
-	       __imp_HeapReAlloc,'HeapReAlloc',\
-	       __imp_HeapSize,'HeapSize',\
-	       __imp_ReadFile,'ReadFile',\
-	       __imp_SetFilePointer,'SetFilePointer',\
-	       __imp_SystemTimeToFileTime,'SystemTimeToFileTime',\
-	       __imp_WriteFile,'WriteFile',\
-	       __imp_GetLastError,'GetLastError'
-
-end data
-
-  _logo db 'flat assembler  version g.',VERSION,13,10,0
-
-  _usage db 'Usage: fasmg source [output]',13,10
-	 db 'Optional settings:',13,10
-	 db '    -e limit    Set the maximum number of displayed errors (default 1)',13,10
-	 db '    -p limit    Set the maximum allowed number of passes (default 100)',13,10
-	 db '    -r limit    Set the maximum depth of the stack (default 10000)',13,10
-	 db '    -v flag     Enable or disable showing all lines from the stack (default 0)',13,10
-	 db '    -i command  Insert instruction at the beginning of source',13,10
-	 db '    -n          Do not show logo nor summary',13,10
-	 db 0
-
-  _pass db ' pass, ',0
-  _passes db ' passes, ',0
-  _dot db '.'
-  _seconds db ' seconds, ',0
-  _byte db ' byte.',0
-  _bytes db ' bytes.',0
-
-  _write_failed db 'failed to write the output file',0
-  _out_of_memory db 'not enough memory to complete the assembly',0
-  _code_cannot_be_generated db 'could not generate code within the allowed number of passes',0
-
-  include '../tables.inc'
-  include '../messages.inc'
-
 section '.text' code executable
+
+  include 'system.inc'
 
   start:
 
@@ -101,7 +46,7 @@ section '.text' code executable
   init:
 	call	assembly_init
 
-	call	GetTickCount
+	invoke	GetTickCount
 	mov	[timer],eax
 
   assemble:
@@ -148,7 +93,7 @@ section '.text' code executable
       display_passes_suffix:
 	xor	ecx,ecx
 	call	display_string
-	call	GetTickCount
+	invoke	GetTickCount
 	sub	eax,[timer]
 	xor	edx,edx
 	add	eax,50
@@ -204,7 +149,7 @@ section '.text' code executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	stdcall ExitProcess,0
+	invoke	ExitProcess,0
 
   assembly_failed:
 
@@ -213,7 +158,7 @@ section '.text' code executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	stdcall ExitProcess,2
+	invoke	ExitProcess,2
 
   write_failed:
 	mov	ebx,_write_failed
@@ -238,7 +183,7 @@ section '.text' code executable
 	call	assembly_shutdown
 	call	system_shutdown
 
-	stdcall ExitProcess,3
+	invoke	ExitProcess,3
 
   display_usage_information:
 
@@ -248,7 +193,7 @@ section '.text' code executable
 
 	call	system_shutdown
 
-	stdcall ExitProcess,1
+	invoke	ExitProcess,1
 
   get_arguments:
 	xor	eax,eax
@@ -260,7 +205,7 @@ section '.text' code executable
 	mov	[maximum_number_of_passes],100
 	mov	[maximum_number_of_errors],1
 	mov	[maximum_depth_of_stack],10000
-	call	GetCommandLine
+	invoke	GetCommandLine
 	mov	esi,eax
 	mov	edi,eax
 	or	ecx,-1
@@ -491,8 +436,6 @@ section '.text' code executable
 	pop	ecx
 	jmp	copy_initial_command
 
-  include 'system.inc'
-
   include '../symbols.inc'
   include '../assembler.inc'
   include '../expressions.inc'
@@ -521,11 +464,66 @@ section '.bss' readable writeable
   stdout dd ?
   stderr dd ?
   memory dd ?
-  systmp dd ?
   timestamp dq ?
   systemtime SYSTEMTIME
   filetime FILETIME
+  systmp dd ?
 
   timer dd ?
   verbosity_level db ?
   no_logo db ?
+
+section '.rdata' data readable
+
+data import
+
+	library kernel32,'KERNEL32.DLL'
+
+	import kernel32,\
+	       CloseHandle,'CloseHandle',\
+	       CreateFile,'CreateFileA',\
+	       ExitProcess,'ExitProcess',\
+	       GetCommandLine,'GetCommandLineA',\
+	       GetEnvironmentVariable,'GetEnvironmentVariableA',\
+	       GetStdHandle,'GetStdHandle',\
+	       GetSystemTime,'GetSystemTime',\
+	       GetTickCount,'GetTickCount',\
+	       HeapAlloc,'HeapAlloc',\
+	       HeapCreate,'HeapCreate',\
+	       HeapDestroy,'HeapDestroy',\
+	       HeapFree,'HeapFree',\
+	       HeapReAlloc,'HeapReAlloc',\
+	       HeapSize,'HeapSize',\
+	       ReadFile,'ReadFile',\
+	       SetFilePointer,'SetFilePointer',\
+	       SystemTimeToFileTime,'SystemTimeToFileTime',\
+	       WriteFile,'WriteFile',\
+	       GetLastError,'GetLastError'
+
+end data
+
+  _logo db 'flat assembler  version g.',VERSION,13,10,0
+
+  _usage db 'Usage: fasmg source [output]',13,10
+	 db 'Optional settings:',13,10
+	 db '    -e limit    Set the maximum number of displayed errors (default 1)',13,10
+	 db '    -p limit    Set the maximum allowed number of passes (default 100)',13,10
+	 db '    -r limit    Set the maximum depth of the stack (default 10000)',13,10
+	 db '    -v flag     Enable or disable showing all lines from the stack (default 0)',13,10
+	 db '    -i command  Insert instruction at the beginning of source',13,10
+	 db '    -n          Do not show logo nor summary',13,10
+	 db 0
+
+  _pass db ' pass, ',0
+  _passes db ' passes, ',0
+  _dot db '.'
+  _seconds db ' seconds, ',0
+  _byte db ' byte.',0
+  _bytes db ' bytes.',0
+
+  _write_failed db 'failed to write the output file',0
+  _out_of_memory db 'not enough memory to complete the assembly',0
+  _code_cannot_be_generated db 'could not generate code within the allowed number of passes',0
+
+  include '../tables.inc'
+  include '../messages.inc'

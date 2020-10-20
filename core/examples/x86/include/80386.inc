@@ -175,6 +175,8 @@ calminstruction x86.parse_operand namespace, operand
 	compute segment_prefix, 64h + segment-4
       segment_prefix_ok:
 
+	compute mode, 0
+
 	match	pre suf, address
 	jno	no_address_size_prefix
 	transform pre, x86
@@ -187,7 +189,6 @@ calminstruction x86.parse_operand namespace, operand
 	compute mode, pre shl 3
       no_address_size_prefix:
 
-	compute mode, 0
 	compute scale, 0
 	compute index, 0
 	compute base, 0
