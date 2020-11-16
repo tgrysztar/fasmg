@@ -1,1 +1,1 @@
-VERSION equ "j27m"
+VERSION equ "j48s"

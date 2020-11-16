@@ -558,12 +558,23 @@ calminstruction x86.parse_jump_operand namespace, operand
 
 	local	imm
 
-	arrange imm, namespace.=imm
+	arrange sym, namespace.=imm
+	compute imm, sym
 
-	check	imm relativeto 0 & (imm < 0 | imm >= 1 shl (size*8))
+	check	imm relativeto 0
 	jno	done
-
+	check	imm < 0
+	jyes	negative
+	check	imm >= 1 shl (size*8)
+	jno	done
+    out_of_range:
 	asmcmd	=err 'value out of range'
+	exit
+    negative:
+	check	imm < - 1 shl (size*8-1)
+	jyes	out_of_range
+	compute imm, imm and (1 shl (size*8) - 1)
+	publish sym, imm
 
     done:
 
@@ -2030,6 +2041,7 @@ calminstruction jmp? dest*
 	exit
 
     jmp_imm:
+	asmcmd	=x86.=store_operand_prefix =@dest.=size
 	check	@dest.jump_type = 'near'
 	jyes	jmp_imm_near
 	check	@dest.jump_type = 'short'
@@ -2045,22 +2057,20 @@ calminstruction jmp? dest*
 	jyes	jmp_imm_short
 	check	@dest.imm relativeto $
 	jno	jmp_imm_near
-	check	@dest.size = 2 & ( (@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h )
+	check	(@dest.imm-($+2)) < 80h & (@dest.imm-($+2)) >= -80h
 	jyes	jmp_imm_short
-	check	@dest.size = 4 & @dest.imm-($+2) < 80h & @dest.imm-($+2) >= -80h
+	check	(@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h
 	jyes	jmp_imm_short
       jmp_imm_near:
 	check	@dest.size = 2
 	jyes	jmp_imm_word
 	check	@dest.size = 4
 	jno	invalid_operand
-	asmcmd	=x86.=store_operand_prefix 4
 	asmcmd	=db 0E9h
 	compute @dest.imm, @dest.imm-($+4)
 	asmcmd	=dd =@dest.=imm
 	exit
       jmp_imm_word:
-	asmcmd	=x86.=store_operand_prefix 2
 	asmcmd	=db 0E9h
 	compute @dest.imm, @dest.imm-($+2)
 	check	@dest.imm relativeto 0
@@ -2070,7 +2080,9 @@ calminstruction jmp? dest*
 	asmcmd	=dw =@dest.=imm
 	exit
       jmp_imm_short_verify:
-	check	(@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h
+	check	(@dest.imm-($+2)) < 80h & (@dest.imm-($+2)) >= -80h
+	jyes	jmp_imm_short
+	check	(@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h
 	jyes	jmp_imm_short
 	asmcmd	=db 0EBh, ?
 	jump	relative_jump_out_of_range
@@ -2105,7 +2117,7 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 
 		check	@dest.jump_type <> 'near' & ( @dest.unresolved | ( @dest.imm relativeto $ & @dest.imm-($+2) < 80h & @dest.imm-($+2) >= -80h ) )
 		jyes	short
-		check	@dest.jump_type <> 'near' & @dest.size = 2 & @dest.imm relativeto $ & ( (@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h )
+		check	@dest.jump_type <> 'near' & @dest.imm relativeto $ & ( (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h )
 		jyes	short
 		check	@dest.jump_type = 'short'
 		jyes	relative_jump_out_of_range
@@ -2167,7 +2179,7 @@ iterate <instr,opcode,len>, loopnz,0E0h,0, loopne,0E0h,0, loopz,0E1h,0, loope,0E
 
 		check	@dest.imm-($+1) < 80h & @dest.imm-($+1) >= -80h
 		jyes	relative_offset_ok
-		check	@dest.size = 2 & ( (@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h )
+		check	(@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h
 		jyes	relative_offset_ok
 		asmcmd	=db ?
 		asmcmd	=err 'relative jump out of range'

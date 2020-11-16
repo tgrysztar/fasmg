@@ -1429,9 +1429,25 @@ preprocess_symbol:
 	jne	no_parameter_recognized
 	jmp	[edx+ValueDefinition.value]
     current_counter_value:
+	mov	ebx,[parameter_namespace]
 	test	[ebx+SymbolTree_Root.parameters],SPECPARM_COUNTER
 	jz	no_parameter_recognized
 	mov	esi,[current_counter]
+	mov	dl,DBLOCK_CONTROL
+	call	find_directive_block
+      find_breakable_block:
+	jc	no_parameter_recognized
+	test	[edi+DirectiveBlock.flags],CTRLF_BREAKABLE
+	jz	look_deeper_for_breakable_block
+	mov	eax,[parameter_namespace]
+	cmp	eax,[edi+DirectiveBlock.parameter_namespace]
+	je	found_breakable_block
+      look_deeper_for_breakable_block:
+	mov	esi,[edi+DirectiveBlock.prior_counter_position]
+	add	esi,[counters_stack_base]
+	call	find_next_directive_block
+	jmp	find_breakable_block
+      found_breakable_block:
 	cmp	byte [esi],0
 	je	no_parameter_recognized
 	mov	edi,[preprocessing_workspace.memory_start]
@@ -1455,21 +1471,24 @@ preprocess_symbol:
 	inc	dword [edx]
 	jmp	parameter_replaced
     current_limit_value:
+	mov	ebx,[parameter_namespace]
 	test	[ebx+SymbolTree_Root.parameters],SPECPARM_LIMIT
 	jz	no_parameter_recognized
 	mov	dl,DBLOCK_CONTROL
 	call	find_directive_block
-	jc	no_block_with_limit
       find_block_with_limit:
+	jc	no_parameter_recognized
 	test	[edi+DirectiveBlock.flags],CTRLF_BREAKABLE
-	jnz	found_breakable_block
-	call	find_next_directive_block
-	jnc	find_block_with_limit
-      no_block_with_limit:
-	jmp	no_parameter_recognized
-      found_breakable_block:
+	jz	look_deeper_for_block_with_limit
 	test	[edi+DirectiveBlock.flags],CTRLF_HAS_REPEAT_DATA
-	jz	no_block_with_limit
+	jz	look_deeper_for_block_with_limit
+	mov	eax,[parameter_namespace]
+	cmp	eax,[edi+DirectiveBlock.parameter_namespace]
+	je	found_block_with_limit
+      look_deeper_for_block_with_limit:
+	call	find_next_directive_block
+	jmp	find_block_with_limit
+      found_block_with_limit:
 	mov	ebx,edi
 	sub	ebx,sizeof.RepeatData
 	mov	edi,[preprocessing_workspace.memory_start]
