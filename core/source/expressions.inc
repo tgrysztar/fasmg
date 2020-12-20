@@ -2359,6 +2359,7 @@ calculate_bswap:
       bswap_argument_out_of_range:
 	mov	edx,_value_out_of_range
 	call	register_error
+	call	pop_terms
 	jmp	single_term_result
 
 count_bytes:
