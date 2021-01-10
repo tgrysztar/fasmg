@@ -258,15 +258,21 @@ namespace MachO
 	end if
 
 	if defined Settings.SegmentAlignment
-	      SEGMENT_ALIGNMENT := Settings.SegmentAlignment
+		SEGMENT_ALIGNMENT := Settings.SegmentAlignment
 	else
-	      SEGMENT_ALIGNMENT := 1000h
+		SEGMENT_ALIGNMENT := 1000h
 	end if
 
 	if defined Settings.FileAlignment
-	      FILE_ALIGNMENT := Settings.FileAlignment
+		FILE_ALIGNMENT := Settings.FileAlignment
 	else
-	      FILE_ALIGNMENT := 1000h
+		FILE_ALIGNMENT := 1000h
+	end if
+
+	if defined Settings.HeaderPad
+		HEADER_PAD := Settings.HeaderPad
+	else
+		HEADER_PAD := 16
 	end if
 
 	if CPUTYPE and CPU_ARCH_ABI64
@@ -287,7 +293,7 @@ namespace MachO
 	COMMAND_NUMBER = 0
 	COMMAND_POSITION = $
 
-	commands db SIZE_OF_COMMANDS dup 0
+	commands db SIZE_OF_COMMANDS dup 0, HEADER_PAD dup ?
 
 	org $
 

@@ -3045,6 +3045,7 @@ else_match_block:
 	mov	dl,DBLOCK_CONTROL
 	xor	ecx,ecx
 	call	add_directive_block
+	mov	[directive_block],edi
 	pop	ebx eax
 	cmp	bl,CTRL_RMATCH
 	sete	[unprocessed_matching]
