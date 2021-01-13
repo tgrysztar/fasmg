@@ -387,7 +387,7 @@ macro section? declaration*
 				else match =linkinfo?, attribute
 					SECTION_FLAGS = SECTION_FLAGS or IMAGE_SCN_LNK_INFO
 				else
-					err 'invalid argument'
+					err 'unknown attribute "',`attribute,'"'
 				end match
 			end irpv
 

@@ -386,7 +386,7 @@ macro section? declaration*
 				else match =executable?, attribute
 					SECTION_FLAGS = SECTION_FLAGS or SHF_EXECINSTR
 				else
-					err 'invalid argument'
+					err 'unknown attribute "',`attribute,'"'
 				end match
 			end irpv
 

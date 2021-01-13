@@ -562,6 +562,9 @@ macro section? declaration*
 				else match =writeable? tail, seq
 					redefine seq tail
 					SECTION_CHARACTERISTICS = SECTION_CHARACTERISTICS or IMAGE_SCN_MEM_WRITE
+				else match =writable? tail, seq
+					redefine seq tail
+					SECTION_CHARACTERISTICS = SECTION_CHARACTERISTICS or IMAGE_SCN_MEM_WRITE
 				else match =executable? tail, seq
 					redefine seq tail
 					SECTION_CHARACTERISTICS = SECTION_CHARACTERISTICS or IMAGE_SCN_MEM_EXECUTE
@@ -600,8 +603,8 @@ macro section? declaration*
 				else match =udata? tail, seq
 					redefine seq tail
 					SECTION_CHARACTERISTICS = SECTION_CHARACTERISTICS or IMAGE_SCN_CNT_UNINITIALIZED_DATA
-				else
-					err 'invalid argument'
+				else match attribute tail, seq
+					err 'unknown attribute "',`attribute,'"'
 					redefine seq :
 				end match
 			end while

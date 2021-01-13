@@ -430,7 +430,7 @@ macro MachO.segment declaration
 					INITPROT = INITPROT and not VM_PROT_EXECUTE
 					MAXPROT = MAXPROT and not VM_PROT_EXECUTE
 				else
-					err 'invalid argument'
+					err 'unknown attribute "',`attribute,'"'
 				end match
 				redefine sequence tail
 			else

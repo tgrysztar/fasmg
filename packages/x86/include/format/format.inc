@@ -26,6 +26,7 @@ end macro
 macro format?.PE? settings
 	PE.Settings.Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE or IMAGE_FILE_32BIT_MACHINE or IMAGE_FILE_LINE_NUMS_STRIPPED or IMAGE_FILE_LOCAL_SYMS_STRIPPED
 	PE.Settings.DllCharacteristics = 0
+	PE.Settings.Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI
 	local seq
 	define seq settings:
 	while 1
@@ -88,7 +89,9 @@ macro format?.PE? settings
 			end match
 		end match
 	end while
-	if PE.Settings.Characteristics and IMAGE_FILE_DLL
+	if PE.Settings.Subsystem = IMAGE_SUBSYSTEM_EFI_APPLICATION | PE.Settings.Subsystem = IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER | PE.Settings.Subsystem = IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
+		format binary as 'efi'
+	else if PE.Settings.Characteristics and IMAGE_FILE_DLL
 		format binary as 'dll'
 	else
 		format binary as 'exe'
@@ -103,6 +106,7 @@ macro format?.PE64? settings
 	PE.Settings.Machine = IMAGE_FILE_MACHINE_AMD64
 	PE.Settings.Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE or IMAGE_FILE_LARGE_ADDRESS_AWARE or IMAGE_FILE_LINE_NUMS_STRIPPED or IMAGE_FILE_LOCAL_SYMS_STRIPPED
 	PE.Settings.DllCharacteristics = 0
+	PE.Settings.Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI
 	PE.Settings.MajorSubsystemVersion = 5
 	PE.Settings.MinorSubsystemVersion = 0
 	local seq
@@ -161,7 +165,9 @@ macro format?.PE64? settings
 			end match
 		end match
 	end while
-	if PE.Settings.Characteristics and IMAGE_FILE_DLL
+	if PE.Settings.Subsystem = IMAGE_SUBSYSTEM_EFI_APPLICATION | PE.Settings.Subsystem = IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER | PE.Settings.Subsystem = IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
+		format binary as 'efi'
+	else if PE.Settings.Characteristics and IMAGE_FILE_DLL
 		format binary as 'dll'
 	else
 		format binary as 'exe'
