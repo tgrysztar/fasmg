@@ -393,7 +393,10 @@ show_line_content:
 	mov	edx,[ebx+SourceEntry.text]
 	mov	esi,[edx+ValueDefinition.value]
 	mov	ecx,[edx+ValueDefinition.value_length]
-	add	esi,[ebx+SourceEntry.line_offset]
+	mov	eax,[ebx+SourceEntry.line_offset]
+	add	esi,eax
+	sub	ecx,eax
+	jbe	line_content_shown
 	call	show_preprocessed_line
     line_content_shown:
 	retn

@@ -255,7 +255,7 @@ macro section? declaration*
 				else match =data?, attribute
 					SECTION_FLAGS = SECTION_FLAGS or STYP_DATA
 				else
-					err 'invalid argument'
+					err 'unknown attribute "',`attribute,'"'
 				end match
 			end irpv
 

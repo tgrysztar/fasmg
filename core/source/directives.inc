@@ -3035,7 +3035,6 @@ else_match_block:
 	mov	dl,DBLOCK_CONTROL
 	call	find_directive_block
 	jc	unexpected_instruction
-	mov	[directive_block],edi
 	mov	al,[edi+DirectiveBlock.flags]
 	test	al,CTRLF_ALLOWS_ELSE
 	jz	unexpected_instruction

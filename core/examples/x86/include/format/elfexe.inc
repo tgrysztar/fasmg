@@ -299,7 +299,7 @@ macro segment? attributes*
 			else match =gnurelro?, attribute
 				SEGMENT_TYPE = PT_GNU_RELRO
 			else
-				err 'invalid argument'
+				err 'unknown attribute "',`attribute,'"'
 			end match
 		end irpv
 
