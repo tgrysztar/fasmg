@@ -1284,7 +1284,13 @@ include_source:
 	and	[eax+SymbolTree_Root.parameters],0
 	mov	[ebx+SourceEntry.local_namespace],eax
 	pop	esi
-	jmp	instruction_assembled
+	call	get_constituent_value
+	jc	instruction_assembled
+	cmp	al,','
+	jne	instruction_assembled
+	cmp	[number_of_line_embeddings],0
+	jne	invalid_argument
+	jmp	assemble_after_label
     include_stack_limit_exceeded:
 	pop	esi
 	mov	edx,_stack_limit_exceeded

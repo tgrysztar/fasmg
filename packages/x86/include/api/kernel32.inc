@@ -252,6 +252,7 @@ import kernel32,\
        GetFileAttributesExW,'GetFileAttributesExW',\
        GetFileInformationByHandle,'GetFileInformationByHandle',\
        GetFileSize,'GetFileSize',\
+       GetFileSizeEx,'GetFileSizeEx',\
        GetFileTime,'GetFileTime',\
        GetFileType,'GetFileType',\
        GetFullPathNameA,'GetFullPathNameA',\
@@ -571,6 +572,7 @@ import kernel32,\
        SetFileAttributesA,'SetFileAttributesA',\
        SetFileAttributesW,'SetFileAttributesW',\
        SetFilePointer,'SetFilePointer',\
+       SetFilePointerEx,'SetFilePointerEx',\
        SetFileTime,'SetFileTime',\
        SetHandleCount,'SetHandleCount',\
        SetHandleInformation,'SetHandleInformation',\

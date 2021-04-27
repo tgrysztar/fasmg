@@ -1914,13 +1914,17 @@ a "virtual" block, they can only separate areas that go into the output file.
 The "include" instruction reads the source text from another file and
 processes it before proceeding further in the current source. Its argument
 should be a string defining the path to a file (the format of the path may
-depend on the operating system). If after the instruction and before the
-argument the "!" character is added, the other file is read and processed
-unconditionally, even when it is inside a skipped block (the unconditional
-instructions from the other file may then get recognized).
+depend on the operating system). If there is a "!" between the instruction
+and the argument, the other file is read and processed unconditionally,
+even when it is inside a skipped block (the unconditional instructions from
+the other file may then get recognized).
 
         include 'macro.inc'
 
+An additional argument may be optionally added (separated from by the path
+by comma), and it is interpreted as a command to be executed after the file
+has been read and inserted into the source stream, just before processing
+the first line.
   The "eval" instruction takes a sequence of bytes defined by its arguments,
 treats it as a source text and assembles it. The arguments are either strings
 or the numeric values of single bytes, separated with commas. In the next
