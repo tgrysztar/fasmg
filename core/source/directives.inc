@@ -1145,6 +1145,10 @@ virtual_block:
 	mov	edi,esi
 	mov	ecx,[edx]
 	lea	esi,[edx+4]
+	test	ecx,ecx
+	jnz	register_auxiliary_file
+	dec	esi
+    register_auxiliary_file:
 	mov	eax,[current_area]
 	inc	[eax+ValueDefinition.reference_count]
 	push	ecx

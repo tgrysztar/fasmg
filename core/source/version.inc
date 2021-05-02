@@ -1,1 +1,1 @@
-VERSION equ "ja8n"
+VERSION equ "jaf7"
