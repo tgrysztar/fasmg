@@ -1921,7 +1921,7 @@ the other file may then get recognized).
 
         include 'macro.inc'
 
-An additional argument may be optionally added (separated from by the path
+An additional argument may be optionally added (separated from the path
 by comma), and it is interpreted as a command to be executed after the file
 has been read and inserted into the source stream, just before processing
 the first line.
@@ -2012,7 +2012,7 @@ as usual.
 15. CALM instructions
 
 The "calminstruction" directive allows to define new instructions in form of
-a compiled sequences of specialized commands. As opposed to regular macroinstructions,
+compiled sequences of specialized commands. As opposed to regular macroinstructions,
 which operate on a straightforward principle of textual substitution, CALM 
 (Compiled Assembly-Like Macro) instructions are able to perform many operations
 without passing any text through the standard preprocessing and assembly cycle. 

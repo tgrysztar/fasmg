@@ -1425,9 +1425,10 @@ detect_mispredictions:
 	push	eax ecx edx esi edi
 	mov	edx,[eax+SymbolTree_Leaf.definition]
 	mov	ecx,[eax+SymbolTree_Leaf.retired_definition]
-	mov	al,[edx+ValueDefinition.type]
-	cmp	al,[ecx+ValueDefinition.type]
-	jne	link_value_mispredicted
+	mov	esi,dword [edx+ValueDefinition.type]
+	sub	esi,dword [ecx+ValueDefinition.type]
+	test	esi,0FFh
+	jnz	link_value_mispredicted
 	mov	esi,[ecx+ValueDefinition.value]
 	mov	ecx,[ecx+ValueDefinition.value_length]
 	mov	edi,[edx+ValueDefinition.value]
