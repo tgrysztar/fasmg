@@ -2107,6 +2107,8 @@ calm_jump:
 calm_assemble:
 	lodsd
 	mov	ebx,eax
+	mov	eax,[current_pass]
+	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
 	mov	eax,[ebx+SymbolTree_Leaf.branch]
 	mov	[instruction_branch],eax
 	call	use_available_value

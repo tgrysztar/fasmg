@@ -166,10 +166,16 @@ recognize_symbol:
 	mov	edi,[symbol_root]
 	cmp	[name_kind],NAME_CASEINSENSITIVE
 	je	no_defined_symbol
+	mov	[current_symbol],ebx
+	mov	ebx,[ebx+SymbolTree_Leaf.fallback_neighbour]
+	test	ebx,ebx
+	jnz	check_namespace_fallback
 	mov	[name_kind],NAME_CASEINSENSITIVE
 	mov	edx,[case_insensitive_hash]
 	mov	ebx,edi
 	call	scan_namespace
+	mov	eax,[current_symbol]
+	mov	[eax+SymbolTree_Leaf.fallback_neighbour],ebx
 	jc	no_defined_symbol
     symbol_recognized:
 	mov	edi,[symbol_root]
@@ -217,6 +223,7 @@ recognize_symbol:
     check_fallback_neighbour:
 	call	get_available_value
 	jc	no_neighbour_found
+      fallback_neighbour_ok:
 	mov	edx,[ebx+SymbolTree_Leaf.branch]
 	mov	edi,[edx+SymbolTree_Foliage.root]
 	retn
@@ -227,6 +234,9 @@ recognize_symbol:
 	mov	[symbol_root],edi
 	jc	find_in_wider_scope
 	retn
+    check_namespace_fallback:
+	call	get_available_value
+	jnc	fallback_neighbour_ok
     no_defined_symbol:
 	cmp	[symbol_class],SYMCLASS_EXPRESSION
 	je	return_kept_symbol

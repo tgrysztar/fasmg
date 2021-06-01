@@ -1,1 +1,1 @@
-VERSION equ "jann"
+VERSION equ "jbi2"

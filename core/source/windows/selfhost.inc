@@ -94,7 +94,7 @@ end macro
 calminstruction invoke? proc*,args&
 	local	tmp, stack
 	match	, args
-	jyes	call
+	jyes	go
     collect:
 	match	tmp=,args, args
 	take	stack, tmp
@@ -104,7 +104,7 @@ calminstruction invoke? proc*,args&
 	assemble args
 	take	args, stack
 	jyes	push
-    call:
+    go:
 	arrange proc, =call [proc]
 	assemble proc
 end calminstruction
