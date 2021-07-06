@@ -127,6 +127,7 @@ struct WINDOWPOS
   cx		  dd ?
   cy		  dd ?
   flags 	  dd ?
+		  dd ?
 ends
 
 struct NMHDR
@@ -139,6 +140,7 @@ ends
 struct COPYDATASTRUCT
   dwData dq ?
   cbData dd ?
+	 dd ?
   lpData dq ?
 ends
 
@@ -203,6 +205,7 @@ struct MEASUREITEMSTRUCT
   itemID     dd ?
   itemWidth  dd ?
   itemHeight dd ?
+	     dd ?
   itemData   dq ?
 ends
 
@@ -233,7 +236,8 @@ struct GESTUREINFO
   cbSize       dd ?
   dwFlags      dd ?
   dwID	       dd ?
-  hwndTarget   dd ?
+	       dd ?
+  hwndTarget   dq ?
   ptsLocation  POINTS
   dwInstanceID dd ?
   dwSequenceID dd ?

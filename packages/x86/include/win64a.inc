@@ -29,6 +29,8 @@ include 'macro/import64.inc'
 include 'macro/export.inc'
 include 'macro/resource.inc'
 
+Struct.CheckAlignment = 1
+
 include 'equates/kernel64.inc'
 include 'equates/user64.inc'
 include 'equates/gdi64.inc'

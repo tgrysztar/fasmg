@@ -33,7 +33,7 @@ namespace struct?
 		jump finish
 
 	    labeled_statement:
-		arrange tmp, sname.=__definition#i
+		arrange tmp, sname.=__label#i sname.=__definition#i
 		transform tmp
 		arrange val, =__init__#field
 		transform val
@@ -183,7 +183,6 @@ namespace struct?
 		jyes ignored
 		arrange default,
 		match definition= default, definition
-		arrange definition, label definition
 		arrange sym, pname.=__definition#i
 		publish sym:, definition
 		match ?label, label
@@ -191,7 +190,7 @@ namespace struct?
 		publish sym:, label
 		arrange sym, pname.=__default__#label
 		publish sym:, default
-		arrange definition, definition default
+		arrange definition, label definition default
 		assemble definition
 		arrange definition, =__size__#label == =$ - label
 		assemble definition
@@ -322,7 +321,18 @@ namespace struct?
 
 end namespace
 
-macro struct? declaration*
+macro struct? declaration*, attributes
+	if defined Struct.CheckAlignment & Struct.CheckAlignment
+		struct?.packed = 0
+	else
+		struct?.packed = 1
+	end if
+	match =packed?, attributes
+		struct?.packed = 1
+	else match any, attributes
+		err 'unknown attribute ',`any
+	end match
+
 	define struct?.pname declaration
 	struct?.i = 0
 	mvstruc ?, struct?.collect
@@ -343,6 +353,8 @@ macro ends?!
 			sizeof.name := $
 			label name: sizeof.name at 0
 		end virtual
+
+		struct?.check name
 
 		local sname
 		define sname name
@@ -405,4 +417,41 @@ macro __union_start
 		purge __union_open,__union_close,__union_divider,__union_end
 	end macro
 	__union_open
+end macro
+
+calminstruction breakifndef? sym
+	transform sym
+	jyes ok
+	asm break
+    ok:
+end calminstruction
+
+macro struct?.check name
+	if ~ struct?.packed
+		local alignment, maxalignment
+		maxalignment = 1
+		while 1
+			breakifndef name.__statement#%
+			match label, name.__label#%
+				if defined name.label
+					local alignment
+					alignment = 1
+					if sizeof name.label > 0
+						alignment = 1 shl (bsf sizeof name.label)
+					end if
+					match type, name.__definition#%
+						if defined type.__alignment
+							alignment = type.__alignment
+						end if
+					end match
+					if name.label mod alignment > 0
+						display 'warning: ',`name,'.',`label,' not aligned to its natural boundary',10
+					else if alignment > maxalignment
+						maxalignment = alignment
+					end if
+				end if
+			end match
+		end while
+		name.__alignment := maxalignment
+	end if
 end macro

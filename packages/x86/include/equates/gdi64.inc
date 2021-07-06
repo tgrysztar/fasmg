@@ -39,7 +39,7 @@ struct BITMAPINFOHEADER
   biClrImportant  dd ?
 ends
 
-struct BITMAPFILEHEADER
+struct BITMAPFILEHEADER, packed
   bfType      dw ?
   bfSize      dd ?
   bfReserved1 dw ?

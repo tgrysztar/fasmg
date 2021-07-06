@@ -38,7 +38,6 @@ struct CHOOSECOLOR
   lpCustColors	 dq ?
   Flags 	 dd ?
   lCustData	 dd ?
-		 dd ?
   lpfnHook	 dq ?
   lpTemplateName dq ?
 ends

@@ -183,6 +183,7 @@ struct MENUITEMINFO
   dwItemData	dd ?
   dwTypeData	dd ?
   cch		dd ?
+  hbmpItem	dd ?
 ends
 
 struct MEASUREITEMSTRUCT
