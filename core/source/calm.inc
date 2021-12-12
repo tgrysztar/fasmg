@@ -107,12 +107,15 @@ define_calm_instruction:
 	call	reserve_workspace
 	mov	[edi+CompiledMacroArgument.symbol_leaf],ebx
 	call	update_value_definition
+	test	edx,edx
+	jz	calm_instruction_argument_prepared
 	push	esi edi
 	mov	[value_type],VALTYPE_RESERVED
 	xor	ecx,ecx
 	call	assign_value
 	pop	edi esi
 	xor	edx,edx
+      calm_instruction_argument_prepared:
 	call	move_to_next_symbol
 	jc	calm_instruction_argument_ready
 	cmp	al,':'
@@ -681,6 +684,7 @@ alm_arrange:
 	cmp	esi,[line_end]
 	je	pattern_parsed
 	lodsb
+    token_available:
 	cmp	al,[breakpoint_token]
 	je	pattern_breakpoint
     token_in_pattern:
@@ -753,8 +757,9 @@ alm_arrange:
 	je	parse_hard_space_in_pattern
 	stosb
 	cmp	al,1Ah
-	je	copy_pattern_data
-	jmp	literal_token_in_pattern
+	jne	literal_token_in_pattern
+	movsd
+	jmp	parsed_name_in_pattern
     parse_hard_space_in_pattern:
 	mov	al,0A0h
 	stosb
@@ -791,11 +796,24 @@ alm_arrange:
 	stosd
 	mov	eax,ebx
 	stosd
+    parsed_name_in_pattern:
+	cmp	esi,[line_end]
+	je	pattern_parsed
+	lodsb
+	cmp	al,40h
+	je	ignore_context_after_name_in_pattern
+	cmp	al,'?'
+	jne	token_available
+	mov	al,0BFh
+	stosb
 	jmp	parse_pattern
+    ignore_context_after_name_in_pattern:
+	call	pass_context
+	jmp	parsed_name_in_pattern
     numeric_name_in_pattern:
 	movsb
 	movsd
-	jmp	parse_pattern
+	jmp	parsed_name_in_pattern
     error_in_parsed_pattern:
 	mov	edx,_invalid_argument
 	call	register_error
@@ -1503,6 +1521,8 @@ calm_arrange:
 	je	arrange_by_reference
 	cmp	al,0A0h
 	je	downgrade_hard_space
+	cmp	al,0BFh
+	je	restore_question_mark
 	stosb
 	cmp	al,1Ah
 	je	copy_arranged_token_data
@@ -1522,6 +1542,10 @@ calm_arrange:
 	jmp	arrange_token
     downgrade_hard_space:
 	mov	al,20h
+	stosb
+	jmp	arrange_token
+    restore_question_mark:
+	mov	al,'?'
 	stosb
 	jmp	arrange_token
     arrange_by_reference:
@@ -1649,7 +1673,7 @@ calm_match:
 	add	edi,1+8
 	cmp	edi,[pattern_end]
 	je	calm_required_wildcard_match
-	cmp	byte [edi],'?'
+	cmp	byte [edi],0BFh
 	je	calm_optional_wildcard_match
     calm_required_wildcard_match:
 	cmp	esi,[line_end]
@@ -1725,7 +1749,7 @@ calm_match:
 	add	esi,eax
 	mov	eax,[edi]
 	lea	edi,[edi+4+eax]
-	cmp	byte [edi],'?'
+	cmp	byte [edi],0BFh
 	jne	calm_compare_token_contents
 	inc	edi
 	jmp	calm_compare_token_contents
@@ -1751,7 +1775,7 @@ calm_match:
 	mov	ecx,eax
 	mov	edx,[edi]
 	add	edi,4
-	cmp	byte [edi],'?'
+	cmp	byte [edi],0BFh
 	je	calm_case_insensitive_match
 	cmp	ecx,edx
 	je	calm_match_with_pattern
@@ -2117,7 +2141,7 @@ calm_assemble:
 	cmp	al,VALTYPE_SYMBOLIC
 	jne	calm_invalid_value
 	call	create_source_entry
-	jc	calm_exceeded_stack_limit
+	jc	calm_assemble_exceeded_stack_limit
 	mov	[ebx+SourceEntry.type],SOURCE_MACRO
 	or	[ebx+SourceEntry.flags],SRCF_PREPROCESSED
 	mov	[ebx+SourceEntry.text],edx
@@ -2141,10 +2165,13 @@ calm_assemble:
 	jmp	assembly_line
     calm_undefined_symbol:
 	mov	edx,_undefined_symbol
-	call	register_error
-	jmp	calm_execution_unit
+	jmp	calm_execution_error
     calm_invalid_value:
 	mov	edx,_invalid_symbol_value
+	jmp	calm_execution_error
+    calm_assemble_exceeded_stack_limit:
+	mov	edx,_stack_limit_exceeded
+    calm_execution_error:
 	call	register_error
 	jmp	calm_execution_unit
 

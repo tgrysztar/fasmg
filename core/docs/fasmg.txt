@@ -599,7 +599,7 @@ into output (padded to multiple of a word, but in this case the string never
 requires such padding).
   For more complex types of relocations additional modifier may need to be
 employed. For example, if upper and lower portions of an address needed to be
-stored in separate places (for example across two instructions) and relocated
+stored in separate places (likely across two instructions) and relocated
 separately, necessary modifiers could be implemented as follows:
 
         element MOD.HIGH
@@ -641,11 +641,10 @@ How can multiple sections of file be generated in parallel?
 
 This assembly engine has a single main output that has to be generated
 sequentially. This may seem problematic when the file needs to contains
-distinct sections for code and data, but the contents of these sections is
-to be collected from interleaved pieces that may be spread across multiple
-source files. However, there are some relatively simple methods that allow
-to do it, all based in one way or the other on forward-referencing capabilities
-of the assembler.
+distinct sections for code and data, collected from interleaved pieces that
+may be spread across multiple source files. There are, however, a couple of
+methods to handle it, all based in one way or another on forward-referencing
+capabilities of the assembler.
   A natural approach is to define contents of auxiliary section in "virtual"
 block and copy it to appropriate position in the output with a single
 operation. When a "virtual" block is labeled, it can be re-opened multiple
