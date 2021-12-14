@@ -35,10 +35,10 @@ namespace struct?
 	    labeled_statement:
 		arrange tmp, sname.=__label#i sname.=__definition#i
 		transform tmp
-		arrange val, =__init__#field
+		arrange val, =__init__.#field
 		transform val
 		jyes given_value
-		arrange val, sname.=__default__#field
+		arrange val, sname.=__default__.#field
 		transform val
 		jyes got_value
 		jump statement_ready
@@ -59,7 +59,7 @@ namespace struct?
 
 		take field, stack
 		jno next_statement
-		arrange tmp, sname.=__size__#field - (=$ - field)
+		arrange tmp, sname.=__size__.#field - (=$ - field)
 		compute tmp, tmp
 		check tmp = 0
 		jyes next_statement
@@ -128,20 +128,20 @@ namespace struct?
 		compute j, -1
 		match <val>, val
 	    got_argument_field:
-		arrange tmp, sname.=__default__#field
+		arrange tmp, sname.=__default__.#field
 		transform tmp
 		jyes argument_ok
 		match field.sub, field
 		jno unknown_field
-		arrange tmp, sname.=__default__#field
+		arrange tmp, sname.=__default__.#field
 		transform tmp
 		jno unknown_field
 		arrange val, sub:val
-		arrange tmp, =__multi__#field
+		arrange tmp, =__multi__.#field
 		transform tmp
 		jno append_value
 		arrange val, tmp, val
-		arrange tmp, =__multi__#field
+		arrange tmp, =__multi__.#field
 	    append_value:
 		publish tmp, val
 		jump argument_ok
@@ -153,7 +153,7 @@ namespace struct?
 		jump next_argument
 
 	    argument_ok:
-		arrange tmp, =__init__#field
+		arrange tmp, =__init__.#field
 		publish tmp, val
 	    next_argument:
 		match , values
@@ -185,14 +185,13 @@ namespace struct?
 		match definition= default, definition
 		arrange sym, pname.=__definition#i
 		publish sym:, definition
-		match ?label, label
 		arrange sym, pname.=__label#i
 		publish sym:, label
-		arrange sym, pname.=__default__#label
+		arrange sym, pname.=__default__.#label
 		publish sym:, default
 		arrange definition, label definition default
 		assemble definition
-		arrange definition, =__size__#label == =$ - label
+		arrange definition, =__size__.#label == =$ - label
 		assemble definition
 		match , a
 		jyes done
