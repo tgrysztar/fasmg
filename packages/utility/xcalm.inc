@@ -39,3 +39,37 @@ calminstruction calminstruction?.asm? line&
 	arrange buffer, =assemble ln
 	assemble buffer
 end calminstruction
+
+; CALL
+; extends the built-in command with the ability to define some arguments as literal values;
+; arguments enclosed with () are treated as numeric,
+; ones enclosed with <> are treated as a text of symbolic value.
+calminstruction calminstruction?.call? instruction*, arguments&
+	arrange instruction, =call instruction
+    convert:
+	match	, arguments
+	jyes	ready
+	local	v
+	match	v=,arguments, arguments, <>
+	jyes	recognize
+	arrange v, arguments
+	arrange arguments,
+    recognize:
+	match	(v), v
+	jyes	numeric
+	match	<v>, v
+	jyes	symbolic
+    append:
+	arrange instruction, instruction=,v
+	jump	convert
+    numeric:
+	compute v, v
+    symbolic:
+	local name
+	asm unique name
+	publish name, v
+	arrange instruction, instruction=,name
+	jump	convert
+    ready:
+	assemble instruction
+end calminstruction

@@ -1322,6 +1322,105 @@ alm_take:
 	mov	[calm_code_cursor],edi
 	jmp	instruction_assembled
 
+alm_call:
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jz	unexpected_instruction
+	and	[symbol_definition],0
+	mov	edx,[embedded_context]
+	mov	[line_context],edx
+	test	edx,edx
+	jnz	alm_call_context_adjust
+	mov	edx,current_context
+      alm_call_context_adjust:
+	mov	ebx,[edx+RecognitionContext.base_namespace]
+	test	[ebx+SymbolTree_Root.flags],NAMESPACE_CALM
+	jz	alm_call_context_ready
+	mov	eax,[ebx+SymbolTree_Root.parent_branch]
+	test	eax,eax
+	jz	alm_call_context_ready
+	mov	ebx,[eax+SymbolTree_Foliage.root]
+	mov	eax,alm_adjusted_context
+	mov	[eax+RecognitionContext.base_namespace],ebx
+	mov	ecx,[edx+RecognitionContext.base_label]
+	mov	[eax+RecognitionContext.base_label],ecx
+	mov	[embedded_context],eax
+      alm_call_context_ready:
+	mov	dl,SYMCLASS_INSTRUCTION
+	call	identify_symbol
+	jc	invalid_identifier
+	test	ebx,ebx
+	jz	invalid_identifier
+	cmp	[ebx+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
+	je	alm_call_instruction_ok
+	mov	ebx,edx
+	mov	[symbol_class],SYMCLASS_INSTRUCTION
+	or	[symbol_required],1
+	or	[symbol_expected],1
+	call	scan_symbol_branch
+	jc	invalid_identifier
+	mov	edi,ebx
+     mark_instruction_fallbacks:
+	mov	edx,[edi+SymbolTree_Leaf.fallback_neighbour]
+	test	edx,edx
+	jz	instruction_fallback_neighbour_ok
+	or	[edx+SymbolTree_Leaf.extra_flags],SYMX_INSTRUCTION_PREDICTED
+       instruction_fallback_neighbour_ok:
+	mov	edi,[edi+SymbolTree_Leaf.fallback_parent]
+	test	edi,edi
+	jz	alm_call_instruction_ok
+	or	[edi+SymbolTree_Leaf.extra_flags],SYMX_INSTRUCTION_PREDICTED
+	jmp	mark_instruction_fallbacks
+     alm_call_instruction_ok:
+	mov	edi,[calm_code_cursor]
+	mov	edx,calm_code_buffer
+	mov	ecx,8+8
+	call	reserve_workspace
+	mov	eax,[calm_line_number]
+	stosd
+	mov	eax,calm_call
+	stosd
+	mov	eax,ebx
+	stosd
+	cmp	[embedded_context],alm_adjusted_context
+	jne	alm_call_argument
+	mov	eax,[line_context]
+	mov	[embedded_context],eax
+     alm_call_argument:
+	call	move_to_next_symbol
+	jc	alm_call_arguments_ready
+	cmp	al,','
+	jne	alm_call_invalid_argument
+	inc	esi
+	mov	edx,calm_code_buffer
+	mov	ecx,8
+	call	reserve_workspace
+	call	move_to_next_symbol
+	jc	alm_call_empty_argument
+	cmp	al,','
+	je	alm_call_empty_argument
+	push	edi
+	mov	dl,SYMCLASS_EXPRESSION
+	call	identify_symbol
+	pop	edi
+	jc	alm_call_invalid_argument
+	test	ebx,ebx
+	jz	alm_call_invalid_argument
+	mov	eax,ebx
+	stosd
+	jmp	alm_call_argument
+      alm_call_empty_argument:
+	or	eax,-1
+	stosd
+	jmp	alm_call_argument
+     alm_call_invalid_argument:
+	mov	edx,_invalid_argument
+	call	register_error
+     alm_call_arguments_ready:
+	xor	eax,eax
+	stosd
+	mov	[calm_code_cursor],edi
+	jmp	instruction_assembled
+
 alm_exit:
 	test	[assembly_mode],AMODE_CALM_DEFINITION
 	jz	unexpected_instruction
@@ -2407,4 +2506,135 @@ calm_take:
 	xor	edx,edx
 	call	remove_value_definition
 	setnc	[calm_result]
+	jmp	calm_execution_unit
+
+calm_call:
+	lodsd
+	mov	ebx,eax
+	mov	eax,[current_pass]
+	mov	[ebx+SymbolTree_Leaf.last_use_pass],eax
+	mov	eax,[ebx+SymbolTree_Leaf.branch]
+	mov	[instruction_branch],eax
+	call	use_available_value
+	jc	calm_call_undefined
+	mov	al,[edx+ValueDefinition.type]
+	cmp	al,VALTYPE_CALM
+	jne	calm_call_invalid
+	call	create_source_entry
+	jc	calm_call_exceeded_stack_limit
+	mov	eax,[parameter_namespace]
+	mov	[ebx+SourceEntry.local_namespace],eax
+	mov	ecx,[instruction_branch]
+	test	ecx,ecx
+	jz	called_name_ok
+	mov	[ebx+SourceEntry.name],ecx
+	or	[ebx+SourceEntry.name_length],-1
+     called_name_ok:
+	mov	[ebx+SourceEntry.type],SOURCE_CALM
+	mov	[ebx+SourceEntry.text],edx
+	or	[edx+ValueDefinition.flags],VAL_IN_USE
+	inc	[edx+ValueDefinition.reference_count]
+	mov	edi,esi
+	mov	esi,[edx+ValueDefinition.value]
+	mov	eax,[esi+CompiledMacroHeader.literals_offset]
+	add	eax,esi
+	mov	[calm_value],edx
+	mov	[calm_literals],eax
+	add	esi,sizeof.CompiledMacroHeader
+	push	ebx
+     process_call_arguments:
+	mov	eax,[esi]
+	inc	eax
+	cmp	eax,1
+	jbe	call_arguments_ready
+	mov	ebx,[edi]
+	test	ebx,ebx
+	jz	omitted_call_argument
+	add	edi,4
+	cmp	ebx,-1
+	je	omitted_call_argument
+	call	use_available_value
+	jc	missing_argument_value
+	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_COMMAND
+	jae	unassignable_value
+	push	edx
+	mov	ebx,[esi+CompiledMacroArgument.symbol_leaf]
+	call	update_value_definition
+	pop	eax
+	push	esi edi
+	mov	esi,[eax+ValueDefinition.value]
+	mov	ecx,[eax+ValueDefinition.value_length]
+	mov	al,[eax+ValueDefinition.type]
+      assign_call_argument:
+	test	edx,edx
+	jz	call_argument_assigned
+	mov	[value_type],al
+	call	assign_value
+      call_argument_assigned:
+	pop	edi esi
+      next_call_argument:
+	add	esi,sizeof.CompiledMacroArgument
+	jmp	process_call_arguments
+      missing_argument_value:
+	mov	edx,_undefined_symbol
+	call	register_error
+	jmp	next_call_argument
+      unassignable_value:
+	mov	edx,_invalid_symbol_value
+	call	register_error
+	jmp	next_call_argument
+      omitted_call_argument:
+	mov	ebx,[esi+CompiledMacroArgument.symbol_leaf]
+	call	update_value_definition
+	push	esi edi
+	mov	ecx,[esi+CompiledMacroArgument.default_value_length]
+	mov	esi,[esi+CompiledMacroArgument.default_value_offset]
+	add	esi,[calm_literals]
+	mov	al,VALTYPE_SYMBOLIC
+	cmp	ecx,-1
+	jne	assign_call_argument
+	inc	ecx
+	push	edx
+	mov	edx,_invalid_argument
+	call	register_error
+	pop	edx
+	jmp	assign_call_argument
+     call_arguments_ready:
+	add	esi,4
+	mov	eax,[edi]
+	add	edi,4
+	test	eax,eax
+	jz	call_arguments_ok
+	mov	edx,_invalid_argument
+	call	register_error
+       skip_excess_arguments:
+	mov	eax,[edi]
+	add	edi,4
+	test	eax,eax
+	jnz	skip_excess_arguments
+     call_arguments_ok:
+	pop	ebx
+	mov	eax,[calm_instruction_number]
+	mov	[ebx-sizeof.SourceEntry+SourceEntry.line_number],eax
+	mov	eax,[ebx-sizeof.SourceEntry+SourceEntry.text]
+	mov	ecx,[eax+ValueDefinition.value]
+	sub	edi,ecx
+	mov	[ebx-sizeof.SourceEntry+SourceEntry.offset],edi
+	mov	al,[calm_result]
+	mov	[ebx-sizeof.SourceEntry+SourceEntry.saved_result],al
+	jmp	calm_execution_unit
+     calm_call_undefined:
+	mov	edx,_undefined_symbol
+	jmp	calm_call_error
+     calm_call_invalid:
+	mov	edx,_invalid_symbol_value
+	jmp	calm_call_error
+     calm_call_exceeded_stack_limit:
+	mov	edx,_stack_limit_exceeded
+     calm_call_error:
+	call	register_error
+       skip_call_arguments:
+	lodsd
+	test	eax,eax
+	jnz	skip_call_arguments
 	jmp	calm_execution_unit

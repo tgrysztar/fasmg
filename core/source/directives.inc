@@ -430,8 +430,10 @@ get_macro_definition_symbol:
     create_placeholder_value:
     ; for VAL_UNCONDITIONAL macros this helps to detect when a macro tries to call itself,
     ; for regular ones this section interferes with operation of SYM_PREDICTED to sometimes prevent excess passes,
-    ; any newly introduced mechanism that would expect SYM_PREDICTED to behave reliably for instruction symbol
-    ; should mark the symbol in some way and skip this section upon seeing the mark
+    ; when SYM_PREDICTED is needed to behave reliably for an instruction, its symbol
+    ; should be marked with SYMX_INSTRUCTION_PREDICTED to skip this section
+       test    [ebx+SymbolTree_Leaf.extra_flags],SYMX_INSTRUCTION_PREDICTED
+       jnz     macro_symbol_ready
 	call	create_value_definition
 	test	edx,edx
 	jz	macro_symbol_ready

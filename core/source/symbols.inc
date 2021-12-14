@@ -33,7 +33,8 @@ ends
 struct SymbolTree_Leaf
 	class db ?			; SYMCLASS_#
 	flags db ?			; SYM_#
-	reserved dw ?
+	extra_flags db ?		; SYMX_#
+	reserved db ?
 	definition dd ? 		; pointer to ValueDefinition
 	retired_definition dd ?
 	last_use_pass dd ?
@@ -97,6 +98,8 @@ SYM_USAGE_PREDICTED = 10h
 SYM_PREDICTED_USED = 20h
 SYM_LINK = 40h
 SYM_LINK_PREDICTED = 80h
+
+SYMX_INSTRUCTION_PREDICTED = 1
 
 VALTYPE_RESERVED = 0
 VALTYPE_SYMBOLIC = 1
@@ -1152,6 +1155,7 @@ assign_value:
 ;  ecx = length of value
 ;  [value_type] = VALTYPE_#
 ; preserves: ebx, edx
+; note: with VALTYPE_PLAIN ecx must be zero and esi should contain the value directly
 	and	[edx+ValueDefinition.flags],0
 	mov	eax,[current_pass]
 	sub	eax,[edx+ValueDefinition.pass]
@@ -1188,6 +1192,8 @@ assign_value:
     write_value:
 	mov	al,[value_type]
 	mov	[edx+ValueDefinition.type],al
+	cmp	al,VALTYPE_PLAIN
+	je	write_plain_value
 	mov	eax,[edx+ValueDefinition.value_length]
 	mov	ecx,eax
 	shr	ecx,2
@@ -1197,6 +1203,17 @@ assign_value:
 	rep	movsb
     value_written:
 	retn
+    write_plain_value:
+	xchg	esi,[edx+ValueDefinition.value]
+	cmp	[edx+ValueDefinition.block_length],0
+	je	value_written
+	and	[edx+ValueDefinition.block_length],0
+	mov	eax,esi
+	call	mfree
+	jmp	value_written
+    rewrite_value:
+	or	[next_pass_needed],1
+	jmp	write_value
     update_value:
 	mov	edi,[edx+ValueDefinition.value]
 	cmp	eax,1
@@ -1207,6 +1224,8 @@ assign_value:
 	jecxz	value_written
 	cmp	al,VALTYPE_SYMBOLIC
 	je	update_symbolic_value
+	cmp	al,VALTYPE_PLAIN
+	je	update_plain_value
 	mov	eax,[edx+ValueDefinition.value_length]
 	mov	ecx,eax
 	shr	ecx,2
@@ -1240,17 +1259,21 @@ assign_value:
 	pop	edx
 	jecxz	value_updated
     value_changed:
-	or	[next_pass_needed],1
 	mov	eax,ecx
 	shr	ecx,2
 	rep	movsd
 	mov	cl,al
 	and	cl,11b
 	rep	movsb
-	retn
-    rewrite_value:
+    changed_value_updated:
 	or	[next_pass_needed],1
-	jmp	write_value
+	retn
+    update_plain_value:
+	mov	eax,esi
+	xchg	eax,[edx+ValueDefinition.value]
+	cmp	eax,esi
+	jne	changed_value_updated
+	retn
 
 expand_value:
 ; in:

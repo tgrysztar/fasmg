@@ -2214,6 +2214,8 @@ to logical expression).
 
         u8range -1
   
+All commands that are not explicitly said to set the flag that is checked by "jyes"
+and "jno", keep the value of this flag unchanged.
   The "publish" command allows to assign a value to a symbol identified by the text
 held in a variable. This allows to define a symbol with a name constructed with
 a command like "arrange", or a name that was passed in an argument to an instruction.
@@ -2341,3 +2343,60 @@ namespace of the "show" instruction. This allows the "display" command to access
 the "text" even though it is local to the CALM instruction and therefore normally
 visible only in the scope of the definition of "show". This is similar to the use
 of "define" to form symbolic links.
+  The "call" command allows to directly execute a CALM instruction. Its first
+argument must provide an identifier of an instruction-class symbol, and at the
+execution time this symbol must be defined as CALM (it is not possible to call
+a macroinstruction or a built-in instruction this way). The execution then
+proceeds directly to the entry point of that instruction, and only returns
+after the called instruction finishes.
+
+        define Msg display 'Hi'
+
+        calminstruction showMsg
+                assemble Msg
+        end calminstruction
+
+        calminstruction demo
+                call showMsg
+                arrange Msg, =display '!'
+                call showMsg
+        end calminstruction
+
+        demo
+
+When looking up the instruction symbol, the assembler skips the local namespace
+of the CALM instruction, as it is not expected to contain instruction definitions.
+  Additional arguments to "call" should be identifiers of variables (or constants)
+whose values are going to be passed as arguments to the called instruction.
+The values of these symbols are assigned directly to the argument variables, 
+without any additional validation - this allows to pass to the CALM instruction
+some values that otherwise would be impossible to pass directly, like numeric ones
+(because when the instructions are called normally, the arguments are treated as
+text and assigned as symbolic values). An argument may be omitted when the definition
+of called instruction allows it, in such case the default value for that argument
+is used.
+
+        calminstruction hex_nibble digit*, command: display
+                compute digit, 0FFh and '0123456789ABCDEF' shr (digit*8)
+                arrange command, command digit
+                assemble command
+        end calminstruction
+
+        calminstruction display_hex_byte value: DATA
+                compute value, value
+                local   digit
+                compute digit, (value shr 4) and 0Fh
+                call    hex_nibble, digit
+                compute digit, value and 0Fh
+                call    hex_nibble, digit
+        end calminstruction
+
+        DATA = 0xedfe
+
+        calminstruction demo
+                call    display_hex_byte
+                compute DATA, DATA shr 8
+                call    display_hex_byte
+        end calminstruction
+
+        demo

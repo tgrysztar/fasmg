@@ -124,6 +124,7 @@ variables:
     constituent_whitespace dd ?
 
     alm_namespace dd ?
+    alm_adjusted_context RecognitionContext
     calm_code_buffer Workspace
     calm_code_cursor dd ?
     calm_literals_buffer Workspace
