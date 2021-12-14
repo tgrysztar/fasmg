@@ -55,8 +55,8 @@ if ~ defined SSE2
 
 	iterate <instr,ext>, movapd,28h, movupd,10h
 		macro instr? dest*,src*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if (@dest.size or @src.size) and not 16
 				err 'invalid operand size'
 			end if
@@ -74,8 +74,8 @@ if ~ defined SSE2
 
 	iterate <instr,ext>, movlpd,12h, movhpd,16h
 		macro instr? dest*,src*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if @dest.type = 'mmreg' & @src.type = 'mem'
 				if @dest.size <> 16 | @src.size and not 8
 					err 'invalid operand size'
@@ -95,8 +95,8 @@ if ~ defined SSE2
 	end iterate
 
 	macro SSE.movsd? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if @dest.size <> 16 | (@src.type = 'mem' & @src.size and not 8) | (@src.type = 'mmreg' & @src.size <> 16)
 				err 'invalid operand size'
@@ -127,8 +127,8 @@ if ~ defined SSE2
 
 	iterate <instr,pre>, movdqa,66h, movdqu,0F3h
 		macro instr? dest*,src*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if (@dest.size or @src.size) and not 16
 				err 'invalid operand size'
 			end if
@@ -146,8 +146,8 @@ if ~ defined SSE2
 
 	iterate <instr,ext>, movntpd,2Bh, movntdq,0E7h
 		macro instr? dest*,src*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if @dest.type = 'mem' & @src.type = 'mmreg'
 				if (@dest.size or @src.size) and not 16
 					err 'invalid operand size'
@@ -161,8 +161,8 @@ if ~ defined SSE2
 	end iterate
 
 	macro movmskpd? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'reg' & @src.type = 'mmreg'
 			if (@dest.size <> 4 & (x86.mode < 64 | @dest.size <> 8)) | @src.size <> 16
 				err 'invalid operand size'
@@ -175,8 +175,8 @@ if ~ defined SSE2
 	end macro
 
 	macro maskmovdqu? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mmreg'
 			if (@dest.size or @src.size) <> 16
 				err 'invalid operand size'
@@ -190,8 +190,8 @@ if ~ defined SSE2
 
 	iterate <instr,ext>, ucomisd,2Eh, comisd,2Fh
 		macro instr? dest*,src*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if @dest.size <> 16 | (@src.type = 'mem' & @src.size and not 8) | (@src.type = 'mmreg' & @src.size <> 16)
 					err 'invalid operand size'
@@ -245,8 +245,8 @@ if ~ defined SSE2
 	end macro
 
 	macro movdq2q? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mmreg'
 			if @dest.size <> 8 | @src.size <> 16
 				err 'invalid operand size'
@@ -259,8 +259,8 @@ if ~ defined SSE2
 	end macro
 
 	macro movq2dq? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mmreg'
 			if @dest.size <> 16 | @src.size <> 8
 				err 'invalid operand size'
@@ -273,8 +273,8 @@ if ~ defined SSE2
 	end macro
 
 	macro cvtpi2pd? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if @dest.size <> 16 | @src.size and not 8
 				err 'invalid operand size'
@@ -287,8 +287,8 @@ if ~ defined SSE2
 	end macro
 
 	macro cvtsi2sd? dest*,src*
-		SSE.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'reg')
 			if @src.size = 0
 				err 'operand size not specified'
@@ -305,8 +305,8 @@ if ~ defined SSE2
 
 	iterate <instr,ext>, cvttpd2pi,2Ch, cvtpd2pi,2Dh
 		macro instr? dest*,src*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if @dest.size <> 8 | @src.size and not 16
 					err 'invalid operand size'
@@ -321,8 +321,8 @@ if ~ defined SSE2
 
 	iterate <instr,ext>, cvttsd2si,2Ch, cvtsd2si,2Dh
 		macro instr? dest*,src*
-			x86.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			x86.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if @dest.size < 4 | (@src.type = 'mem' & @src.size and not 8) | (@src.type = 'mmreg' & @src.size <>16)
 					err 'invalid operand size'
@@ -352,8 +352,8 @@ if ~ defined SSE2
 	end calminstruction
 
 	calminstruction MMX.basic_instruction ext,dest,src
-		call	SSE.parse_operand, @dest,dest
-		call	SSE.parse_operand, @src,src
+		call	SSE.parse_operand@dest, dest
+		call	SSE.parse_operand@src, src
 		check	@src.size and not @dest.size
 		jno	size_ok
 		asmcmd	=err 'operand sizes do not match'
@@ -368,8 +368,8 @@ if ~ defined SSE2
 	end calminstruction
 
 	calminstruction MMX.bit_shift_instruction ext,dest,src
-		call	SSE.parse_operand, @dest,dest
-		call	SSE.parse_operand, @src,src
+		call	SSE.parse_operand@dest, dest
+		call	SSE.parse_operand@src, src
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jyes	mmreg_rm
 		check	@dest.type = 'mmreg' & @src.type = 'imm'
@@ -403,8 +403,8 @@ if ~ defined SSE2
 	end iterate
 
 	macro movq? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if (@src.type = 'mem' & @src.size and not 8) | (@src.type = 'mmreg' & @src.size <> @dest.size)
 				err 'invalid operand size'
@@ -449,8 +449,8 @@ if ~ defined SSE2
 	end macro
 
 	macro movd? dest*,src*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'reg')
 			if @src.size and not 4
 				err 'invalid operand size'
@@ -469,9 +469,9 @@ if ~ defined SSE2
 	end macro
 
 	macro pinsrw? dest*,src*,sel*
-		SSE.parse_operand @dest,dest
-		x86.parse_operand @src,src
-		x86.parse_operand @aux,sel
+		SSE.parse_operand@dest dest
+		x86.parse_operand@src src
+		x86.parse_operand@aux sel
 		if @dest.type = 'mmreg' & (@src.type = 'reg' | @src.type = 'mem') & @aux.type = 'imm'
 			if (@src.type = 'reg' & @src.size <> 4) | (@src.type = 'mem' & @src.size and not 2) | @aux.size and not 1
 				err 'invalid operand size'
@@ -484,9 +484,9 @@ if ~ defined SSE2
 	end macro
 
 	macro pextrw? dest*,src*,sel*
-		x86.parse_operand @dest,dest
-		SSE.parse_operand @src,src
-		x86.parse_operand @aux,sel
+		x86.parse_operand@dest dest
+		SSE.parse_operand@src src
+		x86.parse_operand@aux sel
 		if @dest.type = 'reg' & @src.type = 'mmreg' & @aux.type = 'imm'
 			if x86.mode = 64 & @dest.size = 8
 				@dest.size = 4
@@ -503,9 +503,9 @@ if ~ defined SSE2
 
 	iterate <instr,pre>, pshufd,66h, pshuflw,0F2h, pshufhw,0F3h
 		macro instr? dest*,src*,sel*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
-			x86.parse_operand @aux,sel
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
+			x86.parse_operand@aux sel
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
 				if @dest.size <> 16 | @src.size and not 16 | @aux.size and not 1
 					err 'invalid operand size'
@@ -519,8 +519,8 @@ if ~ defined SSE2
 	end iterate
 
 	macro pmovmskb? dest*,src*
-		x86.parse_operand @dest,dest
-		SSE.parse_operand @src,src
+		x86.parse_operand@dest dest
+		SSE.parse_operand@src src
 		if @dest.type = 'reg' & @src.type = 'mmreg'
 			if @dest.size <> 4 & (x86.mode < 64 | @dest.size <> 8)
 				err 'invalid operand size'
@@ -534,8 +534,8 @@ if ~ defined SSE2
 
 	iterate <instr,postbyte>, psrldq,3, pslldq,7
 		macro instr? dest*,cnt*
-			SSE.parse_operand @dest,dest
-			x86.parse_operand @aux,cnt
+			SSE.parse_operand@dest dest
+			x86.parse_operand@aux cnt
 			if @dest.type = 'mmreg' & @aux.type = 'imm'
 				if @dest.size <> 16 | @aux.size and not 1
 					err 'invalid operand size'
@@ -550,8 +550,8 @@ if ~ defined SSE2
 
 	iterate <instr,ext>, punpcklqdq,6Ch, punpckhqdq,6Dh
 		macro instr? dest*,src*
-			SSE.parse_operand @dest,dest
-			SSE.parse_operand @src,src
+			SSE.parse_operand@dest dest
+			SSE.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if (@dest.size or @src.size) and not 16
 					err 'invalid operand size'
@@ -565,8 +565,8 @@ if ~ defined SSE2
 	end iterate
 
 	macro movnti? dest*,src*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'mem' & @src.type = 'reg'
 			if @dest.size and not @src.size
 				err 'operand sizes do not match'
@@ -581,7 +581,7 @@ if ~ defined SSE2
 	end macro
 
 	macro clflush? src*
-		x86.parse_operand @src,src
+		x86.parse_operand@src src
 		if @src.type = 'mem'
 			if @src.size and not 1
 				err 'invalid operand size'

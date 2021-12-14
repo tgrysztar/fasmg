@@ -1,6 +1,6 @@
 
 macro ptwrite? src*
-	x86.parse_operand @src,src
+	x86.parse_operand@src src
 	if @src.size = 0
 		err 'operand size not specified'
 	else if @src.size <> 4 & (@src.size <> 8 | x86.mode <> 64)

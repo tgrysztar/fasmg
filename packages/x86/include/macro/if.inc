@@ -307,7 +307,7 @@ macro JCOND? target,neg,cond
 			jp target
 		end if
 	else match v, cond
-		x86.parse_operand @aux,v
+		x86.parse_operand@aux v
 		if @aux.type = 'imm'
 			if neg
 				if v = 0

@@ -5,8 +5,8 @@ if ~ defined AVX512
 end if
 
 macro movdir64b? dest*,src*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
 	if @dest.type = 'reg' & @src.type = 'mem'
 		if @src.size and not 64
 			err 'invalid operand size'

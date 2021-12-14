@@ -21,7 +21,7 @@ if ~ defined i80387
 	iterate <instr,postbyte>, fucom,4, fucomp,5
 
 		calminstruction instr? src:st1
-			call	x87.parse_operand, @src,src
+			call	x87.parse_operand@src, src
 			check	@src.type = 'streg'
 			jno	invalid_operand
 			xcall	x86.store_instruction, (0DDh),@src,(postbyte)
@@ -36,7 +36,7 @@ if ~ defined i80387
 	iterate <instr,postbyte>, fldenv,4, fnstenv,6
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size & ( ( x86.mode = 16 & @dest.size <> 14 ) | ( x86.mode = 32 & @dest.size <> 28 ) )
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
@@ -55,7 +55,7 @@ if ~ defined i80387
 	iterate <instr,postbyte>, fldenvw,4, fnstenvw,6
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size and not 14
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
@@ -75,7 +75,7 @@ if ~ defined i80387
 	iterate <instr,postbyte>, fldenvd,4, fnstenvd,6
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size and not 28
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
@@ -95,7 +95,7 @@ if ~ defined i80387
 	iterate <instr,postbyte>, frstor,4, fnsave,6
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size & ( ( x86.mode = 16 & @dest.size <> 94 ) | ( x86.mode = 32 & @dest.size <> 108 ) )
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
@@ -114,7 +114,7 @@ if ~ defined i80387
 	iterate <instr,postbyte>, frstorw,4, fnsavew,6
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size and not 94
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
@@ -133,7 +133,7 @@ if ~ defined i80387
 
 	iterate <instr,postbyte>, frstord,4, fnsaved,6
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size and not 108
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'

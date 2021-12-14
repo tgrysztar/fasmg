@@ -15,9 +15,9 @@ iterate <instr,vex_mpw,opcode>, vpopcntb,VEX_66_0F38_W0,54h, vpopcntw,VEX_66_0F3
 end iterate
 
 macro vpshufbitqmb? dest*,src*,src2*
-	AVX_512.parse_operand_k1 @dest,dest
-	AVX_512.parse_operand @src,src
-	AVX_512.parse_operand @src2,src2
+	AVX_512.parse_k1_operand@dest dest
+	AVX_512.parse_operand@src src
+	AVX_512.parse_operand@src2 src2
 	if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 		if @src2.size and not @src.size
 			err 'operand sizes do not match'

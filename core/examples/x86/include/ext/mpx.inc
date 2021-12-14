@@ -11,7 +11,7 @@ if ~ defined MPX
 	end repeat
 
 	macro MPX.parse_operand ns,op
-		x86.parse_operand ns,op
+		x86.parse_operand#ns op
 		if ns.type = 'imm' & ns.size = 0 & ns.imm eq 1 elementof ns.imm & 1 metadataof ns.imm relativeto MPX.bnd
 			ns.type = 'bnd'
 			ns.mod = 11b
@@ -95,7 +95,7 @@ if ~ defined MPX
 			end if
 		else
 			ns.split = 0
-			x86.parse_operand ns,op
+			x86.parse_operand#ns op
 		end match
 	end macro
 

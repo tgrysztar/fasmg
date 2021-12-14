@@ -16,65 +16,54 @@ if ~ defined i8087
 	define x86.tword? :10
 	define x86.tbyte? :10
 
-	calminstruction x87.parse_operand namespace, operand
+	iterate context, @dest,@src,@src2,@aux
 
-		local	size, type, mod, rm, imm
-		local	i, sym, cmd
+		namespace context
 
-		match	=st?(i), operand
-		jyes	indexed_streg_operand
+			calminstruction x87.parse_operand#context operand
 
-		call	x86.parse_operand, namespace, operand
+				local	i
 
-		arrange type, namespace.=type
-		arrange size, namespace.=size
-		arrange imm, namespace.=imm
+				match	=st?(i), operand
+				jyes	indexed_streg_operand
 
-		check	type = 'imm' & size = 0
-		jno	done
-		check	imm eq 1 elementof imm & 1 metadataof imm relativeto st?
-		jyes	streg_operand
-		check	imm relativeto st? & imm = st?
-		jno	done
+				call	x86.parse_operand#context, operand
 
-		compute type, 'streg'
-		compute mod, 11b
-		compute rm, 0
+				check	type = 'imm' & size = 0
+				jno	done
+				check	imm eq 1 elementof imm & 1 metadataof imm relativeto st?
+				jyes	streg_operand
+				check	imm relativeto st? & imm = st?
+				jno	done
 
-		jump	export_register
+				compute type, 'streg'
+				compute mod, 11b
+				compute rm, 0
 
-	    streg_operand:
+				exit
 
-		compute type, 'streg'
-		compute mod, 11b
-		compute rm, 1 metadataof imm - st?
+			    streg_operand:
 
-		jump	export_register
+				compute type, 'streg'
+				compute mod, 11b
+				compute rm, 1 metadataof imm - st?
 
-	    indexed_streg_operand:
+				exit
 
-		compute size, 0
-		compute type, 'streg'
-		compute mod, 11b
-		compute rm, +i
+			    indexed_streg_operand:
 
-		arrange sym, namespace.=size
-		publish sym, size
+				compute size, 0
+				compute type, 'streg'
+				compute mod, 11b
+				compute rm, +i
 
-	    export_register:
+			    done:
 
-		arrange sym, namespace.=mod
-		publish sym, mod
+			end calminstruction
 
-		arrange sym, namespace.=rm
-		publish sym, rm
+		end namespace
 
-		arrange sym, namespace.=type
-		publish sym, type
-
-	    done:
-
-	end calminstruction
+	end iterate
 
 	iterate <instr,opcode>, fwait,9Bh, wait,9Bh, fnop,<0D9h,0D0h>, \
 				fchs,<0D9h,0E0h>, fabs,<0D9h,0E1h>, ftst,<0D9h,0E4h>, fxam,<0D9h,0E5h>, fld1,<0D9h,0E8h>, \
@@ -105,7 +94,7 @@ if ~ defined i8087
 			local	dest, src
 			match	dest=,src, operand
 			jyes	st
-			call	x87.parse_operand, @dest,operand
+			call	x87.parse_operand@dest, operand
 			check	@dest.type = 'mem'
 			jno	invalid_combination_of_operands
 			check	@dest.size = 4
@@ -126,8 +115,8 @@ if ~ defined i8087
 			exit
 		    st:
 			local	modrm
-			call	x87.parse_operand, @dest,dest
-			call	x87.parse_operand, @src,src
+			call	x87.parse_operand@dest, dest
+			call	x87.parse_operand@src, src
 			check	@dest.type = 'streg' & @src.type = 'streg'
 			jno	invalid_combination_of_operands
 			check	@dest.rm = 0
@@ -163,8 +152,8 @@ if ~ defined i8087
 			jyes	default
 			match	dest=,src, operand
 			jno	invalid_combination_of_operands
-			call	x87.parse_operand, @dest,dest
-			call	x87.parse_operand, @src,src
+			call	x87.parse_operand@dest, dest
+			call	x87.parse_operand@src, src
 			check	@dest.type = 'streg' & @src.type = 'streg' & @src.rm = 0
 			jyes	ok
 		    invalid_combination_of_operands:
@@ -182,7 +171,7 @@ if ~ defined i8087
 	iterate <instr,postbyte>, fcom,2, fcomp,3
 
 		calminstruction instr? src:st1
-			call	x87.parse_operand, @src,src
+			call	x87.parse_operand@src, src
 			check	@src.type = 'streg'
 			jyes	st
 			check	@src.type = 'mem'
@@ -212,7 +201,7 @@ if ~ defined i8087
 	iterate <instr,postbyte>, fiadd,0, fimul,1, ficom,2, ficomp,3, fisub,4, fisubr,5, fidiv,6, fidivr,7
 
 		calminstruction instr? src*
-			call	x87.parse_operand, @src,src
+			call	x87.parse_operand@src, src
 			check	@src.type = 'mem'
 			jno	invalid_operand
 			check	@src.size = 2
@@ -238,7 +227,7 @@ if ~ defined i8087
 	end iterate
 
 	calminstruction fld? src*
-		call	x87.parse_operand, @src,src
+		call	x87.parse_operand@src, src
 		check	@src.type = 'streg'
 		jyes	st
 		check	@src.type = 'mem'
@@ -269,7 +258,7 @@ if ~ defined i8087
 	end calminstruction
 
 	calminstruction fst? dest*
-		call	x87.parse_operand, @dest,dest
+		call	x87.parse_operand@dest, dest
 		check	@dest.type = 'streg'
 		jyes	st
 		check	@dest.type = 'mem'
@@ -295,7 +284,7 @@ if ~ defined i8087
 	end calminstruction
 
 	calminstruction fstp? dest*
-		call	x87.parse_operand, @dest,dest
+		call	x87.parse_operand@dest, dest
 		check	@dest.type = 'streg'
 		jyes	st
 		check	@dest.type = 'mem'
@@ -326,7 +315,7 @@ if ~ defined i8087
 	end calminstruction
 
 	calminstruction fild? src*
-		call	x87.parse_operand, @src,src
+		call	x87.parse_operand@src, src
 		check	@src.type = 'mem'
 		jno	invalid_operand
 		check	@src.size = 2
@@ -355,7 +344,7 @@ if ~ defined i8087
 	end calminstruction
 
 	calminstruction fist? dest*
-		call	x87.parse_operand, @dest,dest
+		call	x87.parse_operand@dest, dest
 		check	@dest.type = 'mem'
 		jno	invalid_operand
 		check	@dest.size = 2
@@ -379,7 +368,7 @@ if ~ defined i8087
 	end calminstruction
 
 	calminstruction fistp? dest*
-		call	x87.parse_operand, @dest,dest
+		call	x87.parse_operand@dest, dest
 		check	@dest.type = 'mem'
 		jno	invalid_operand
 		check	@dest.size = 2
@@ -408,7 +397,7 @@ if ~ defined i8087
 	end calminstruction
 
 	calminstruction fisttp? dest*
-		call	x87.parse_operand, @dest,dest
+		call	x87.parse_operand@dest, dest
 		check	@dest.type = 'mem'
 		jno	invalid_operand
 		check	@dest.size = 2
@@ -439,7 +428,7 @@ if ~ defined i8087
 	iterate <instr,postbyte>, fbld,4, fbstp,6
 
 		calminstruction instr? src*
-			call	x87.parse_operand, @src,src
+			call	x87.parse_operand@src, src
 			check	@src.type = 'mem'
 			jno	invalid_operand
 			check	@src.size and not 10
@@ -456,7 +445,7 @@ if ~ defined i8087
 	end iterate
 
 	calminstruction fxch? src:st1
-		call	x87.parse_operand, @src,src
+		call	x87.parse_operand@src, src
 		check	@src.type = 'streg'
 		jno	invalid_operand
 		local	modrm
@@ -470,7 +459,7 @@ if ~ defined i8087
 	iterate <instr,basecode>, ffree,0DDh, ffreep,0DFh
 
 		calminstruction instr? src*
-			call	x87.parse_operand, @src,src
+			call	x87.parse_operand@src, src
 			check	@src.type = 'streg'
 			jno	invalid_operand
 			local	modrm
@@ -486,7 +475,7 @@ if ~ defined i8087
 	define x87.fnstsw_ax? db 0DFh,0E0h
 
 	calminstruction fnstsw? dest*
-		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand@dest, dest
 		check	@dest.size and not 2
 		jyes	invalid_operand_size
 		check	@dest.type = 'mem'
@@ -508,7 +497,7 @@ if ~ defined i8087
 	iterate <instr,postbyte>, fldcw,5, fnstcw,7
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size and not 2
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
@@ -527,7 +516,7 @@ if ~ defined i8087
 	iterate <instr,postbyte>, fldenv,4, fnstenv,6
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size and not 14
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
@@ -546,7 +535,7 @@ if ~ defined i8087
 	iterate <instr,postbyte>, frstor,4, fnsave,6
 
 		calminstruction instr? dest*
-			call	x86.parse_operand, @dest,dest
+			call	x86.parse_operand@dest, dest
 			check	@dest.size and not 94
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'

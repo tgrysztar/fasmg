@@ -42,8 +42,8 @@ end iterate
 iterate <instr,vex_mpw,opcode>, vpcompressb,VEX_66_0F38_W0,63h, vpcompressw,VEX_66_0F38_W1,63h
 
 	macro instr? dest*,src*
-		AVX_512.parse_operand_k1z @dest,dest
-		AVX_512.parse_operand @src,src
+		AVX_512.parse_k1z_operand@dest dest
+		AVX_512.parse_operand@src src
 		if (@dest.type = 'mmreg' | @dest.type = 'mem') & @src.type = 'mmreg'
 			if @dest.size and not @src.size
 				err 'operand sizes do not match'

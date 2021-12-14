@@ -10,46 +10,35 @@ if ~ defined MMX
 		element mm#i? : MMX.reg + i
 	end repeat
 
-	calminstruction MMX.parse_operand namespace, operand
+	iterate context, @dest,@src,@src2,@aux
 
-		local	size, type, mod, rm, imm
-		local	i, sym, cmd
+		namespace context
 
-		call	x86.parse_operand, namespace, operand
+			calminstruction MMX.parse_operand#context operand
 
-		arrange type, namespace.=type
-		arrange size, namespace.=size
-		arrange imm, namespace.=imm
+				call	x86.parse_operand#context, operand
 
-		check	type = 'imm' & size = 0
-		jno	done
-		check	imm eq 1 elementof imm & 1 metadataof imm relativeto MMX.reg
-		jno	done
+				check	type = 'imm' & size = 0
+				jno	done
+				check	imm eq 1 elementof imm & 1 metadataof imm relativeto MMX.reg
+				jno	done
 
-		compute type, 'mmreg'
-		compute mod, 11b
-		compute rm, 1 metadataof imm - MMX.reg
-		compute size, 8
+				compute type, 'mmreg'
+				compute mod, 11b
+				compute rm, 1 metadataof imm - MMX.reg
+				compute size, 8
 
-		arrange sym, namespace.=mod
-		publish sym, mod
+			    done:
 
-		arrange sym, namespace.=rm
-		publish sym, rm
+			end calminstruction
 
-		arrange sym, namespace.=type
-		publish sym, type
+		end namespace
 
-		arrange sym, namespace.=size
-		publish sym, size
-
-	    done:
-
-	end calminstruction
+	end iterate
 
 	calminstruction MMX.basic_instruction ext,dest,src
-		call	MMX.parse_operand, @dest,dest
-		call	MMX.parse_operand, @src,src
+		call	MMX.parse_operand@dest, dest
+		call	MMX.parse_operand@src, src
 		check	(@src.size or @dest.size) and not 8
 		jno	size_ok
 		asmcmd	=err 'invalid operand size'
@@ -74,8 +63,8 @@ if ~ defined MMX
 	end iterate
 
 	calminstruction movq? dest*,src*
-		call	MMX.parse_operand, @dest,dest
-		call	MMX.parse_operand, @src,src
+		call	MMX.parse_operand@dest, dest
+		call	MMX.parse_operand@src, src
 		check	(@src.size or @dest.size) and not 8
 		jno	size_ok
 		asmcmd	=err 'invalid operand size'
@@ -95,8 +84,8 @@ if ~ defined MMX
 	end calminstruction
 
 	calminstruction movd? dest*,src*
-		call	MMX.parse_operand, @dest,dest
-		call	MMX.parse_operand, @src,src
+		call	MMX.parse_operand@dest, dest
+		call	MMX.parse_operand@src, src
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'reg')
 		jyes	mmreg_rm
 		check	(@dest.type = 'mem' | @dest.type = 'reg') & @src.type = 'mmreg'
@@ -119,8 +108,8 @@ if ~ defined MMX
 	end calminstruction
 
 	calminstruction MMX.bit_shift_instruction ext,dest,src
-		call	MMX.parse_operand, @dest,dest
-		call	MMX.parse_operand, @src,src
+		call	MMX.parse_operand@dest, dest
+		call	MMX.parse_operand@src, src
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jyes	mmreg_rm
 		check	@dest.type = 'mmreg' & @src.type = 'imm'

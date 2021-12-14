@@ -2,9 +2,9 @@
 include 'avx.inc'
 
 macro andn? dest*,src*,src2*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
-	x86.parse_operand @src2,src2
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	x86.parse_operand@src2 src2
 	if @dest.type = 'reg' & @src.type = 'reg' & (@src2.type = 'mem' | @src2.type = 'reg')
 		if @dest.size < 4
 			err 'invalid operand size'
@@ -25,9 +25,9 @@ macro andn? dest*,src*,src2*
 end macro
 
 macro bextr? dest*,src*,src2*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
-	x86.parse_operand @src2,src2
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	x86.parse_operand@src2 src2
 	if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg') & @src2.type = 'reg'
 		if @dest.size < 4
 			err 'invalid operand size'
@@ -50,8 +50,8 @@ end macro
 iterate <instr,opcode,postbyte>, blsi,0F3h,3, blmsk,0F3h,2, blsr,0F3h,1
 
 	macro instr? dest*,src*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
 			if @dest.size < 4
 				err 'invalid operand size'
@@ -76,8 +76,8 @@ end iterate
 iterate <instr,opcode>, lzcnt,0BDh, tzcnt,0BCh
 
 	macro instr? dest*,src*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'reg' & ( @src.type = 'reg' | @src.type = 'mem' )
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'

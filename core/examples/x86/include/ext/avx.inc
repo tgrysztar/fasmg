@@ -52,63 +52,52 @@ if ~ defined AVX
 	VEX_F3_0F3A_W1 = VEX_F3_0F3A_W0 or 8000h
 	VEX_F2_0F3A_W1 = VEX_F2_0F3A_W0 or 8000h
 
-	calminstruction AVX.parse_operand namespace, operand
+	iterate context, @dest,@src,@src2,@aux
 
-		local	size, type, mod, rm, imm
-		local	i, sym, cmd
+		namespace context
 
-		call	x86.parse_operand, namespace, operand
+			calminstruction AVX.parse_operand#context operand
 
-		arrange type, namespace.=type
-		arrange size, namespace.=size
-		arrange imm, namespace.=imm
+				call	x86.parse_operand#context, operand
 
-		check	type = 'reg' & size = 1 & rm >= 4 & (~ defined x86.REX_FORBIDDEN | rm and x86.REX_FORBIDDEN)
-		jyes	invalid_operand
-		check	type = 'imm' & size = 0
-		jno	done
+				check	type = 'reg' & size = 1 & rm >= 4 & (~ defined x86.REX_FORBIDDEN | rm and x86.REX_FORBIDDEN)
+				jyes	invalid_operand
+				check	type = 'imm' & size = 0
+				jno	done
 
-		check	imm eq 1 elementof imm & 1 metadataof imm relativeto SSE.reg
-		jyes	xmm_register
-		check	imm eq 1 elementof imm & 1 metadataof imm relativeto AVX.reg
-		jyes	ymm_register
-		exit
+				check	imm eq 1 elementof imm & 1 metadataof imm relativeto SSE.reg
+				jyes	xmm_register
+				check	imm eq 1 elementof imm & 1 metadataof imm relativeto AVX.reg
+				jyes	ymm_register
+				exit
 
-	    invalid_operand:
-		asmcmd	=err 'invalid operand'
+			    invalid_operand:
+				asmcmd	=err 'invalid operand'
 
-	    xmm_register:
+			    xmm_register:
 
-		compute rm, 1 metadataof imm - SSE.reg
-		compute size, 16
+				compute rm, 1 metadataof imm - SSE.reg
+				compute size, 16
 
-		jump	export_mmreg
+				jump	export_mmreg
 
-	    ymm_register:
+			    ymm_register:
 
-		compute rm, 1 metadataof imm - AVX.reg
-		compute size, 32
+				compute rm, 1 metadataof imm - AVX.reg
+				compute size, 32
 
-	    export_mmreg:
+			    export_mmreg:
 
-		compute type, 'mmreg'
-		compute mod, 11b
+				compute type, 'mmreg'
+				compute mod, 11b
 
-		arrange sym, namespace.=mod
-		publish sym, mod
+			    done:
 
-		arrange sym, namespace.=rm
-		publish sym, rm
+			end calminstruction
 
-		arrange sym, namespace.=type
-		publish sym, type
+		end namespace
 
-		arrange sym, namespace.=size
-		publish sym, size
-
-	    done:
-
-	end calminstruction
+	end iterate
 
 	calminstruction AVX.store_instruction vsize*,vex_mpw*,opcode*,rm_operand*,reg*,vreg:0,imm_size:0,imm
 
@@ -284,9 +273,9 @@ if ~ defined AVX
 	end calminstruction
 
 	macro AVX.basic_instruction vex_mpw,opcode,msize,dest,src,src2
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		AVX.parse_operand @src2,src2
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		AVX.parse_operand@src2 src2
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 			if msize & (@dest.size < msize | (@dest.size > msize & @dest.size <> 16) | (@src2.type = 'mem' & @src2.size and not msize))
 				err 'invalid operand size'
@@ -300,10 +289,10 @@ if ~ defined AVX
 	end macro
 
 	macro AVX.basic_instruction_imm8 vex_mpw,opcode,msize,dest,src,src2,aux
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		AVX.parse_operand @src2,src2
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		AVX.parse_operand@src2 src2
+		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
 			if (msize & (@dest.size < msize | (@dest.size > msize & @dest.size <> 16) | (@src2.type = 'mem' & @src2.size and not msize))) | @aux.size and not 1
 				err 'invalid operand size'
@@ -317,8 +306,8 @@ if ~ defined AVX
 	end macro
 
 	macro AVX.single_source_instruction vex_mpw,opcode,msize,dest,src
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if msize & (@dest.size < msize | (@dest.size > msize & @dest.size <> 16) | (@src.type = 'mem' & @src.size and not msize))
 				err 'invalid operand size'
@@ -332,9 +321,9 @@ if ~ defined AVX
 	end macro
 
 	macro AVX.single_source_instruction_imm8 vex_mpw,opcode,msize,dest,src,aux
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
 			if (msize & (@dest.size < msize | (@dest.size > msize & @dest.size <> 16) | (@src.type = 'mem' & @src.size and not msize))) | @aux.size and not 1
 				err 'invalid operand size'
@@ -454,10 +443,10 @@ if ~ defined AVX
 	iterate <instr,opcode>, blendvps,4Ah, blendvpd,4Bh
 
 		macro v#instr? dest*,src*,src2*,mask*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			AVX.parse_operand @src2,src2
-			AVX.parse_operand @aux,mask
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			AVX.parse_operand@src2 src2
+			AVX.parse_operand@aux mask
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'mmreg'
 				if @src.size <> @dest.size | @src2.size and not @dest.size | @aux.size <> @dest.size
 					err 'operand sizes do not match'
@@ -471,8 +460,8 @@ if ~ defined AVX
 	end iterate
 
 	macro vbroadcastss? dest*,src*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mem'
 			if @src.size and not 4
 				err 'invalid operand size'
@@ -486,8 +475,8 @@ if ~ defined AVX
 	iterate <instr,opcode,msize>, vbroadcastsd,19h,8, vbroadcastf128,1Ah,16
 
 		macro instr? dest*,src*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'mmreg' & @src.type = 'mem'
 				if @dest.size <> 32 | @src.size and not msize
 					err 'invalid operand size'
@@ -501,9 +490,9 @@ if ~ defined AVX
 	end iterate
 
 	macro vextractps? dest*,src*,aux*
-		x86.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		x86.parse_operand @aux,aux
+		x86.parse_operand@dest dest
+		AVX.parse_operand@src src
+		x86.parse_operand@aux aux
 		if (@dest.type = 'reg' | @dest.type = 'mem') & @src.type = 'mmreg' & @aux.type = 'imm'
 			if @dest.size and not 4 | @src.size <> 16 | @aux.size and not 1
 				err 'invalid operand size'
@@ -515,10 +504,10 @@ if ~ defined AVX
 	end macro
 
 	macro vinsertps? dest*,src*,src2*,aux*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		AVX.parse_operand @src2,src2
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		AVX.parse_operand@src2 src2
+		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mmreg' | @src2.type = 'mem') & @aux.type = 'imm'
 			if @dest.size <> 16 | @src.size <> 16 | (@src2.type = 'mmreg' & @src2.size <> 16) | (@src2.type = 'mem' & @src2.size and not 4) | @aux.size and not 1
 				err 'invalid operand size'
@@ -530,9 +519,9 @@ if ~ defined AVX
 	end macro
 
 	macro vextractf128? dest*,src*,aux*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		x86.parse_operand@aux aux
 		if (@dest.type = 'mmreg' | @dest.type = 'mem') & @src.type = 'mmreg' & @aux.type = 'imm'
 			if @dest.size and not 16 | @src.size <> 32 | @aux.size and not 1
 				err 'invalid operand size'
@@ -544,10 +533,10 @@ if ~ defined AVX
 	end macro
 
 	macro vinsertf128? dest*,src*,src2*,aux*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		AVX.parse_operand @src2,src2
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		AVX.parse_operand@src2 src2
+		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mmreg' | @src2.type = 'mem') & @aux.type = 'imm'
 			if @dest.size <> 32 | @src.size <> 32 | @src2.size and not 16 | @aux.size and not 1
 				err 'invalid operand size'
@@ -612,8 +601,8 @@ if ~ defined AVX
 	iterate <instr,vex_mpw,opcode>, vcvtdq2pd,VEX_F3_0F_W0,0E6h, vcvtps2pd,VEX_0F_W0,5Ah
 
 		macro instr? dest*,src*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if (@src.type = 'mem' & @src.size and not (@dest.size shr 1)) | (@src.type = 'mmreg' & @src.size <> 16)
 					err 'invalid operand size'
@@ -629,8 +618,8 @@ if ~ defined AVX
 	iterate <instr,vex_mpw,opcode>, vcvtpd2dq,VEX_F2_0F_W0,0E6h, vcvttpd2dq,VEX_66_0F_W0,0E6h, vcvtpd2ps,VEX_66_0F_W0,5Ah
 
 		macro instr? dest*,src*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if @src.size = 0
 					err ' operand size not specified'
@@ -660,8 +649,8 @@ if ~ defined AVX
 	iterate <instr,vex_mp,opcode,msize>, vcvtsd2si,VEX_F2_0F,2Dh,8, vcvttsd2si,VEX_F2_0F,2Ch,8, vcvtss2si,VEX_F3_0F,2Dh,4, vcvttss2si,VEX_F3_0F,2Ch,4
 
 		macro instr? dest*,src*
-			x86.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			x86.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if (@dest.size <> 4 & @dest.size <> 8) | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16)
 					err 'invalid operand size'
@@ -692,9 +681,9 @@ if ~ defined AVX
 	iterate <instr,vex_mp,opcode>, vcvtsi2sd,VEX_F2_0F,2Ah, vcvtsi2ss,VEX_F3_0F,2Ah
 
 		macro instr? dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			x86.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			x86.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'reg' | @src2.type = 'mem')
 				if @src.size = 0
 					err ' operand size not specified'
@@ -725,8 +714,8 @@ if ~ defined AVX
 	end macro
 
 	macro vlddqu? dest*,src*
-		AVX.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mem'
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'
@@ -740,7 +729,7 @@ if ~ defined AVX
 	iterate <instr,postbyte>, vldmxcsr,2, vstmxcsr,3
 
 		macro instr? src*
-			x86.parse_operand @src,src
+			x86.parse_operand@src src
 			if @src.type = 'mem'
 				if @src.size and not 4
 					err 'invalid operand size'
@@ -754,8 +743,8 @@ if ~ defined AVX
 	end iterate
 
 	macro vmaskmovdqu? dest*,src*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mmreg'
 			if @dest.size <> 16 | @src.size <> 16
 				err 'invalid operand size'
@@ -769,9 +758,9 @@ if ~ defined AVX
 	iterate <instr,opcode>, vmaskmovps,2Ch, vmaskmovpd,2Dh
 
 		macro instr? dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			AVX.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			AVX.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'mem'
 				if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
@@ -792,8 +781,8 @@ if ~ defined AVX
 	iterate <instr,vex_mpw,opcode_rm,opcode_mr>, vmovapd,VEX_66_0F_W0,28h,29h, vmovaps,VEX_0F_W0,28h,29h, vmovdqa,VEX_66_0F_W0,6Fh,7Fh, vmovdqu,VEX_F3_0F_W0,6Fh,7Fh, vmovupd,VEX_66_0F_W0,10h,11h, vmovups,VEX_0F_W0,10h,11h
 
 		macro instr? dest*,src*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem')
 				if @src.size and not @dest.size
 					err 'operand sizes do not match'
@@ -812,8 +801,8 @@ if ~ defined AVX
 	end iterate
 
 	macro vmovd? dest*,src*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'reg' | @src.type = 'mem')
 			if @dest.size <> 16 | @src.size and not 4
 				err 'invalid operand size'
@@ -830,8 +819,8 @@ if ~ defined AVX
 	end macro
 
 	macro vmovq? dest*,src*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem')
 			if @dest.size <> 16 | (@src.type = 'mmreg' & @src.size <> 16) | (@src.type = 'mem' and @src.size and not 8)
 				err 'invalid operand size'
@@ -864,8 +853,8 @@ if ~ defined AVX
 	end macro
 
 	macro vmovddup? dest*,src*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem')
 			if ((@src.type = 'mmreg' | @dest.size = 32) & @src.size and not @dest.size) | (@src.type = 'mem' & @dest.size = 16 & @src.size and not 8)
 				err 'operand sizes do not match'
@@ -879,9 +868,9 @@ if ~ defined AVX
 	iterate <instr,opcode>, vmovhlps,12h, vmovlhps,16h
 
 		macro instr? dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			AVX.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			AVX.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'mmreg'
 				if @dest.size <> 16
 					err 'invalid operand size'
@@ -899,8 +888,8 @@ if ~ defined AVX
 	iterate <instr,vex_mpw,opcode>, vmovhpd,VEX_66_0F_W0,16h, vmovhps,VEX_0F_W0,16h, vmovlpd,VEX_66_0F_W0,12h, vmovlps,VEX_0F_W0,12h
 
 		macro instr? dest*,src*,src2
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			match , src2
 				if @dest.type = 'mem' & @src.type = 'mmreg'
 					if @dest.size and not 8 | @src.size <> 16
@@ -911,7 +900,7 @@ if ~ defined AVX
 					err 'invalid combination of operands'
 				end if
 			else
-				AVX.parse_operand @src2,src2
+				AVX.parse_operand@src2 src2
 				if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'mem'
 					if @dest.size <> 16 | @src.size <> 16 | @src2.size and not 8
 						err 'invalid operand size'
@@ -928,8 +917,8 @@ if ~ defined AVX
 	iterate <instr,vex_mpw>, vmovmskpd,VEX_66_0F_W0, vmovmskps,VEX_0F_W0
 
 		macro instr? dest*,src*
-			x86.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			x86.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'reg' & @src.type = 'mmreg'
 				if @dest.size <> 4 & (x86.mode < 64 | @dest.size <> 8)
 					err 'invalid operand size'
@@ -945,8 +934,8 @@ if ~ defined AVX
 	iterate <instr,vex_mpw,opcode>, vmovntdq,VEX_66_0F_W0,0E7h, vmovntpd,VEX_66_0F_W0,2Bh, vmovntps,VEX_0F_W0,2Bh
 
 		macro instr? dest*,src*
-			x86.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			x86.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'mem' & @src.type = 'mmreg'
 				if @dest.size and not @src.size
 					err 'operand sizes do not match'
@@ -960,8 +949,8 @@ if ~ defined AVX
 	end iterate
 
 	macro vmovntdqa? dest*,src*
-		AVX.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mem'
 			if @dest.size <> 16
 				err 'invalid operand size'
@@ -977,8 +966,8 @@ if ~ defined AVX
 	iterate <instr,vex_mpw,msize>, vmovsd,VEX_F2_0F_W0,8, vmovss,VEX_F3_0F_W0,4
 
 		macro instr? dest*,src*,src2
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			match , src2
 				if @dest.type = 'mmreg' & @src.type = 'mem'
 					if @dest.size <> 16 | @src.size and not msize
@@ -994,7 +983,7 @@ if ~ defined AVX
 					err 'invalid combination of operands'
 				end if
 			else
-				AVX.parse_operand @src2,src2
+				AVX.parse_operand@src2 src2
 				if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'mmreg'
 					if @dest.size <> 16 | @src.size <> 16 | @src2.size <> 16
 						err 'invalid operand size'
@@ -1023,9 +1012,9 @@ if ~ defined AVX
 	iterate <instr,opcode_rrm,opcode_rri>, vpermilps,0Ch,4, vpermilpd,0Dh,5
 
 		macro instr? dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			AVX.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			AVX.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
@@ -1100,10 +1089,10 @@ if ~ defined AVX
 	end iterate
 
 	macro vpblendvb? dest*,src*,src2*,mask*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		AVX.parse_operand @src2,src2
-		AVX.parse_operand @aux,mask
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		AVX.parse_operand@src2 src2
+		AVX.parse_operand@aux mask
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'mmreg'
 			if @dest.size <> 16
 				err 'invalid operand size'
@@ -1119,9 +1108,9 @@ if ~ defined AVX
 	iterate <instr,opcode,msize>, vpextrb,14h,1, vpextrd,16h,4
 
 		macro instr? dest*,src*,aux*
-			x86.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			x86.parse_operand @aux,aux
+			x86.parse_operand@dest dest
+			AVX.parse_operand@src src
+			x86.parse_operand@aux aux
 			if (@dest.type = 'reg' | @dest.type = 'mem') & @src.type = 'mmreg' & @aux.type = 'imm'
 				if (@dest.type = 'reg' & @dest.size <> 4 & (x86.mode < 64 | @dest.size <> 8)) | (@dest.type = 'mem' & @dest.size and not msize) | @src.size <> 16 | @aux.size and not 1
 					err 'invalid operand size'
@@ -1135,9 +1124,9 @@ if ~ defined AVX
 	end iterate
 
 	macro vpextrw? dest*,src*,aux*
-		x86.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		x86.parse_operand @aux,aux
+		x86.parse_operand@dest dest
+		AVX.parse_operand@src src
+		x86.parse_operand@aux aux
 		if @dest.type = 'reg' & @src.type = 'mmreg' & @aux.type = 'imm'
 			if @dest.size <> 4 & (x86.mode < 64 | @dest.size <> 8) | @src.size <> 16 | @aux.size and not 1
 				err 'invalid operand size'
@@ -1154,9 +1143,9 @@ if ~ defined AVX
 	end macro
 
 	macro vpextrq? dest*,src*,aux*
-		x86.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		x86.parse_operand @aux,aux
+		x86.parse_operand@dest dest
+		AVX.parse_operand@src src
+		x86.parse_operand@aux aux
 		if (@dest.type = 'reg' | @dest.type = 'mem') & @src.type = 'mmreg' & @aux.type = 'imm'
 			if @dest.size and not 8 | @src.size <> 16 | @aux.size and not 1
 				err 'invalid operand size'
@@ -1173,10 +1162,10 @@ if ~ defined AVX
 	iterate <instr,vex_mpw,opcode,msize>, vpinsrb,VEX_66_0F3A_W0,20h,1, vpinsrw,VEX_66_0F_W0,0C4h,2, vpinsrd,VEX_66_0F3A_W0,22h,4
 
 		macro instr? dest*,src*,src2*,aux*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			x86.parse_operand @src2,src2
-			x86.parse_operand @aux,aux
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			x86.parse_operand@src2 src2
+			x86.parse_operand@aux aux
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'reg' | @src2.type = 'mem') & @aux.type = 'imm'
 				if @dest.size <> 16 | @src.size <> 16 | (@src2.type = 'reg' & @src2.size <> 4) | (@src2.type = 'mem' & @src2.size and not msize) | @aux.size and not 1
 					err 'invalid operand size'
@@ -1190,10 +1179,10 @@ if ~ defined AVX
 	end iterate
 
 	macro vpinsrq? dest*,src*,src2*,aux*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		x86.parse_operand @src2,src2
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		x86.parse_operand@src2 src2
+		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'reg' | @src2.type = 'mem') & @aux.type = 'imm'
 			if @dest.size <> 16 | @src.size <> 16 | @src2.size and not 8 | @aux.size and not 1
 				err 'invalid operand size'
@@ -1208,8 +1197,8 @@ if ~ defined AVX
 	end macro
 
 	macro vpmovmskb? dest*,src*
-		x86.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		x86.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'reg' & @src.type = 'mmreg'
 			if (@dest.size <> 4 & (x86.mode < 64 | @dest.size <> 8)) | @src.size <> 16
 				err 'invalid operand size'
@@ -1232,9 +1221,9 @@ if ~ defined AVX
 	iterate <instr,postbyte>, pslldq,7, psrldq,3
 
 		macro v#instr dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			x86.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			x86.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'imm'
 				if @dest.size <> 16 | @src2.size and not 1
 					err 'invalid operand size'
@@ -1252,9 +1241,9 @@ if ~ defined AVX
 	iterate <instr,opcode_rrm,opcode,postbyte>, psllw,0F1h,71h,6, pslld,0F2h,72h,6, psllq,0F3h,73h,6, psraw,0E1h,71h,4, psrad,0E2h,72h,4, psrlw,0D1h,71h,2, psrld,0D2h,72h,2, psrlq,0D3h,73h,2
 
 		macro v#instr? dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			AVX.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			AVX.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @dest.size <> 16 | @src2.size and not 16
 					err 'invalid operand size'
@@ -1293,7 +1282,7 @@ if ~ defined AVX
 	end macro
 
 	macro xsaveopt? src*
-		x86.parse_operand @src,src
+		x86.parse_operand@src src
 		if @src.type = 'mem'
 			x86.store_instruction <0Fh,0AEh>,@src,6
 		else

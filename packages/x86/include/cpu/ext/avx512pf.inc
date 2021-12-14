@@ -8,7 +8,7 @@ end if
 iterate <instr,postbyte>, gatherpf0,1 ,gatherpf1,2 ,scatterpf0,5, scatterpf1,6
 
 	macro v#instr#dps? src*
-		AVX_512.parse_vsib_operand_k1 @src,src
+		AVX_512.parse_k1_vsib_operand@src src
 		if @src.type = 'mem' & @src.mask
 			if @src.size and not 4 | @src.visize <> 64
 				err 'invalid operand size'
@@ -21,7 +21,7 @@ iterate <instr,postbyte>, gatherpf0,1 ,gatherpf1,2 ,scatterpf0,5, scatterpf1,6
 	end macro
 
 	macro v#instr#qps? src*
-		AVX_512.parse_vsib_operand_k1 @src,src
+		AVX_512.parse_k1_vsib_operand@src src
 		if @src.type = 'mem' & @src.mask
 			if @src.size and not 8 | @src.visize <> 64
 				err 'invalid operand size'
@@ -34,7 +34,7 @@ iterate <instr,postbyte>, gatherpf0,1 ,gatherpf1,2 ,scatterpf0,5, scatterpf1,6
 	end macro
 
 	macro v#instr#dpd? src*
-		AVX_512.parse_vsib_operand_k1 @src,src
+		AVX_512.parse_k1_vsib_operand@src src
 		if @src.type = 'mem' & @src.mask
 			if @src.size and not 4 | @src.visize <> 32
 				err 'invalid operand size'
@@ -47,7 +47,7 @@ iterate <instr,postbyte>, gatherpf0,1 ,gatherpf1,2 ,scatterpf0,5, scatterpf1,6
 	end macro
 
 	macro v#instr#qpd? src*
-		AVX_512.parse_vsib_operand_k1 @src,src
+		AVX_512.parse_k1_vsib_operand@src src
 		if @src.type = 'mem' & @src.mask
 			if @src.size and not 8	| @src.visize <> 64
 				err 'invalid operand size'

@@ -2,7 +2,7 @@
 iterate <instr,ext,postbyte>, clrssbsy,0AEh,6, rstorssp,01h,5
 
 	macro instr? src*
-		x86.parse_operand @src,src
+		x86.parse_operand@src src
 		if @src.type = 'mem'
 			if @src.size and not 8
 				err 'invalid operand size'
@@ -20,7 +20,7 @@ end iterate
 iterate <instr,ext,postbyte>, incsspd,0AEh,5, rdsspd,1Eh,1
 
 	macro instr? src*
-		x86.parse_operand @src,src
+		x86.parse_operand@src src
 		if @src.type = 'reg'
 			if @src.size <> 4
 				err 'invalid operand size'
@@ -38,7 +38,7 @@ end iterate
 iterate <instr,ext,postbyte>, incsspq,0AEh,5, rdsspq,1Eh,1
 
 	macro instr? src*
-		x86.parse_operand @src,src
+		x86.parse_operand@src src
 		if @src.type = 'reg'
 			if @src.size <> 8
 				err 'invalid operand size'
@@ -65,8 +65,8 @@ end iterate
 iterate <instr,prefix,ext>, wrssd,0,0F6h, wrussd,66h,0F5h
 
 	macro instr? dest*,src*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
 		local size
 		if @src.size <> 4
 			err 'invalid operand size'
@@ -86,8 +86,8 @@ end iterate
 iterate <instr,prefix,ext>, wrssq,0,0F6h, wrussq,66h,0F5h
 
 	macro instr? dest*,src*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
 		local size
 		if @src.size <> 8
 			err 'invalid operand size'

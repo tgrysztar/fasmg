@@ -1,6 +1,6 @@
 
 macro xbegin? dest*
-	x86.parse_jump_operand @dest,dest
+	x86.parse_jump_operand@dest dest
 	if @dest.type = 'imm' & ~ @dest.jump_type
 		if x86.mode shr 3 <> @dest.size
 			err 'invalid operand size'

@@ -7,8 +7,8 @@ purge xbts?,ibts?
 iterate <instr,ext>, cmpxchg,0B0h, xadd,0C0h
 
 	calminstruction instr? dest*,src*
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
 		check	@src.type = 'reg' & ( @dest.type = 'reg' | @dest.type = 'mem' )
 		jyes	xadd_rm_reg
 		asmcmd	=err 'invalid combination of operands'
@@ -30,7 +30,7 @@ iterate <instr,ext>, cmpxchg,0B0h, xadd,0C0h
 end iterate
 
 calminstruction bswap? dest*
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 	check	@dest.type = 'reg' & @dest.size = 4
 	jyes	operand_ok
 	asmcmd	=err 'invalid operand'
@@ -43,7 +43,7 @@ calminstruction bswap? dest*
 end calminstruction
 
 calminstruction invlpg? dest*
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 	check	@dest.type = 'mem'
 	jyes	operand_ok
 	asmcmd	=err 'invalid operand'

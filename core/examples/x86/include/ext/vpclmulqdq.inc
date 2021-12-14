@@ -4,10 +4,10 @@ include 'pclmulqdq.inc'
 if defined AVX_512
 
 	macro vpclmulqdq? dest*,src*,src2*,aux*
-		AVX_512.parse_operand @dest,dest
-		AVX_512.parse_operand @src,src
-		AVX_512.parse_operand @src2,src2
-		x86.parse_operand @aux,aux
+		AVX_512.parse_operand@dest dest
+		AVX_512.parse_operand@src src
+		AVX_512.parse_operand@src2 src2
+		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
 			if @aux.size and not 1
 				err 'invalid operand size'

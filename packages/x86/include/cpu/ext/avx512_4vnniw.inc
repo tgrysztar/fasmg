@@ -8,13 +8,13 @@ end if
 iterate <instr,opcode>, vp4dpwssd,52h, vp4dpwssds,53h
 
 	macro instr? dest*,src*,src2*
-		AVX_512.parse_operand_k1z @dest,dest
+		AVX_512.parse_k1z_operand@dest dest
 		match rsrc+=3, src
-			AVX_512.parse_operand @src,rsrc
+			AVX_512.parse_operand@src rsrc
 		else
-			AVX_512.parse_operand @src,src
+			AVX_512.parse_operand@src src
 		end match
-		AVX_512.parse_operand @src2,src2
+		AVX_512.parse_operand@src2 src2
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'mem'
 			if @dest.size <> 64 | @src2.size and not 16
 				err 'invalid operand size'

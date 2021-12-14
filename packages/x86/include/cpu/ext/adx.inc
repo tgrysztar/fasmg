@@ -1,8 +1,8 @@
 
 iterate <instr,pfx>, adcx,66h, adox,0F3h
 	macro instr? dest*,src*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
 			if @src.size <> 0 & @src.size <> @dest.size
 				err 'operand sizes do not match'

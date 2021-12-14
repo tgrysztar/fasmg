@@ -7,7 +7,7 @@ calminstruction push? src*
 
 	local	opcode
 
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@src, src
 
 	check	@src.size and not 2
 	jno	main
@@ -61,7 +61,7 @@ calminstruction x86.pop_instruction size:0,dest*
 
 	local	opcode
 
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 
 	check	@dest.size and not 2
 	jno	main
@@ -147,7 +147,7 @@ calminstruction imul? dest*,src&
 
 	local	size
 
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 
 	match	, src
 	jyes	imul_rm
@@ -157,7 +157,7 @@ calminstruction imul? dest*,src&
 	match	src1 =, src2, src
 	jyes	imul_second_source
 
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@src, src
 
 	check	@dest.size = 0 & @src.size = 0
 	jyes	operand_size_not_specified
@@ -178,8 +178,8 @@ calminstruction imul? dest*,src&
 	jump	main
 
     imul_second_source:
-	call	x86.parse_operand, @src,src1
-	call	x86.parse_operand, @aux,src2
+	call	x86.parse_operand@src, src1
+	call	x86.parse_operand@aux, src2
 
 	check	@dest.size = 0 & @src.size = 0 & @aux.size = 0
 	jyes	operand_size_not_specified
@@ -243,8 +243,8 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 
 	calminstruction instr? dest*,cnt*
 
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,cnt
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, cnt
 
 		check	@dest.size = 0
 		jyes	operand_size_not_specified
@@ -299,8 +299,8 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 end iterate
 
 calminstruction ins? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -321,8 +321,8 @@ calminstruction ins? dest*,src*
 end calminstruction
 
 calminstruction outs? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@src.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -354,8 +354,8 @@ calminstruction outs? dest*,src*
 end calminstruction
 
 calminstruction enter? alloc*,nesting*
-	call	x86.parse_operand, @src,alloc
-	call	x86.parse_operand, @aux,nesting
+	call	x86.parse_operand@src, alloc
+	call	x86.parse_operand@aux, nesting
 	check	(@src.size and not 2) | (@aux.size and not 1)
 	jno	size_ok
 	asmcmd	=err 'invalid operand size'
@@ -371,8 +371,8 @@ calminstruction enter? alloc*,nesting*
 end calminstruction
 
 calminstruction bound? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@src.type = 'mem' & @dest.type = 'reg'
 	jno	invalid_combination_of_operands
 	check	@dest.size = 2

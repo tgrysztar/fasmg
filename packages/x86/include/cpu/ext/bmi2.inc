@@ -4,9 +4,9 @@ include 'bmi1.inc'
 iterate <instr,opcode>, bzhi,0F5h
 
 	macro instr? dest*,src*,src2*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
-		x86.parse_operand @src2,src2
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
+		x86.parse_operand@src2 src2
 		if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg') & @src2.type = 'reg'
 			if @dest.size < 4
 				err 'invalid operand size'
@@ -31,9 +31,9 @@ end iterate
 iterate <instr,vex_mp,opcode>, mulx,VEX_F2_0F38,0F6h, pdep,VEX_F2_0F38,0F5h, pext,VEX_F3_0F38,0F5h
 
 	macro instr? dest*,src*,src2*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
-		x86.parse_operand @src2,src2
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
+		x86.parse_operand@src2 src2
 		if @dest.type = 'reg' & @src.type = 'reg' & (@src2.type = 'mem' | @src2.type = 'reg')
 			if @dest.size < 4
 				err 'invalid operand size'
@@ -56,9 +56,9 @@ iterate <instr,vex_mp,opcode>, mulx,VEX_F2_0F38,0F6h, pdep,VEX_F2_0F38,0F5h, pex
 end iterate
 
 macro rorx? dest*,src*,src2*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
-	x86.parse_operand @src2,src2
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	x86.parse_operand@src2 src2
 	if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg') & @src2.type = 'imm'
 		if @dest.size < 4 | @src2.size and not 1
 			err 'invalid operand size'
@@ -81,9 +81,9 @@ end macro
 iterate <instr,vex_mp,opcode>, sarx,VEX_F3_0F38,0F7h, shlx,VEX_66_0F38,0F7h, shrx,VEX_F2_0F38,0F7h
 
 	macro instr? dest*,src*,src2*
-		x86.parse_operand @dest,dest
-		x86.parse_operand @src,src
-		x86.parse_operand @src2,src2
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
+		x86.parse_operand@src2 src2
 		if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg') & @src2.type = 'reg'
 			if @dest.size < 4
 				err 'invalid operand size'

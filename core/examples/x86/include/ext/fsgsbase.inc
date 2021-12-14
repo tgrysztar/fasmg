@@ -3,7 +3,7 @@ iterate <instr,postbyte>, rdfsbase,0, rdgsbase,1, wrfsbase,2, wrgsbase,3
 
 	macro instr? dest*
 		if x86.mode = 64
-			x86.parse_operand @dest,dest
+			x86.parse_operand@dest dest
 			if @dest.type = 'reg'
 				if @dest.size >= 4
 					@dest.opcode_prefix = 0F3h

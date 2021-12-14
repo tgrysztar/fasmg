@@ -2,8 +2,8 @@
 include 'avx.inc'
 
 macro vcvtph2ps? dest*,src*
-	AVX.parse_operand @dest,dest
-	AVX.parse_operand @src,src
+	AVX.parse_operand@dest dest
+	AVX.parse_operand@src src
 	if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem')
 		if (@src.type = 'mmreg' & @src.size <> 16) | (@src.type = 'mem' & @src.size*2 <> @dest.size)
 			err 'invalid operand size'
@@ -15,9 +15,9 @@ macro vcvtph2ps? dest*,src*
 end macro
 
 macro vcvtps2ph? dest*,src*,round*
-	AVX.parse_operand @dest,dest
-	AVX.parse_operand @src,src
-	x86.parse_operand @aux,round
+	AVX.parse_operand@dest dest
+	AVX.parse_operand@src src
+	x86.parse_operand@aux round
 	if (@dest.type = 'mmreg' | @dest.type = 'mem') & @src.type = 'mmreg' & @aux.type = 'imm'
 		if (@dest.type = 'mmreg' & @dest.size <> 16) | (@dest.type = 'mem' & @dest.size*2 <> @src.size) | @aux.size and not 1
 			err 'invalid operand size'

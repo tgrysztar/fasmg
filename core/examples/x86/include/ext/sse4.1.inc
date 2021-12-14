@@ -15,9 +15,9 @@ end iterate
 
 iterate <instr,supp>, pblendvb,10h, blendvps,14h, blendvpd,15h
 	macro instr? dest*,src*,sel*
-		SSE.parse_operand @dest,dest
-		SSE.parse_operand @src,src
-		SSE.parse_operand @aux,sel
+		SSE.parse_operand@dest dest
+		SSE.parse_operand@src src
+		SSE.parse_operand@aux sel
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'mmreg' & @aux.size = 16 & @aux.rm = 0
 			if @dest.size or @src.size and not 16
 				err 'invalid operand size'
@@ -44,9 +44,9 @@ macro insertps? dest*,src*,sel*
 end macro
 
 macro extractps? dest*,src*,sel*
-	x86.parse_operand @dest,dest
-	SSE.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	x86.parse_operand@dest dest
+	SSE.parse_operand@src src
+	x86.parse_operand@aux sel
 	if @dest.type = 'reg' & @src.type = 'mmreg' & @aux.type = 'imm'
 		if x86.mode = 64 & @dest.size = 8
 			@dest.size = 4
@@ -62,9 +62,9 @@ macro extractps? dest*,src*,sel*
 end macro
 
 macro pinsrb? dest*,src*,sel*
-	SSE.parse_operand @dest,dest
-	x86.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	SSE.parse_operand@dest dest
+	x86.parse_operand@src src
+	x86.parse_operand@aux sel
 	if (@dest.type = 'mmreg' & @dest.size = 16) & (@src.type = 'reg' | @src.type = 'mem') & @aux.type = 'imm'
 		if (@src.type = 'reg' & @src.size <> 4) | (@src.type = 'mem' & @src.size and not 1) | @aux.size and not 1
 			err 'invalid operand size'
@@ -77,9 +77,9 @@ macro pinsrb? dest*,src*,sel*
 end macro
 
 macro pinsrd? dest*,src*,sel*
-	SSE.parse_operand @dest,dest
-	x86.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	SSE.parse_operand@dest dest
+	x86.parse_operand@src src
+	x86.parse_operand@aux sel
 	if (@dest.type = 'mmreg' & @dest.size = 16) & (@src.type = 'reg' | @src.type = 'mem') & @aux.type = 'imm'
 		if @src.size and not 4 | @aux.size and not 1
 			err 'invalid operand size'
@@ -92,9 +92,9 @@ macro pinsrd? dest*,src*,sel*
 end macro
 
 macro pinsrq? dest*,src*,sel*
-	SSE.parse_operand @dest,dest
-	x86.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	SSE.parse_operand@dest dest
+	x86.parse_operand@src src
+	x86.parse_operand@aux sel
 	if (@dest.type = 'mmreg' & @dest.size = 16) & (@src.type = 'reg' | @src.type = 'mem') & @aux.type = 'imm'
 		if @src.size and not 8 | @aux.size and not 1
 			err 'invalid operand size'
@@ -111,9 +111,9 @@ macro pinsrq? dest*,src*,sel*
 end macro
 
 macro pextrb? dest*,src*,sel*
-	x86.parse_operand @dest,dest
-	SSE.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	x86.parse_operand@dest dest
+	SSE.parse_operand@src src
+	x86.parse_operand@aux sel
 	if (@dest.type = 'reg' | @dest.type = 'mem') & (@src.type = 'mmreg' & @src.size = 16) & @aux.type = 'imm'
 		if x86.mode = 64 & @dest.type = 'reg' & @dest.size = 8
 			@dest.size = 4
@@ -129,9 +129,9 @@ macro pextrb? dest*,src*,sel*
 end macro
 
 macro pextrw? dest*,src*,sel*
-	x86.parse_operand @dest,dest
-	SSE.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	x86.parse_operand@dest dest
+	SSE.parse_operand@src src
+	x86.parse_operand@aux sel
 	if @dest.type = 'reg' & @src.type = 'mmreg' & @aux.type = 'imm'
 		if x86.mode = 64 & @dest.size = 8
 			@dest.size = 4
@@ -153,9 +153,9 @@ macro pextrw? dest*,src*,sel*
 end macro
 
 macro pextrd? dest*,src*,sel*
-	x86.parse_operand @dest,dest
-	SSE.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	x86.parse_operand@dest dest
+	SSE.parse_operand@src src
+	x86.parse_operand@aux sel
 	if (@dest.type = 'reg' | @dest.type = 'mem') & (@src.type = 'mmreg' & @src.size = 16) & @aux.type = 'imm'
 		if x86.mode = 64 & @dest.type = 'reg' & @dest.size = 8
 			@dest.size = 4
@@ -171,9 +171,9 @@ macro pextrd? dest*,src*,sel*
 end macro
 
 macro pextrq? dest*,src*,sel*
-	x86.parse_operand @dest,dest
-	SSE.parse_operand @src,src
-	x86.parse_operand @aux,sel
+	x86.parse_operand@dest dest
+	SSE.parse_operand@src src
+	x86.parse_operand@aux sel
 	if (@dest.type = 'reg' | @dest.type = 'mem') & (@src.type = 'mmreg' & @src.size = 16) & @aux.type = 'imm'
 		if @dest.size and not 8 | @aux.size and not 1
 			err 'invalid operand size'
@@ -190,8 +190,8 @@ macro pextrq? dest*,src*,sel*
 end macro
 
 macro movntdqa? dest*,src*
-	SSE.parse_operand @dest,dest
-	SSE.parse_operand @src,src
+	SSE.parse_operand@dest dest
+	SSE.parse_operand@src src
 	if @dest.type = 'mmreg' & @src.type = 'mem'
 		if (@dest.size or @src.size) and not 16
 			err 'invalid operand size'

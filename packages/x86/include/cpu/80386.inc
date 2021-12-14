@@ -120,502 +120,426 @@ calminstruction calminstruction?.xcall? instruction*, arguments&
 end calminstruction
 
 
-calminstruction x86.parse_operand namespace, operand
-
-	local	size, type, segment_prefix, prefix, opcode_prefix
-	local	imm, unresolved, displacement, displacement_size
-	local	address, address_registers, segment, offset
-	local	mode, mod, rm
-	local	scale, index, base
-
-	local	i, pre, suf, sym
-
-	compute segment_prefix, 0
-	compute prefix, 0
-	compute opcode_prefix, 0
-
-	compute size, 0
-	compute displacement_size, 0
-
-	transform operand
-
-	match	pre suf, operand
-	jno	no_size_prefix
-	transform pre, x86
-	jno	no_size_prefix
-	match	:size, pre
-	jno	no_size_prefix
-	arrange operand, suf
-      no_size_prefix:
-
-	match	[address], operand
-	jyes	memory_operand
-	match	=ptr? address, operand
-	jyes	memory_operand
-	match	segment:offset, operand
-	jyes	far_operand
-
-  immediate_operand:
-	compute type, 'imm'
-	compute imm, +operand
-
-	compute unresolved, 0
-	check	defined operand
-	jyes	operand_resolved
-	compute unresolved, 1
-      operand_resolved:
-
-	check	imm eq 1 elementof imm
-	jno	export_immediate
-	check	1 metadataof (1 metadataof imm) relativeto x86.reg
-	jyes	register_operand
-	check	1 metadataof imm relativeto x86.sreg
-	jyes	segment_register_operand
-
-	jump	export_immediate
-
-  register_operand:
-
-	compute type, 'reg'
-	compute mode, x86.mode
-	compute mod, 11b
-	compute rm, 1 metadataof imm - 1 elementof (1 metadataof imm)
-	check	size & size <> 1 metadataof (1 metadataof imm) - x86.reg
-	jyes	operand_sizes_do_not_match
-	compute size, 1 metadataof (1 metadataof imm) - x86.reg
-
-	jump	export_register
-
-  segment_register_operand:
-
-	compute type, 'sreg'
-	compute mode, x86.mode
-	compute mod, 11b
-	compute rm, 1 metadataof imm - x86.sreg
-	check	size & size <> 2 & size <> 4
-	jyes	invalid_operand_size
-
-	jump	export_register
-
-  memory_operand:
-	compute type, 'mem'
-
-	match	segment:address, address
-	jno	segment_prefix_ok
-	check	segment eq 1 elementof segment & 1 metadataof segment relativeto x86.sreg
-	jno	invalid_operand
-	compute segment, 1 metadataof segment - x86.sreg
-	check	segment >= 4
-	jyes	segment_prefix_386
-	compute segment_prefix, 26h + segment shl 3
-	jump	segment_prefix_ok
-      segment_prefix_386:
-	compute segment_prefix, 64h + segment-4
-      segment_prefix_ok:
-
-	compute mode, 0
-
-	match	pre suf, address
-	jno	no_address_size_prefix
-	transform pre, x86
-	jno	no_address_size_prefix
-	match	:pre, pre
-	jno	no_address_size_prefix
-	arrange address, suf
-	check	pre = 2 | pre = 4 | pre = 8
-	jno	invalid_address_size
-	compute mode, pre shl 3
-      no_address_size_prefix:
-
-	compute scale, 0
-	compute index, 0
-	compute base, 0
-
-	check	size
-	jyes	size_override
-	compute size, sizeof address
-      size_override:
-
-	compute address, address
-	compute address_registers, 0
-	compute i, 1
-      extract_registers:
-	check	i > elementsof address
-	jyes	registers_extracted
-	check	i metadataof address relativeto x86.r16 | i metadataof address relativeto x86.r32
-	jno	next_term
-	compute address_registers, address_registers + i elementof address * i scaleof address
-      next_term:
-	compute i, i+1
-	jump	extract_registers
-      registers_extracted:
-	compute displacement, address - address_registers
-
-	check	mode
-	jyes	verify_mode
-	compute mode, x86.mode
-	check	mode = 16 & displacement relativeto 0 & displacement >= 10000h & address_registers eq 0
-	jno	mode_ok
-	compute mode, 32
-	jump	mode_ok
-      verify_mode:
-	check	(mode = 16 & 1 metadataof address_registers relativeto x86.r32) | (mode = 32 & 1 metadataof address_registers relativeto x86.r16)
-	jyes	invalid_address
-      mode_ok:
-
-	check	address_registers eq 0
-	jyes	direct_address
-	check	1 metadataof address_registers relativeto x86.r32
-	jyes	address_32bit
-	check	1 metadataof address_registers relativeto x86.r16
-	jyes	address_16bit
-	jump	invalid_address
-
-    direct_address:
-	compute mod, 0
-	check	mode = 16
-	jyes	direct_address_16bit
-      direct_address_32bit:
-	compute rm, 5
-	compute displacement_size, 4
-	jump	export_address
-      direct_address_16bit:
-	compute rm, 6
-	compute displacement_size, 2
-	jump	export_address
-
-    address_16bit:
-	compute mode, 16
-
-	check	address_registers relativeto bx+si
-	jyes	rm_0
-	check	address_registers relativeto bx+di
-	jyes	rm_1
-	check	address_registers relativeto bp+si
-	jyes	rm_2
-	check	address_registers relativeto bp+di
-	jyes	rm_3
-	check	address_registers relativeto si
-	jyes	rm_4
-	check	address_registers relativeto di
-	jyes	rm_5
-	check	address_registers relativeto bp
-	jyes	rm_6
-	check	address_registers relativeto bx
-	jyes	rm_7
-	jump	invalid_address
-
-      rm_0:
-	compute rm, 0
-	jump	rm_ok
-      rm_1:
-	compute rm, 1
-	jump	rm_ok
-      rm_2:
-	compute rm, 2
-	jump	rm_ok
-      rm_3:
-	compute rm, 3
-	jump	rm_ok
-      rm_4:
-	compute rm, 4
-	jump	rm_ok
-      rm_5:
-	compute rm, 5
-	jump	rm_ok
-      rm_6:
-	compute rm, 6
-	jump	rm_ok
-      rm_7:
-	compute rm, 7
-      rm_ok:
-
-	check	displacement relativeto 0
-	jno	displacement_16bit
-	check	displacement = 0 & rm <> 6
-	jyes	displacement_empty
-	check	displacement<80h & displacement>=-80h
-	jyes	displacement_8bit
-	check	displacement-10000h>=-80h & displacement<10000h
-	jyes	displacement_8bit_wrap_16bit
-      displacement_16bit:
-	compute displacement_size, 2
-	compute mod, 2
-	jump	export_address
-      displacement_empty:
-	compute displacement_size, 0
-	compute mod, 0
-	jump	export_address
-      displacement_8bit_wrap_16bit:
-	compute displacement, displacement-10000h
-      displacement_8bit:
-	compute displacement_size, 1
-	compute mod, 1
-	jump	export_address
-
-    address_32bit:
-	compute mode,32
-	check	2 scaleof address_registers = 0
-	jyes	one_register
-	check	3 scaleof address_registers = 0 & 2 metadataof address_registers relativeto x86.r32
-	jyes	two_registers
-	jump	invalid_address
-
-      one_register:
-	compute scale, 1 scaleof address_registers
-	compute base, 1 metadataof address_registers - x86.r32
-	check	scale = 1
-	jyes	one_register_unscaled
-	check	base <> 4 & (scale = 4 | scale = 8)
-	jyes	one_register_scaled
-	check	base <> 4 & (scale = 2 | scale = 3 | scale = 5 | scale = 9)
-	jyes	one_register_split
-	jump	invalid_address
-      one_register_unscaled:
-	compute rm, base
-	check	rm = 4
-	jno	setup_displacement
-	compute index, 4
-	jump	setup_displacement
-      one_register_scaled:
-	compute rm, 4
-	compute index, base
-	compute base, 5
-	jump	index_only
-      one_register_split:
-	compute rm, 4
-	compute index, base
-	compute scale, scale - 1
-	jump	setup_displacement
-      two_registers:
-	compute rm,4
-	check	1 scaleof address_registers = 1
-	jyes	base_first
-	check	2 scaleof address_registers = 1
-	jyes	base_second
-	jump	invalid_address
-      base_first:
-	compute base, 1 metadataof address_registers - x86.r32
-	compute index, 2 metadataof address_registers - x86.r32
-	compute scale, 2 scaleof address_registers
-	jump	process_sib
-      base_second:
-	compute base, 2 metadataof address_registers - x86.r32
-	compute index, 1 metadataof address_registers - x86.r32
-	compute scale, 1 scaleof address_registers
-      process_sib:
-	check	index = 4
-	jyes	forbidden_index
-	check	segment_prefix = 36h & index = 5 & scale = 1
-	jyes	switch_to_index
-	check	segment_prefix = 3Eh & base = 5 & scale = 1
-	jyes	switch_to_base
-	check	scale > 2 & scale <> 4 & scale <> 8
-	jyes	invalid_address
-	jump	setup_displacement
-      forbidden_index:
-	check	scale = 1
-	jno	invalid_address
-	compute index, base
-	compute base, 4
-	jump	setup_displacement
-      switch_to_index:
-	compute index, base
-	compute base, 5
-	jump	setup_displacement
-      switch_to_base:
-	compute base, index
-	compute index, 5
-	jump	setup_displacement
-
-      setup_displacement:
-	check	displacement relativeto 0
-	jno	displacement_32bit
-	check	displacement = 0 & rm <> 5 & (rm <> 4 | base <> 5)
-	jyes	displacement_empty
-	check	displacement < 80h & displacement >= -80h
-	jyes	displacement_8bit
-	check	displacement-100000000h >= -80h & displacement < 100000000h
-	jyes	displacement_8bit_wrap_32bit
-	check	segment_prefix = 3Eh & base = 5 & index = 5 & scale = 1
-	jno	displacement_32bit
-	compute scale, 2
-	jump	index_only
-      displacement_32bit:
-	compute displacement_size, 4
-	compute mod, 2
-	jump	export_address
-      displacement_8bit_wrap_32bit:
-	compute displacement, displacement-100000000h
-	jump	displacement_8bit
-      index_only:
-	compute displacement_size, 4
-	compute mod, 0
-	jump	export_address
-
-  far_operand:
-	compute type, 'far'
-
-	check	size & size <> 4 & size <> 6
-	jyes	operand_sizes_do_not_match
-
-	arrange sym, namespace.=segment
-	publish sym, segment
-
-	arrange sym, namespace.=offset
-	publish sym, offset
-
-	jump	export_common
-
-  export_immediate:
-
-	arrange sym, namespace.=imm
-	publish sym, imm
-
-	arrange sym, namespace.=unresolved
-	publish sym, unresolved
-
-	jump	export_common
-
-  export_address:
-
-	arrange sym, namespace.=address
-	publish sym, address
-
-	arrange sym, namespace.=address_registers
-	publish sym, address_registers
-
-	arrange sym, namespace.=scale
-	publish sym, scale
-
-	arrange sym, namespace.=index
-	publish sym, index
-
-	arrange sym, namespace.=base
-	publish sym, base
-
-	arrange sym, namespace.=displacement
-	publish sym, displacement
-
-  export_register:
-
-	arrange sym, namespace.=mode
-	publish sym, mode
-
-	arrange sym, namespace.=mod
-	publish sym, mod
-
-	arrange sym, namespace.=rm
-	publish sym, rm
-
-  export_common:
-
-	arrange sym, namespace.=type
-	publish sym, type
-
-	arrange sym, namespace.=size
-	publish sym, size
-
-	arrange sym, namespace.=displacement_size
-	publish sym, displacement_size
-
-	arrange sym, namespace.=segment_prefix
-	publish sym, segment_prefix
-
-	arrange sym, namespace.=prefix
-	publish sym, prefix
-
-	arrange sym, namespace.=opcode_prefix
-	publish sym, opcode_prefix
-
-	exit
-
-  invalid_operand:
-	asmcmd	=err 'invalid operand'
-	exit
-  invalid_operand_size:
-	asmcmd	=err 'invalid operand size'
-	exit
-  operand_sizes_do_not_match:
-	asmcmd	=err 'operand sizes do not match'
-	exit
-  invalid_address:
-	asmcmd	=err 'invalid address'
-	exit
-  invalid_address_size:
-	asmcmd	=err 'invalid address size'
-	exit
-
-end calminstruction
-
-calminstruction x86.parse_jump_operand namespace, operand
-
-	local	jump_type
-	local	sym
-
-	match	=far? operand, operand
-	jyes	far_jump
-	match	=near? operand, operand
-	jyes	near_jump
-	match	=short? operand, operand
-	jyes	short_jump
-	compute jump_type, ''
-	jump	parse_operand
-    far_jump:
-	compute jump_type, 'far'
-	jump	parse_operand
-    near_jump:
-	compute jump_type, 'near'
-	jump	parse_operand
-    short_jump:
-	compute jump_type, 'short'
-
-    parse_operand:
-
-	call	x86.parse_operand, namespace, operand
-
-	arrange sym, namespace.=jump_type
-	publish sym, jump_type
-
-	local	type, size
-
-	arrange type, namespace.=type
-	check	type = 'imm'
-	jno	done
-
-	arrange size, namespace.=size
-	check	size = 0
-	jno	verify_target_address
-
-	compute size, x86.mode shr 3
-	arrange sym, namespace.=size
-	publish sym, size
-
-    verify_target_address:
-
-	local	imm
-
-	arrange sym, namespace.=imm
-	compute imm, sym
-
-	check	imm relativeto 0
-	jno	done
-	check	imm < 0
-	jyes	negative
-	check	imm >= 1 shl (size*8)
-	jno	done
-    out_of_range:
-	asmcmd	=err 'value out of range'
-	exit
-    negative:
-	check	imm < - 1 shl (size*8-1)
-	jyes	out_of_range
-	compute imm, imm and (1 shl (size*8) - 1)
-	publish sym, imm
-
-    done:
-
-end calminstruction
+iterate context, @dest,@src,@src2,@aux
+
+	namespace context
+
+		iterate name,	size, type, segment_prefix, prefix, opcode_prefix, \
+				imm, unresolved, displacement, displacement_size, \
+				address, address_registers, segment, offset, jump_type, \
+				mode, mod, rm, \
+				scale, index, base
+			define name
+		end iterate
+
+		calminstruction x86.parse_operand#context operand
+
+			local	i, pre, suf, sym
+
+			compute segment_prefix, 0
+			compute prefix, 0
+			compute opcode_prefix, 0
+
+			compute size, 0
+			compute displacement_size, 0
+
+			transform operand
+
+			match	pre suf, operand
+			jno	no_size_prefix
+			transform pre, x86
+			jno	no_size_prefix
+			match	:size, pre
+			jno	no_size_prefix
+			arrange operand, suf
+		      no_size_prefix:
+
+			match	[address], operand
+			jyes	memory_operand
+			match	=ptr? address, operand
+			jyes	memory_operand
+			match	segment:offset, operand
+			jyes	far_operand
+
+		  immediate_operand:
+			compute type, 'imm'
+			compute imm, +operand
+
+			compute unresolved, 0
+			check	defined operand
+			jyes	operand_resolved
+			compute unresolved, 1
+		      operand_resolved:
+
+			check	imm eq 1 elementof imm
+			jno	operand_ready
+			check	1 metadataof (1 metadataof imm) relativeto x86.reg
+			jyes	register_operand
+			check	1 metadataof imm relativeto x86.sreg
+			jyes	segment_register_operand
+
+		      operand_ready:
+			exit
+
+		  register_operand:
+
+			compute type, 'reg'
+			compute mode, x86.mode
+			compute mod, 11b
+			compute rm, 1 metadataof imm - 1 elementof (1 metadataof imm)
+			check	size & size <> 1 metadataof (1 metadataof imm) - x86.reg
+			jyes	operand_sizes_do_not_match
+			compute size, 1 metadataof (1 metadataof imm) - x86.reg
+
+			exit
+
+		  segment_register_operand:
+
+			compute type, 'sreg'
+			compute mode, x86.mode
+			compute mod, 11b
+			compute rm, 1 metadataof imm - x86.sreg
+			check	size & size <> 2 & size <> 4
+			jyes	invalid_operand_size
+
+			exit
+
+		  memory_operand:
+			compute type, 'mem'
+
+			match	segment:address, address
+			jno	segment_prefix_ok
+			check	segment eq 1 elementof segment & 1 metadataof segment relativeto x86.sreg
+			jno	invalid_operand
+			compute segment, 1 metadataof segment - x86.sreg
+			check	segment >= 4
+			jyes	segment_prefix_386
+			compute segment_prefix, 26h + segment shl 3
+			jump	segment_prefix_ok
+		      segment_prefix_386:
+			compute segment_prefix, 64h + segment-4
+		      segment_prefix_ok:
+
+			compute mode, 0
+
+			match	pre suf, address
+			jno	no_address_size_prefix
+			transform pre, x86
+			jno	no_address_size_prefix
+			match	:pre, pre
+			jno	no_address_size_prefix
+			arrange address, suf
+			check	pre = 2 | pre = 4 | pre = 8
+			jno	invalid_address_size
+			compute mode, pre shl 3
+		      no_address_size_prefix:
+
+			compute scale, 0
+			compute index, 0
+			compute base, 0
+
+			check	size
+			jyes	size_override
+			compute size, sizeof address
+		      size_override:
+
+			compute address, address
+			compute address_registers, 0
+			compute i, 1
+		      extract_registers:
+			check	i > elementsof address
+			jyes	registers_extracted
+			check	i metadataof address relativeto x86.r16 | i metadataof address relativeto x86.r32
+			jno	next_term
+			compute address_registers, address_registers + i elementof address * i scaleof address
+		      next_term:
+			compute i, i+1
+			jump	extract_registers
+		      registers_extracted:
+			compute displacement, address - address_registers
+
+			check	mode
+			jyes	verify_mode
+			compute mode, x86.mode
+			check	mode = 16 & displacement relativeto 0 & displacement >= 10000h & address_registers eq 0
+			jno	mode_ok
+			compute mode, 32
+			jump	mode_ok
+		      verify_mode:
+			check	(mode = 16 & 1 metadataof address_registers relativeto x86.r32) | (mode = 32 & 1 metadataof address_registers relativeto x86.r16)
+			jyes	invalid_address
+		      mode_ok:
+
+			check	address_registers eq 0
+			jyes	direct_address
+			check	1 metadataof address_registers relativeto x86.r32
+			jyes	address_32bit
+			check	1 metadataof address_registers relativeto x86.r16
+			jyes	address_16bit
+			jump	invalid_address
+
+		    direct_address:
+			compute mod, 0
+			check	mode = 16
+			jyes	direct_address_16bit
+		      direct_address_32bit:
+			compute rm, 5
+			compute displacement_size, 4
+			exit
+		      direct_address_16bit:
+			compute rm, 6
+			compute displacement_size, 2
+			exit
+
+		    address_16bit:
+			compute mode, 16
+
+			check	address_registers relativeto bx+si
+			jyes	rm_0
+			check	address_registers relativeto bx+di
+			jyes	rm_1
+			check	address_registers relativeto bp+si
+			jyes	rm_2
+			check	address_registers relativeto bp+di
+			jyes	rm_3
+			check	address_registers relativeto si
+			jyes	rm_4
+			check	address_registers relativeto di
+			jyes	rm_5
+			check	address_registers relativeto bp
+			jyes	rm_6
+			check	address_registers relativeto bx
+			jyes	rm_7
+			jump	invalid_address
+
+		      rm_0:
+			compute rm, 0
+			jump	rm_ok
+		      rm_1:
+			compute rm, 1
+			jump	rm_ok
+		      rm_2:
+			compute rm, 2
+			jump	rm_ok
+		      rm_3:
+			compute rm, 3
+			jump	rm_ok
+		      rm_4:
+			compute rm, 4
+			jump	rm_ok
+		      rm_5:
+			compute rm, 5
+			jump	rm_ok
+		      rm_6:
+			compute rm, 6
+			jump	rm_ok
+		      rm_7:
+			compute rm, 7
+		      rm_ok:
+
+			check	displacement relativeto 0
+			jno	displacement_16bit
+			check	displacement = 0 & rm <> 6
+			jyes	displacement_empty
+			check	displacement<80h & displacement>=-80h
+			jyes	displacement_8bit
+			check	displacement-10000h>=-80h & displacement<10000h
+			jyes	displacement_8bit_wrap_16bit
+		      displacement_16bit:
+			compute displacement_size, 2
+			compute mod, 2
+			exit
+		      displacement_empty:
+			compute displacement_size, 0
+			compute mod, 0
+			exit
+		      displacement_8bit_wrap_16bit:
+			compute displacement, displacement-10000h
+		      displacement_8bit:
+			compute displacement_size, 1
+			compute mod, 1
+			exit
+
+		    address_32bit:
+			compute mode,32
+			check	2 scaleof address_registers = 0
+			jyes	one_register
+			check	3 scaleof address_registers = 0 & 2 metadataof address_registers relativeto x86.r32
+			jyes	two_registers
+			jump	invalid_address
+
+		      one_register:
+			compute scale, 1 scaleof address_registers
+			compute base, 1 metadataof address_registers - x86.r32
+			check	scale = 1
+			jyes	one_register_unscaled
+			check	base <> 4 & (scale = 4 | scale = 8)
+			jyes	one_register_scaled
+			check	base <> 4 & (scale = 2 | scale = 3 | scale = 5 | scale = 9)
+			jyes	one_register_split
+			jump	invalid_address
+		      one_register_unscaled:
+			compute rm, base
+			check	rm = 4
+			jno	setup_displacement
+			compute index, 4
+			jump	setup_displacement
+		      one_register_scaled:
+			compute rm, 4
+			compute index, base
+			compute base, 5
+			jump	index_only
+		      one_register_split:
+			compute rm, 4
+			compute index, base
+			compute scale, scale - 1
+			jump	setup_displacement
+		      two_registers:
+			compute rm,4
+			check	1 scaleof address_registers = 1
+			jyes	base_first
+			check	2 scaleof address_registers = 1
+			jyes	base_second
+			jump	invalid_address
+		      base_first:
+			compute base, 1 metadataof address_registers - x86.r32
+			compute index, 2 metadataof address_registers - x86.r32
+			compute scale, 2 scaleof address_registers
+			jump	process_sib
+		      base_second:
+			compute base, 2 metadataof address_registers - x86.r32
+			compute index, 1 metadataof address_registers - x86.r32
+			compute scale, 1 scaleof address_registers
+		      process_sib:
+			check	index = 4
+			jyes	forbidden_index
+			check	segment_prefix = 36h & index = 5 & scale = 1
+			jyes	switch_to_index
+			check	segment_prefix = 3Eh & base = 5 & scale = 1
+			jyes	switch_to_base
+			check	scale > 2 & scale <> 4 & scale <> 8
+			jyes	invalid_address
+			jump	setup_displacement
+		      forbidden_index:
+			check	scale = 1
+			jno	invalid_address
+			compute index, base
+			compute base, 4
+			jump	setup_displacement
+		      switch_to_index:
+			compute index, base
+			compute base, 5
+			jump	setup_displacement
+		      switch_to_base:
+			compute base, index
+			compute index, 5
+			jump	setup_displacement
+
+		      setup_displacement:
+			check	displacement relativeto 0
+			jno	displacement_32bit
+			check	displacement = 0 & rm <> 5 & (rm <> 4 | base <> 5)
+			jyes	displacement_empty
+			check	displacement < 80h & displacement >= -80h
+			jyes	displacement_8bit
+			check	displacement-100000000h >= -80h & displacement < 100000000h
+			jyes	displacement_8bit_wrap_32bit
+			check	segment_prefix = 3Eh & base = 5 & index = 5 & scale = 1
+			jno	displacement_32bit
+			compute scale, 2
+			jump	index_only
+		      displacement_32bit:
+			compute displacement_size, 4
+			compute mod, 2
+			exit
+		      displacement_8bit_wrap_32bit:
+			compute displacement, displacement-100000000h
+			jump	displacement_8bit
+		      index_only:
+			compute displacement_size, 4
+			compute mod, 0
+			exit
+
+		  far_operand:
+			compute type, 'far'
+
+			check	size & size <> 4 & size <> 6
+			jyes	operand_sizes_do_not_match
+
+			exit
+
+		  invalid_operand:
+			asmcmd	=err 'invalid operand'
+			exit
+		  invalid_operand_size:
+			asmcmd	=err 'invalid operand size'
+			exit
+		  operand_sizes_do_not_match:
+			asmcmd	=err 'operand sizes do not match'
+			exit
+		  invalid_address:
+			asmcmd	=err 'invalid address'
+			exit
+		  invalid_address_size:
+			asmcmd	=err 'invalid address size'
+			exit
+
+		end calminstruction
+
+		calminstruction x86.parse_jump_operand#context operand
+
+			match	=far? operand, operand
+			jyes	far_jump
+			match	=near? operand, operand
+			jyes	near_jump
+			match	=short? operand, operand
+			jyes	short_jump
+			compute jump_type, ''
+			jump	parse_operand
+		    far_jump:
+			compute jump_type, 'far'
+			jump	parse_operand
+		    near_jump:
+			compute jump_type, 'near'
+			jump	parse_operand
+		    short_jump:
+			compute jump_type, 'short'
+
+		    parse_operand:
+
+			call	x86.parse_operand#context, operand
+
+			check	type = 'imm'
+			jno	done
+
+			check	size = 0
+			jno	verify_target_address
+
+			compute size, x86.mode shr 3
+
+		    verify_target_address:
+
+			check	imm relativeto 0
+			jno	done
+			check	imm < 0
+			jyes	negative
+			check	imm >= 1 shl (size*8)
+			jno	done
+		    out_of_range:
+			asmcmd	=err 'value out of range'
+			exit
+		    negative:
+			check	imm < - 1 shl (size*8-1)
+			jyes	out_of_range
+			compute imm, imm and (1 shl (size*8) - 1)
+
+		    done:
+
+		end calminstruction
+
+	end namespace
+
+end iterate
 
 calminstruction x86.select_operand_prefix rm_operand*,size*
 
@@ -766,8 +690,8 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 
 	calminstruction instr? dest*,src*
 
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
 
 		local	opcode, rm, size
 
@@ -893,7 +817,7 @@ iterate <instr,postbyte>, not,2, neg,3, mul,4, div,6, idiv,7
 
 	calminstruction instr? src*
 
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@src, src
 
 		check	@src.size = 0
 		jyes	operand_size_not_specified
@@ -926,8 +850,8 @@ end iterate
 
 calminstruction mov? dest*,src*
 
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 
 	local	ext, rm, size
 
@@ -1121,8 +1045,8 @@ end calminstruction
 
 calminstruction test? dest*,src*
 
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 
 	local	ext, rm, size
 
@@ -1209,8 +1133,8 @@ end calminstruction
 
 calminstruction xchg? dest*,src*
 
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 
 	local	ext, rm, size
 
@@ -1281,7 +1205,7 @@ iterate <instr,postbyte>, inc,00 ,dec,01
 
 	calminstruction instr? dest*
 
-		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand@dest, dest
 
 		check	@dest.size
 		jyes	main
@@ -1323,7 +1247,7 @@ calminstruction imul? dest*,src&
 
 	local	size
 
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 
 	match	, src
 	jyes	imul_rm
@@ -1333,7 +1257,7 @@ calminstruction imul? dest*,src&
 	match	src1 =, src2, src
 	jyes	imul_second_source
 
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@src, src
 
 	check	@dest.size = 0 & @src.size = 0
 	jyes	operand_size_not_specified
@@ -1357,8 +1281,8 @@ calminstruction imul? dest*,src&
 	jump	main
 
     imul_second_source:
-	call	x86.parse_operand, @src,src1
-	call	x86.parse_operand, @aux,src2
+	call	x86.parse_operand@src, src1
+	call	x86.parse_operand@aux, src2
 
 	check	@dest.size = 0 & @src.size = 0 & @aux.size = 0
 	jyes	operand_size_not_specified
@@ -1439,7 +1363,7 @@ calminstruction x86.push_instruction size:0,src*
 
 	local	opcode
 
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@src, src
 
 	check	size <> 0 & @src.size and not size
 	jyes	invalid_operand_size
@@ -1533,7 +1457,7 @@ calminstruction x86.pop_instruction size:0,dest*
 
 	local	opcode
 
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 
 	check	size <> 0 & @dest.size and not size
 	jyes	invalid_operand_size
@@ -1655,8 +1579,8 @@ iterate <instr,size,opcode>, retw,2,0C2h, retnw,2,0C2h, retd,4,0C2h, retnd,4,0C2
 end iterate
 
 calminstruction lea? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@src.type = 'mem' & @dest.type = 'reg'
 	jno	invalid_combination_of_operands
 	call	x86.select_operand_prefix, @src,@dest.size
@@ -1669,8 +1593,8 @@ end calminstruction
 iterate <instr,opcode>, les,0C4h, lds,0C5h, lss,<0Fh,0B2h>, lfs,<0Fh,0B4h>, lgs,<0Fh,0B5h>
 
 	calminstruction instr? dest*,src*
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
 		check	(@dest.size = 2 & (@src.size <> 0 & @src.size <> 4)) | (@dest.size = 4 & (@src.size <> 0 & @src.size <> 6))
 		jyes	invalid_operand_size
 		check	@src.type = 'mem' & @dest.type = 'reg'
@@ -1691,8 +1615,8 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 
 	calminstruction instr? dest*,cnt*
 
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,cnt
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, cnt
 
 		check	@dest.size = 0
 		jyes	operand_size_not_specified
@@ -1751,9 +1675,9 @@ end iterate
 iterate <instr,ext>, shld,0A4h, shrd,0ACh
 
 	calminstruction instr? dest*,src*,cnt*
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
-		call	x86.parse_operand, @aux,cnt
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
+		call	x86.parse_operand@aux, cnt
 		check	@aux.size and not 1
 		jyes	invalid_operand_size
 		check	@dest.size and not @src.size
@@ -1783,8 +1707,8 @@ end iterate
 iterate <instr,postbyte>, bt,4, bts,5, btr,6, btc,7
 
 	calminstruction instr? dest*,src*
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
 		check	@src.type = 'reg' & (@dest.type = 'mem' | @dest.type = 'reg')
 		jyes	bt_rm_reg
 		check	@src.type = 'imm' & (@dest.type = 'mem' | @dest.type = 'reg')
@@ -1818,8 +1742,8 @@ end iterate
 iterate <instr,ext>, bsf,0BCh, bsr,0BDh
 
 	calminstruction instr? dest*,src*
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
 		check	@dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
 		jyes	bsf_reg_rm
 		asmcmd	=err 'invalid combination of operands'
@@ -1838,8 +1762,8 @@ end iterate
 iterate <instr,ext>, movzx,0B6h, movsx,0BEh
 
 	calminstruction instr? dest*,src*
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
 		check	@dest.size > @src.size
 		jyes	size_ok
 		asmcmd	=err 'operand sizes do not match'
@@ -1874,7 +1798,7 @@ iterate <cond,code>, o,0, no,1, c,2, b,2, nae,2, nc,3, nb,3, ae,3, z,4, e,4, nz,
 		     s,8, ns,9, p,0Ah, pe,0Ah, np,0Bh, po,0Bh, l,0Ch, nge,0Ch, nl,0Dh, ge,0Dh, ng,0Eh, le,0Eh, g,0Fh, nle,0Fh
 
 	calminstruction set#cond? dest*
-		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand@dest, dest
 		check	@dest.size > 1
 		jno	size_ok
 		asmcmd	=err 'invalid operand size'
@@ -1891,7 +1815,7 @@ end iterate
 
 calminstruction call? dest*
 
-	call	x86.parse_jump_operand, @dest,dest
+	call	x86.parse_jump_operand@dest, dest
 
 	check	@dest.type = 'imm'
 	jyes	call_imm
@@ -1999,7 +1923,7 @@ end calminstruction
 
 calminstruction jmp? dest*
 
-	call	x86.parse_jump_operand, @dest,dest
+	call	x86.parse_jump_operand@dest, dest
 
 	check	@dest.type = 'imm'
 	jyes	jmp_imm
@@ -2142,7 +2066,7 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 
 	calminstruction instr? dest*
 
-		call	x86.parse_jump_operand, @dest,dest
+		call	x86.parse_jump_operand@dest, dest
 
 		check	@dest.type <> 'imm' | @dest.jump_type = 'far'
 		jyes	invalid_operand
@@ -2201,7 +2125,7 @@ iterate <instr,opcode,len>, loopnz,0E0h,0, loopne,0E0h,0, loopz,0E1h,0, loope,0E
 			    jcxz,0E3h,2, jecxz,0E3h,4
 	calminstruction instr? dest*
 
-		call	x86.parse_jump_operand, @dest,dest
+		call	x86.parse_jump_operand@dest, dest
 
 		check	@dest.type = 'imm' & ( @dest.jump_type = 'short' | ~ @dest.jump_type )
 		jno	invalid_operand
@@ -2307,8 +2231,8 @@ if defined SSE2
 end if
 
 calminstruction movs? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	local	size
 	check	@dest.size = 0 & @src.size = 0
 	jyes	operand_size_not_specified
@@ -2348,8 +2272,8 @@ calminstruction movs? dest*,src*
 end calminstruction
 
 calminstruction cmps? src*,dest*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	local	size
 	check	@dest.size = 0 & @src.size = 0
 	jyes	operand_size_not_specified
@@ -2389,7 +2313,7 @@ calminstruction cmps? src*,dest*
 end calminstruction
 
 calminstruction stos? dest*
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -2414,7 +2338,7 @@ calminstruction stos? dest*
 end calminstruction
 
 calminstruction lods? src*
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@src, src
 	check	@src.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -2443,7 +2367,7 @@ calminstruction lods? src*
 end calminstruction
 
 calminstruction scas? dest*
-	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand@dest, dest
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -2468,8 +2392,8 @@ calminstruction scas? dest*
 end calminstruction
 
 calminstruction ins? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -2495,8 +2419,8 @@ calminstruction ins? dest*,src*
 end calminstruction
 
 calminstruction outs? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@src.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -2533,7 +2457,7 @@ calminstruction outs? dest*,src*
 end calminstruction
 
 calminstruction xlat? src*
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@src, src
 	check	@src.size > 1
 	jno	size_ok
 	asmcmd	=err 'invalid operand size'
@@ -2556,8 +2480,8 @@ calminstruction xlat? src*
 end calminstruction
 
 calminstruction in? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -2589,8 +2513,8 @@ calminstruction in? dest*,src*
 end calminstruction
 
 calminstruction out? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@src.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -2622,8 +2546,8 @@ calminstruction out? dest*,src*
 end calminstruction
 
 calminstruction enter? alloc*,nesting*
-	call	x86.parse_operand, @src,alloc
-	call	x86.parse_operand, @aux,nesting
+	call	x86.parse_operand@src, alloc
+	call	x86.parse_operand@aux, nesting
 	check	(@src.size and not 2) | (@aux.size and not 1)
 	jno	size_ok
 	asmcmd	=err 'invalid operand size'
@@ -2639,8 +2563,8 @@ calminstruction enter? alloc*,nesting*
 end calminstruction
 
 calminstruction bound? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@src.type = 'mem' & @dest.type = 'reg'
 	jno	invalid_combination_of_operands
 	check	@src.size and not @dest.size
@@ -2655,8 +2579,8 @@ calminstruction bound? dest*,src*
 end calminstruction
 
 calminstruction arpl? dest*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
 	check	@src.type = 'reg' & (@dest.type = 'mem' | @dest.type = 'reg')
 	jno	invalid_combination_of_operands
 	check	@src.size = 2
@@ -2677,7 +2601,7 @@ end calminstruction
 iterate <instr,ext,postbyte>, lldt,0,2, ltr,0,3, verr,0,4, verw,0,5, lmsw,1,6
 
 	calminstruction instr? dest*
-		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand@dest, dest
 		check	@dest.size and not 2
 		jno	size_ok
 		asmcmd	=err 'invalid operand size'
@@ -2695,7 +2619,7 @@ end iterate
 iterate <instr,ext,postbyte>, sldt,0,0, str,0,1, smsw,1,4
 
 	calminstruction instr? dest*
-		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand@dest, dest
 		check	@dest.type = 'reg'
 		jyes	select_operand_prefix
 		check	@dest.size and not 2
@@ -2717,7 +2641,7 @@ end iterate
 iterate <instr,postbyte>, lgdt,2, lidt,3, sgdt,0, sidt,1
 
 	calminstruction instr? dest*
-		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand@dest, dest
 		check	@dest.type = 'mem'
 		jyes	operand_ok
 		asmcmd	=err 'invalid operand'
@@ -2745,8 +2669,8 @@ end iterate
 iterate <instr,ext>, lar,2, lsl,3
 
 	calminstruction instr? dest*,src*
-		call	x86.parse_operand, @dest,dest
-		call	x86.parse_operand, @src,src
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
 		check	@dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
 		jno	invalid_combination_of_operands
 		check	@src.size and not 2
@@ -2763,10 +2687,10 @@ iterate <instr,ext>, lar,2, lsl,3
 end iterate
 
 calminstruction xbts? dest*,src*,offs*,len*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
-	call	x86.parse_operand, @src2,offs
-	call	x86.parse_operand, @aux,len
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
+	call	x86.parse_operand@src2, offs
+	call	x86.parse_operand@aux, len
 	check	@dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg') & \
 		@src2.type = 'reg' & @src2.rm = 0 & @aux.type = 'reg' & @aux.size = 1 & @aux.rm = 1
 	jno	invalid_combination_of_operands
@@ -2787,10 +2711,10 @@ calminstruction xbts? dest*,src*,offs*,len*
 end calminstruction
 
 calminstruction ibts? dest*,offs*,len*,src*
-	call	x86.parse_operand, @dest,dest
-	call	x86.parse_operand, @src,src
-	call	x86.parse_operand, @src2,offs
-	call	x86.parse_operand, @aux,len
+	call	x86.parse_operand@dest, dest
+	call	x86.parse_operand@src, src
+	call	x86.parse_operand@src2, offs
+	call	x86.parse_operand@aux, len
 	check	@src.type = 'reg' & (@dest.type = 'mem' | @dest.type = 'reg') & \
 		@src2.type = 'reg' & @src2.rm = 0 & @aux.type = 'reg' & @aux.size = 1 & @aux.rm = 1
 	jno	invalid_combination_of_operands

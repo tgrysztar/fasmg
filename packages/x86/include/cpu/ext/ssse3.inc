@@ -8,9 +8,9 @@ iterate <instr,supp>, pshufb,0, phaddw,1, phaddd,2, phaddsw,3, pmaddubsw,4, phsu
 end iterate
 
 macro palignr? dest*,src*,aux*
-	SSE.parse_operand @dest,dest
-	SSE.parse_operand @src,src
-	x86.parse_operand @aux,aux
+	SSE.parse_operand@dest dest
+	SSE.parse_operand@src src
+	x86.parse_operand@aux aux
 	if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
 		if @src.size and not @dest.size
 			err 'operand sizes do not match'

@@ -3,7 +3,7 @@ iterate <instr,prefix,ext,postbyte>, vmxon,0F3h,0C7h,6, vmclear,66h,0C7h,6,  \
 				 vmptrld,0,0C7h,6, vmptrst,0,0C7h,7
 
 	macro instr? src*
-		x86.parse_operand @src,src
+		x86.parse_operand@src src
 		if @src.type = 'mem'
 			if @src.size and not 8
 				err 'invalid operand size'
@@ -35,8 +35,8 @@ macro vmresume?
 end macro
 
 macro vmread? dest*,src*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
 	if @src.type = 'reg' & (@dest.type = 'mem' | @dest.type = 'reg')
 		if (x86.mode < 64 & @src.size <> 4) | (x86.mode = 64 & @src.size <> 8)
 			err 'invalid operand size'
@@ -50,8 +50,8 @@ macro vmread? dest*,src*
 end macro
 
 macro vmwrite? dest*,src*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
 	if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
 		if (x86.mode < 64 & @dest.size <> 4) | (x86.mode = 64 & @dest.size <> 8)
 			err 'invalid operand size'

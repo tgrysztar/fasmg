@@ -8,8 +8,8 @@ end if
 iterate <instr,vex_mpw,opcode>, vpbroadcastmb2q,VEX_F3_0F38_W1,2Ah, vpbroadcastmw2d,VEX_F3_0F38_W0,3Ah
 
 	macro instr? dest*,src*
-		AVX_512.parse_operand @dest,dest
-		AVX_512.parse_operand @src,src
+		AVX_512.parse_operand@dest dest
+		AVX_512.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'maskreg'
 			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,0,@dest.rm
 		else

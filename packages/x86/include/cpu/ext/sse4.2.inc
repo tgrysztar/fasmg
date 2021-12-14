@@ -14,8 +14,8 @@ iterate <instr,supp>, pcmpestrm,60h, pcmpestri,61h, pcmpistrm,62h, pcmpistri,63h
 end iterate
 
 macro crc32? dest*,src*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
 	if @dest.type = 'reg' & ( @src.type = 'reg' | @src.type = 'mem' )
 		if @dest.size <> 4 & ( @dest.size <> 8 | x86.mode <> 64 )
 			err 'invalid operand size'
@@ -35,8 +35,8 @@ macro crc32? dest*,src*
 end macro
 
 macro popcnt? dest*,src*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
 	if @dest.type = 'reg' & ( @src.type = 'reg' | @src.type = 'mem' )
 		if @src.size and not @dest.size
 			err 'operand sizes do not match'

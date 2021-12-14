@@ -1,7 +1,7 @@
 
 macro invpcid? dest*,src*
-	x86.parse_operand @dest,dest
-	x86.parse_operand @src,src
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
 	if @dest.type = 'reg' & @src.type = 'mem'
 		if (x86.mode < 64 & @dest.size <> 4) | (x86.mode = 64 & @dest.size <> 8) | @src.size and not 16
 			err 'invalid operand size'

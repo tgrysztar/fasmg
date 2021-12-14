@@ -2,7 +2,7 @@
 include 'sse2.inc'
 
 macro fisttp? src*
-	x86.parse_operand @src,src
+	x86.parse_operand@src src
 	if @src.type = 'mem'
 		if @src.size = 2
 			x86.store_instruction 0DFh,@src,1
@@ -40,8 +40,8 @@ macro movddup? dest*,src*
 end macro
 
 macro lddqu? dest*,src*
-	SSE.parse_operand @dest,dest
-	SSE.parse_operand @src,src
+	SSE.parse_operand@src dest
+	SSE.parse_operand@src src
 	if (@dest.size or @src.size) and not 16
 		err 'invalid operand size'
 	end if

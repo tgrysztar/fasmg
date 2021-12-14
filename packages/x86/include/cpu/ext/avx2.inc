@@ -6,224 +6,186 @@ if ~ defined AVX2
 
 	include 'avx.inc'
 
-	calminstruction AVX.parse_vsib_operand namespace, operand
+	iterate context, @dest,@src,@src2,@aux
 
-		local	size, type, segment_prefix
-		local	displacement, displacement_size, auto_relative
-		local	address, base_registers, index_registers
-		local	mode, mod, rm
-		local	scale, index, base
-		local	visize
+		namespace context
 
-		local	i, pre, suf, sym
+			define visize
 
-		compute segment_prefix, 0
+			calminstruction AVX.parse_vsib_operand#context operand
 
-		compute size, 0
-		compute displacement_size, 0
+				local	i, pre, suf
 
-		transform operand
+				compute segment_prefix, 0
 
-		match	pre suf, operand
-		jno	no_size_prefix
-		transform pre, x86
-		jno	no_size_prefix
-		match	:size, pre
-		jno	no_size_prefix
-		arrange operand, suf
-	      no_size_prefix:
+				compute size, 0
+				compute displacement_size, 0
 
-		match	[address], operand
-		jyes	memory_operand
-		match	=ptr? address, operand
-		jyes	memory_operand
+				transform operand
 
-		jump	invalid_operand
+				match	pre suf, operand
+				jno	no_size_prefix
+				transform pre, x86
+				jno	no_size_prefix
+				match	:size, pre
+				jno	no_size_prefix
+				arrange operand, suf
+			      no_size_prefix:
 
-	  memory_operand:
-		compute type, 'mem'
+				match	[address], operand
+				jyes	memory_operand
+				match	=ptr? address, operand
+				jyes	memory_operand
 
-		match	segment:address, address
-		jno	segment_prefix_ok
-		check	segment eq 1 elementof segment & 1 metadataof segment relativeto x86.sreg
-		jno	invalid_operand
-		compute segment, 1 metadataof segment - x86.sreg
-		check	segment >= 4
-		jyes	segment_prefix_386
-		compute segment_prefix, 26h + segment shl 3
-		jump	segment_prefix_ok
-	      segment_prefix_386:
-		compute segment_prefix, 64h + segment-4
-	      segment_prefix_ok:
+				jump	invalid_operand
 
-		match	pre suf, address
-		jno	no_address_size_prefix
-		transform pre, x86
-		jno	no_address_size_prefix
-		match	:pre, pre
-		jno	no_address_size_prefix
-		arrange address, suf
-		check	pre = 4 | pre = 8
-		jno	invalid_address_size
-		compute mode, pre shl 3
-	      no_address_size_prefix:
+			  memory_operand:
+				compute type, 'mem'
 
-		compute mode, 0
-		compute scale, 0
-		compute index, 0
-		compute base, 0
-		compute auto_relative, 0
+				match	segment:address, address
+				jno	segment_prefix_ok
+				check	segment eq 1 elementof segment & 1 metadataof segment relativeto x86.sreg
+				jno	invalid_operand
+				compute segment, 1 metadataof segment - x86.sreg
+				check	segment >= 4
+				jyes	segment_prefix_386
+				compute segment_prefix, 26h + segment shl 3
+				jump	segment_prefix_ok
+			      segment_prefix_386:
+				compute segment_prefix, 64h + segment-4
+			      segment_prefix_ok:
 
-		check	size
-		jyes	size_override
-		compute size, sizeof address
-	      size_override:
+				match	pre suf, address
+				jno	no_address_size_prefix
+				transform pre, x86
+				jno	no_address_size_prefix
+				match	:pre, pre
+				jno	no_address_size_prefix
+				arrange address, suf
+				check	pre = 4 | pre = 8
+				jno	invalid_address_size
+				compute mode, pre shl 3
+			      no_address_size_prefix:
 
-		compute address, address
-		compute base_registers, 0
-		compute index_registers, 0
-		compute i, 1
-	      extract_registers:
-		check	i > elementsof address
-		jyes	registers_extracted
-		check	i metadataof address relativeto SSE.reg | i metadataof address relativeto AVX.reg
-		jyes	index_term
-		check	i metadataof address relativeto x86.r32 | i metadataof address relativeto x86.r64
-		jno	next_term
-		compute base_registers, base_registers + i elementof address * i scaleof address
-		jump	next_term
-	      index_term:
-		compute index_registers, index_registers + i elementof address * i scaleof address
-	      next_term:
-		compute i, i+1
-		jump	extract_registers
-	      registers_extracted:
-		compute displacement, address - base_registers - index_registers
-		compute auto_relative, 0
+				compute mode, 0
+				compute scale, 0
+				compute index, 0
+				compute base, 0
+				compute auto_relative, 0
 
-		check	elementsof index_registers = 1
-		jno	invalid_address
-		compute scale, 1 scaleof index_registers
-		compute index, 0 scaleof (1 metadataof index_registers)
-		check	scale > 2 & scale <> 4 & scale <> 8
-		jyes	invalid_address
-		check	1 metadataof index_registers relativeto SSE.reg
-		jyes	xmm_index
-		compute visize, 32
-		jump	index_ok
-	      xmm_index:
-		compute visize, 16
-	      index_ok:
+				check	size
+				jyes	size_override
+				compute size, sizeof address
+			      size_override:
 
-		compute rm, 4
-		check	elementsof base_registers = 1 & 1 scaleof base_registers = 1
-		jyes	base_and_index
-		check	elementsof base_registers = 0
-		jno	invalid_address
-		compute base, 5
-		compute displacement_size, 4
-		compute mod, 0
-		compute mode, x86.mode
-		check	mode > 16
-		jyes	export_address
-		compute mode, 32
-		jump	export_address
-	      base_and_index:
-		compute base, 0 scaleof (1 metadataof base_registers)
-		check	mode & mode <> 0 scaleof (1 metadataof (1 metadataof base_registers)) shl 3
-		jyes	invalid_address
-		compute mode, 0 scaleof (1 metadataof (1 metadataof base_registers)) shl 3
+				compute address, address
+				compute base_registers, 0
+				compute index_registers, 0
+				compute i, 1
+			      extract_registers:
+				check	i > elementsof address
+				jyes	registers_extracted
+				check	i metadataof address relativeto SSE.reg | i metadataof address relativeto AVX.reg
+				jyes	index_term
+				check	i metadataof address relativeto x86.r32 | i metadataof address relativeto x86.r64
+				jno	next_term
+				compute base_registers, base_registers + i elementof address * i scaleof address
+				jump	next_term
+			      index_term:
+				compute index_registers, index_registers + i elementof address * i scaleof address
+			      next_term:
+				compute i, i+1
+				jump	extract_registers
+			      registers_extracted:
+				compute displacement, address - base_registers - index_registers
+				compute auto_relative, 0
 
-	      setup_displacement:
-		check	displacement relativeto 0
-		jno	displacement_32bit
-		check	displacement = 0 & rm and 111b <> 5 & (rm <> 4 | base and 111b <> 5)
-		jyes	displacement_empty
-		check	displacement < 80h & displacement >= -80h
-		jyes	displacement_8bit
-		check	displacement - 1 shl mode >= -80h & displacement < 1 shl mode
-		jyes	displacement_8bit_wrap
-	      displacement_32bit:
-		compute displacement_size, 4
-		compute mod, 2
-		jump	export_address
-	      displacement_8bit_wrap:
-		compute displacement, displacement - 1 shl mode
-	      displacement_8bit:
-		compute displacement_size, 1
-		compute mod, 1
-		jump	export_address
-	      index_only:
-		compute displacement_size, 4
-		compute mod, 0
-		jump	export_address
-	      displacement_empty:
-		compute displacement_size, 0
-		compute mod, 0
+				check	elementsof index_registers = 1
+				jno	invalid_address
+				compute scale, 1 scaleof index_registers
+				compute index, 0 scaleof (1 metadataof index_registers)
+				check	scale > 2 & scale <> 4 & scale <> 8
+				jyes	invalid_address
+				check	1 metadataof index_registers relativeto SSE.reg
+				jyes	xmm_index
+				compute visize, 32
+				jump	index_ok
+			      xmm_index:
+				compute visize, 16
+			      index_ok:
 
-	  export_address:
+				compute rm, 4
+				check	elementsof base_registers = 1 & 1 scaleof base_registers = 1
+				jyes	base_and_index
+				check	elementsof base_registers = 0
+				jno	invalid_address
+				compute base, 5
+				compute displacement_size, 4
+				compute mod, 0
+				compute mode, x86.mode
+				check	mode > 16
+				jyes	ready
+				compute mode, 32
+				jump	ready
+			      base_and_index:
+				compute base, 0 scaleof (1 metadataof base_registers)
+				check	mode & mode <> 0 scaleof (1 metadataof (1 metadataof base_registers)) shl 3
+				jyes	invalid_address
+				compute mode, 0 scaleof (1 metadataof (1 metadataof base_registers)) shl 3
 
-		arrange sym, namespace.=address
-		publish sym, address
+			      setup_displacement:
+				check	displacement relativeto 0
+				jno	displacement_32bit
+				check	displacement = 0 & rm and 111b <> 5 & (rm <> 4 | base and 111b <> 5)
+				jyes	displacement_empty
+				check	displacement < 80h & displacement >= -80h
+				jyes	displacement_8bit
+				check	displacement - 1 shl mode >= -80h & displacement < 1 shl mode
+				jyes	displacement_8bit_wrap
+			      displacement_32bit:
+				compute displacement_size, 4
+				compute mod, 2
+				jump	ready
+			      displacement_8bit_wrap:
+				compute displacement, displacement - 1 shl mode
+			      displacement_8bit:
+				compute displacement_size, 1
+				compute mod, 1
+				jump	ready
+			      index_only:
+				compute displacement_size, 4
+				compute mod, 0
+				jump	ready
+			      displacement_empty:
+				compute displacement_size, 0
+				compute mod, 0
 
-		arrange sym, namespace.=scale
-		publish sym, scale
+			  ready:
 
-		arrange sym, namespace.=index
-		publish sym, index
+				exit
 
-		arrange sym, namespace.=base
-		publish sym, base
+			  invalid_operand:
+				asmcmd	=err 'invalid operand'
+				exit
+			  invalid_address:
+				asmcmd	=err 'invalid address'
+				exit
+			  invalid_address_size:
+				asmcmd	=err 'invalid address size'
+				exit
 
-		arrange sym, namespace.=auto_relative
-		publish sym, auto_relative
+			end calminstruction
 
-		arrange sym, namespace.=displacement
-		publish sym, displacement
+		end namespace
 
-		arrange sym, namespace.=mode
-		publish sym, mode
-
-		arrange sym, namespace.=mod
-		publish sym, mod
-
-		arrange sym, namespace.=rm
-		publish sym, rm
-
-		arrange sym, namespace.=type
-		publish sym, type
-
-		arrange sym, namespace.=size
-		publish sym, size
-
-		arrange sym, namespace.=visize
-		publish sym, visize
-
-		arrange sym, namespace.=displacement_size
-		publish sym, displacement_size
-
-		arrange sym, namespace.=segment_prefix
-		publish sym, segment_prefix
-		exit
-
-	  invalid_operand:
-		asmcmd	=err 'invalid operand'
-		exit
-	  invalid_address:
-		asmcmd	=err 'invalid address'
-		exit
-	  invalid_address_size:
-		asmcmd	=err 'invalid address size'
-		exit
-
-	end calminstruction
+	end iterate
 
 	iterate <instr,opcode,asize>, vpgatherdd,90h,4, vpgatherqd,91h,8, vgatherdps,92h,4, vgatherqps,93h,8
 
 		macro instr? dest*,src*,mask*
-			AVX.parse_operand @dest,dest
-			AVX.parse_vsib_operand @src,src
-			AVX.parse_operand @aux,mask
+			AVX.parse_operand@dest dest
+			AVX.parse_vsib_operand@src src
+			AVX.parse_operand@aux mask
 			if @dest.type = 'mmreg' & @src.type = 'mem' & @aux.type = 'mmreg'
 				if @src.size and not 4 | (@dest.size > 16 & @dest.size * (asize shr 2) > @src.visize) | (@src.visize > 16 & @dest.size * (asize shr 2) < @src.visize)
 					err 'invalid operand size'
@@ -243,9 +205,9 @@ if ~ defined AVX2
 	iterate <instr,opcode,asize>, vpgatherdq,90h,4, vpgatherqq,91h,8, vgatherdpd,92h,4, vgatherqpd,93h,8
 
 		macro instr? dest*,src*,mask*
-			AVX.parse_operand @dest,dest
-			AVX.parse_vsib_operand @src,src
-			AVX.parse_operand @aux,mask
+			AVX.parse_operand@dest dest
+			AVX.parse_vsib_operand@src src
+			AVX.parse_operand@aux mask
 			if @dest.type = 'mmreg' & @src.type = 'mem' & @aux.type = 'mmreg'
 				if @src.size and not 8 | (@dest.size > 16 & @dest.size * (asize shr 2) > @src.visize * 2) | (@src.visize > 16 & @dest.size * (asize shr 2) < @src.visize * 2)
 					err 'invalid operand size'
@@ -317,10 +279,10 @@ if ~ defined AVX2
 	end iterate
 
 	macro vpblendvb? dest*,src*,src2*,mask*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		AVX.parse_operand @src2,src2
-		AVX.parse_operand @aux,mask
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		AVX.parse_operand@src2 src2
+		AVX.parse_operand@aux mask
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'mmreg'
 			if @src.size <> @dest.size | @src2.size and not @dest.size | @aux.size <> @dest.size
 				err 'operand sizes do not match'
@@ -332,8 +294,8 @@ if ~ defined AVX2
 	end macro
 
 	macro vpmovmskb? dest*,src*
-		x86.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		x86.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'reg' & @src.type = 'mmreg'
 			if (@dest.size <> 4 & (x86.mode < 64 | @dest.size <> 8))
 				err 'invalid operand size'
@@ -348,8 +310,8 @@ if ~ defined AVX2
 				      pmovzxbw,30h,8, pmovzxbd,31h,4, pmovzxbq,32h,2, pmovzxwd,33h,8, pmovzxwq,34h,4, pmovzxdq,35h,8
 
 		macro v#instr? dest*,src*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if (@src.type = 'mmreg' & @src.size <> 16) | (@src.type = 'mem' & @src.size and not (msize * (@dest.size shr 4)))
 					err 'invalid operand size'
@@ -365,9 +327,9 @@ if ~ defined AVX2
 	iterate <instr,postbyte>, pslldq,7, psrldq,3
 
 		macro v#instr dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			x86.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			x86.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'imm'
 				if @src2.size and not 1
 					err 'invalid operand size'
@@ -385,9 +347,9 @@ if ~ defined AVX2
 	iterate <instr,opcode_rrm,opcode,postbyte>, psllw,0F1h,71h,6, pslld,0F2h,72h,6, psllq,0F3h,73h,6, psraw,0E1h,71h,4, psrad,0E2h,72h,4, psrlw,0D1h,71h,2, psrld,0D2h,72h,2, psrlq,0D3h,73h,2
 
 		macro v#instr? dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			AVX.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			AVX.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src2.size and not 16
 					err 'invalid operand size'
@@ -410,8 +372,8 @@ if ~ defined AVX2
 	end iterate
 
 	macro vmovntdqa? dest*,src*
-		AVX.parse_operand @dest,dest
-		x86.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		x86.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mem'
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'
@@ -425,9 +387,9 @@ if ~ defined AVX2
 	iterate <instr,w>, vpmaskmovd,0, vpmaskmovq,1
 
 		macro instr? dest*,src*,src2*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
-			AVX.parse_operand @src2,src2
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
+			AVX.parse_operand@src2 src2
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & @src2.type = 'mem'
 				if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
@@ -446,8 +408,8 @@ if ~ defined AVX2
 	end iterate
 
 	macro vbroadcasti128? dest*,src*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'mem'
 			if @dest.size <> 32 | @src.size and not 16
 				err 'invalid operand size'
@@ -459,9 +421,9 @@ if ~ defined AVX2
 	end macro
 
 	macro vextracti128? dest*,src*,aux*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		x86.parse_operand@aux aux
 		if (@dest.type = 'mmreg' | @dest.type = 'mem') & @src.type = 'mmreg' & @aux.type = 'imm'
 			if @dest.size and not 16 | @src.size <> 32 | @aux.size and not 1
 				err 'invalid operand size'
@@ -473,10 +435,10 @@ if ~ defined AVX2
 	end macro
 
 	macro vinserti128? dest*,src*,src2*,aux*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
-		AVX.parse_operand @src2,src2
-		x86.parse_operand @aux,aux
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
+		AVX.parse_operand@src2 src2
+		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mmreg' | @src2.type = 'mem') & @aux.type = 'imm'
 			if @dest.size <> 32 | @src.size <> 32 | @src2.size and not 16 | @aux.size and not 1
 				err 'invalid operand size'
@@ -494,8 +456,8 @@ if ~ defined AVX2
 	iterate <instr,opcode,msize>, vbroadcastss,18h,4, vpbroadcastb,78h,1, vpbroadcastw,79h,2, vpbroadcastd,58h,4, vpbroadcastq,59h,8
 
 		macro instr? dest*,src*
-			AVX.parse_operand @dest,dest
-			AVX.parse_operand @src,src
+			AVX.parse_operand@dest dest
+			AVX.parse_operand@src src
 			if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem')
 				if (@src.type='mmreg' & @src.size <> 16) | (@src.type = 'mem' & @src.size and not msize)
 					err 'invalid operand size'
@@ -509,8 +471,8 @@ if ~ defined AVX2
 	end iterate
 
 	macro vbroadcastsd? dest*,src*
-		AVX.parse_operand @dest,dest
-		AVX.parse_operand @src,src
+		AVX.parse_operand@dest dest
+		AVX.parse_operand@src src
 		if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem')
 			if @dest.size <> 32 | (@src.type='mmreg' & @src.size <> 16) | (@src.type = 'mem' & @src.size and not 8)
 				err 'invalid operand size'
