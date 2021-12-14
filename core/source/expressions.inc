@@ -166,9 +166,8 @@ convert_number:
 	jc	invalid_number
     hexadecimal_number:
 	push	edx ecx
-	inc	ecx
 	shr	ecx,1
-	add	ecx,5
+	add	ecx,6
 	mov	edx,value_workspace
 	call	reserve_workspace
 	pop	ebx edx
@@ -218,9 +217,8 @@ convert_number:
 	sub	ecx,2
 	jc	invalid_number
 	push	edx ecx
-	add	ecx,7
 	shr	ecx,3
-	add	ecx,5
+	add	ecx,6
 	mov	edx,value_workspace
 	call	reserve_workspace
 	pop	ebx edx
@@ -257,9 +255,8 @@ convert_number:
 	sub	ecx,2
 	jc	invalid_number
 	push	edx ecx
-	inc	ecx
 	shr	ecx,1
-	add	ecx,5
+	add	ecx,6
 	mov	edx,value_workspace
 	call	reserve_workspace
 	pop	ebx edx

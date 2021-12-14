@@ -1,1 +1,1 @@
-VERSION equ "jist"
+VERSION equ "jit5"
