@@ -40,11 +40,11 @@ calminstruction calminstruction?.asm? line&
 	assemble buffer
 end calminstruction
 
-; CALL
-; extends the built-in command with the ability to define some arguments as literal values;
+; XCALL
+; extends the CALL command with the ability to define some arguments as literal values;
 ; arguments enclosed with () are treated as numeric,
 ; ones enclosed with <> are treated as a text of symbolic value.
-calminstruction calminstruction?.call? instruction*, arguments&
+calminstruction calminstruction?.xcall? instruction*, arguments&
 	arrange instruction, =call instruction
     convert:
 	match	, arguments

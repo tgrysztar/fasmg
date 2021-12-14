@@ -43,6 +43,44 @@ macro calminstruction?.asmcmd? pattern&
 	assemble cmd
 end macro
 
+calminstruction calminstruction?.initsym? var*, val&
+	publish var, val
+end calminstruction
+
+calminstruction calminstruction?.xcall? instruction*, arguments&
+	arrange instruction, =call instruction
+    convert:
+	match	, arguments
+	jyes	ready
+	local	v
+	match	v=,arguments, arguments, <>
+	jyes	recognize
+	arrange v, arguments
+	arrange arguments,
+    recognize:
+	match	(v), v
+	jyes	numeric
+	match	<v>, v
+	jyes	symbolic
+    append:
+	arrange instruction, instruction=,v
+	jump	convert
+    numeric:
+	compute v, v
+    symbolic:
+	local proxy, base, i
+	initsym base, proxy
+	initsym i, 0
+	compute i, i+1
+	arrange proxy, base.i
+	publish proxy, v
+	arrange instruction, instruction=,proxy
+	jump	convert
+    ready:
+	assemble instruction
+end calminstruction
+
+
 calminstruction x86.parse_operand namespace, operand
 
 	local	size, type, segment_prefix
@@ -322,8 +360,7 @@ calminstruction x86.parse_jump_operand namespace, operand
 
     parse_operand:
 
-	arrange operand, =x86.=parse_operand namespace, operand
-	assemble operand
+	call	x86.parse_operand, namespace, operand
 
 	arrange sym, namespace.=jump_type
 	publish sym, jump_type
@@ -342,7 +379,6 @@ calminstruction x86.store_instruction opcode*,rm_operand*,reg*,imm_size:0,imm
 	arrange rm, rm_operand.=rm
 
 	arrange displacement_size, rm_operand.=displacement_size
-	arrange displacement, rm_operand.=displacement
 
 	check	segment_prefix
 	jno	segment_prefix_ok
@@ -380,10 +416,12 @@ calminstruction x86.store_instruction opcode*,rm_operand*,reg*,imm_size:0,imm
 	check	imm_size = 2
 	jno	immediate_ok
     immediate_16bit:
-	asmcmd	=dw imm
+	compute x86.imm, +imm
+	asmcmd	=dw =x86.=imm
 	jump	immediate_ok
     immediate_8bit:
-	asmcmd	=db imm
+	compute x86.imm, +imm
+	asmcmd	=db =x86.=imm
     immediate_ok:
 
 end calminstruction
@@ -393,8 +431,8 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 
 	calminstruction instr? dest*,src*
 
-		asmcmd	=x86.=parse_operand =@dest,dest
-		asmcmd	=x86.=parse_operand =@src,src
+		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand, @src,src
 
 		local	opcode, rm, size
 
@@ -442,7 +480,7 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		jno	reg_rm_store
 		compute opcode, opcode + 1
 	    reg_rm_store:
-		asmcmd	=x86.=store_instruction opcode,=@dest,=@src.=rm
+		call	x86.store_instruction, opcode,@dest,@src.rm
 		exit
 
 	    rm_reg:
@@ -451,7 +489,7 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		jno	rm_reg_store
 		compute opcode, opcode + 1
 	    rm_reg_store:
-		asmcmd	=x86.=store_instruction opcode,=@src,=@dest.=rm
+		call	x86.store_instruction, opcode,@src,@dest.rm
 		exit
 
 	    rm_imm:
@@ -461,7 +499,7 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		jyes	al_imm
 
 		compute opcode, opcode shr 3
-		asmcmd	=x86.=store_instruction 80h,=@dest,opcode,1,=@src.=imm
+		xcall	x86.store_instruction, (80h),@dest,opcode,byte,@src.imm
 		exit
 
 	    al_imm:
@@ -479,7 +517,7 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		jyes	ax_imm
 
 		compute rm, opcode shr 3
-		asmcmd	=x86.=store_instruction 81h,=@dest,rm,size,=@src.=imm
+		xcall	x86.store_instruction, (81h),@dest,rm,size,@src.imm
 		exit
 
 	    ax_imm:
@@ -493,7 +531,7 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 
 	    rm_simm:
 		compute rm, opcode shr 3
-		asmcmd	=x86.=store_instruction 83h,=@dest,rm,1,=@src.=imm
+		xcall	x86.store_instruction, (83h),@dest,rm,byte,@src.imm
 
 	end calminstruction
 
@@ -503,7 +541,7 @@ iterate <instr,postbyte>, not,2, neg,3, mul,4, imul,5, div,6, idiv,7
 
 	calminstruction instr? src*
 
-		asmcmd	=x86.=parse_operand =@src,src
+		call	x86.parse_operand, @src,src
 
 		check	@src.size = 0
 		jyes	operand_size_not_specified
@@ -517,11 +555,11 @@ iterate <instr,postbyte>, not,2, neg,3, mul,4, imul,5, div,6, idiv,7
 		check	@src.size = 2
 		jyes	rm_word
 
-		asmcmd	=x86.=store_instruction 0F6h,=@src,postbyte
+		xcall	x86.store_instruction, (0F6h),@src,(postbyte)
 		exit
 
 	    rm_word:
-		asmcmd	=x86.=store_instruction 0F7h,=@src,postbyte
+		xcall	x86.store_instruction, (0F7h),@src,(postbyte)
 		exit
 
 	    operand_size_not_specified:
@@ -542,8 +580,8 @@ end iterate
 
 calminstruction mov? dest*,src*
 
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 
 	local	ext, rm, size
 
@@ -594,10 +632,10 @@ calminstruction mov? dest*,src*
 	jyes	mov_ax_dirmem
 	check	size < 2
 	jyes	mov_reg_rm_8bit
-	asmcmd	=x86.=store_instruction 89h,=@dest,=@src.=rm
+	xcall	x86.store_instruction, (89h),@dest,@src.rm
 	exit
       mov_reg_rm_8bit:
-	asmcmd	=x86.=store_instruction 88h,=@dest,=@src.=rm
+	xcall	x86.store_instruction, (88h),@dest,@src.rm
 	exit
 
     mov_mem_reg:
@@ -605,10 +643,10 @@ calminstruction mov? dest*,src*
 	jyes	mov_dirmem_ax
 	check	size < 2
 	jyes	mov_mem_reg_8bit
-	asmcmd	=x86.=store_instruction 8Bh,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (8Bh),@src,@dest.rm
 	exit
       mov_mem_reg_8bit:
-	asmcmd	=x86.=store_instruction 8Ah,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (8Ah),@src,@dest.rm
 	exit
 
     mov_ax_dirmem:
@@ -659,30 +697,30 @@ calminstruction mov? dest*,src*
     mov_mem_imm:
 	check	size < 2
 	jyes	mov_mem_imm_8bit
-	asmcmd	=x86.=store_instruction 0C7h,=@dest,0,size,=@src.=imm
+	xcall	x86.store_instruction, (0C7h),@dest,(0),size,@src.imm
 	exit
       mov_mem_imm_8bit:
-	asmcmd	=x86.=store_instruction 0C6h,=@dest,0,1,=@src.=imm
+	xcall	x86.store_instruction, (0C6h),@dest,(0),byte,@src.imm
 	exit
 
     mov_rm_sreg:
 	check	size < 2
 	jyes	invalid_operand_size
-	asmcmd	=x86.=store_instruction 8Ch,=@dest,=@src.=rm
+	xcall	x86.store_instruction, (8Ch),@dest,@src.rm
 	exit
 
     mov_sreg_rm:
 	check	size < 2
 	jyes	invalid_operand_size
-	asmcmd	=x86.=store_instruction 8Eh,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (8Eh),@src,@dest.rm
 	exit
 
 end calminstruction
 
 calminstruction test? dest*,src*
 
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 
 	local	ext, rm, size
 
@@ -727,19 +765,19 @@ calminstruction test? dest*,src*
     test_reg_rm:
 	check	size < 2
 	jyes	test_reg_rm_8bit
-	asmcmd	=x86.=store_instruction 85h,=@dest,=@src.=rm
+	xcall	x86.store_instruction, (85h),@dest,@src.rm
 	exit
       test_reg_rm_8bit:
-	asmcmd	=x86.=store_instruction 84h,=@dest,=@src.=rm
+	xcall	x86.store_instruction, (84h),@dest,@src.rm
 	exit
 
     test_mem_reg:
 	check	size < 2
 	jyes	test_mem_reg_8bit
-	asmcmd	=x86.=store_instruction 85h,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (85h),@src,@dest.rm
 	exit
       test_mem_reg_8bit:
-	asmcmd	=x86.=store_instruction 84h,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (84h),@src,@dest.rm
 	exit
 
     test_rm_imm:
@@ -747,7 +785,7 @@ calminstruction test? dest*,src*
 	jyes	test_rm_imm_8bit
 	check	@dest.type = 'reg' & @dest.rm = 0
 	jyes	test_ax_imm
-	asmcmd	=x86.=store_instruction 0F7h,=@dest,0,size,=@src.=imm
+	xcall	x86.store_instruction, (0F7h),@dest,(0),size,@src.imm
 	exit
 
       test_ax_imm:
@@ -758,7 +796,7 @@ calminstruction test? dest*,src*
       test_rm_imm_8bit:
 	check	@dest.type = 'reg' & @dest.rm = 0
 	jyes	test_al_imm
-	asmcmd	=x86.=store_instruction 0F6h,=@dest,0,1,=@src.=imm
+	xcall	x86.store_instruction, (0F6h),@dest,(0),byte,@src.imm
 	exit
       test_al_imm:
 	asmcmd	=db 0A8h, =@src.=imm
@@ -768,8 +806,8 @@ end calminstruction
 
 calminstruction xchg? dest*,src*
 
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 
 	local	ext, rm, size
 
@@ -824,19 +862,19 @@ calminstruction xchg? dest*,src*
     xchg_reg_rm:
 	check	size < 2
 	jyes	xchg_reg_rm_8bit
-	asmcmd	=x86.=store_instruction 87h,=@dest,=@src.=rm
+	xcall	x86.store_instruction, (87h),@dest,@src.rm
 	exit
       xchg_reg_rm_8bit:
-	asmcmd	=x86.=store_instruction 86h,=@dest,=@src.=rm
+	xcall	x86.store_instruction, (86h),@dest,@src.rm
 	exit
 
     xchg_rm_reg:
 	check	size < 2
 	jyes	xchg_rm_reg_8bit
-	asmcmd	=x86.=store_instruction 87h,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (87h),@src,@dest.rm
 	exit
       xchg_rm_reg_8bit:
-	asmcmd	=x86.=store_instruction 86h,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (86h),@src,@dest.rm
 	exit
 
 end calminstruction
@@ -845,7 +883,7 @@ iterate <instr,postbyte>, inc,0 ,dec,1
 
 	calminstruction instr? dest*
 
-		asmcmd	=x86.=parse_operand =@dest,dest
+		call	x86.parse_operand, @dest,dest
 
 		check	@dest.size > 2
 		jyes	invalid_operand_size
@@ -879,10 +917,10 @@ iterate <instr,postbyte>, inc,0 ,dec,1
 	    inc_rm:
 		check	@dest.size < 2
 		jyes	inc_rm_8bit
-		asmcmd	=x86.=store_instruction 0FFh,=@dest,postbyte
+		xcall	x86.store_instruction, (0FFh),@dest,(postbyte)
 		exit
 	      inc_rm_8bit:
-		asmcmd	=x86.=store_instruction 0FEh,=@dest,postbyte
+		xcall	x86.store_instruction, (0FEh),@dest,(postbyte)
 
 	end calminstruction
 
@@ -892,7 +930,7 @@ calminstruction push? src*
 
 	local	opcode
 
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @src,src
 
 	check	@src.size and not 2
 	jno	main
@@ -911,7 +949,7 @@ calminstruction push? src*
 	exit
 
     push_mem:
-	asmcmd	=x86.=store_instruction 0FFh,=@src,110b
+	xcall	x86.store_instruction, (0FFh),@src,(110b)
 	exit
 
     push_reg:
@@ -930,7 +968,7 @@ calminstruction pop? dest*
 
 	local	opcode
 
-	asmcmd	=x86.=parse_operand =@dest,dest
+	call	x86.parse_operand, @dest,dest
 
 	check	@dest.size and not 2
 	jno	main
@@ -950,7 +988,7 @@ calminstruction pop? dest*
 	exit
 
     pop_mem:
-	asmcmd	=x86.=store_instruction 8Fh,=@dest,0
+	xcall	x86.store_instruction, (8Fh),@dest,(0)
 	exit
 
     pop_reg:
@@ -1021,15 +1059,15 @@ iterate <instr,opcode>, ret,0C2h, retn,0C2h, retf,0CAh
 end iterate
 
 calminstruction lea? dest*,src*
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 	check	@src.type = 'mem' & @dest.type = 'reg'
 	jno	invalid_combination_of_operands
 	check	@dest.size = 2
 	jyes	ok
 	asmcmd	=err 'invalid operand size'
     ok:
-	asmcmd	=x86.=store_instruction 8Dh,=@src,=@dest.=rm
+	xcall	x86.store_instruction, (8Dh),@src,@dest.rm
 	exit
     invalid_combination_of_operands:
 	asmcmd	=err 'invalid combination of operands'
@@ -1038,13 +1076,13 @@ end calminstruction
 iterate <instr,opcode>, les,0C4h, lds,0C5h
 
 	calminstruction instr? dest*,src*
-		asmcmd	=x86.=parse_operand =@dest,dest
-		asmcmd	=x86.=parse_operand =@src,src
+		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand, @src,src
 		check	@dest.size and not 2 | @src.size and not 4
 		jyes	invalid_operand_size
 		check	@src.type = 'mem' & @dest.type = 'reg'
 		jno	invalid_combination_of_operands
-		asmcmd	=x86.=store_instruction opcode,=@src,=@dest.=rm
+		xcall	x86.store_instruction, (opcode),@src,@dest.rm
 		exit
 	    invalid_operand_size:
 		asmcmd	=err 'invalid operand size'
@@ -1059,8 +1097,8 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 
 	calminstruction instr? dest*,cnt*
 
-		asmcmd	=x86.=parse_operand =@dest,dest
-		asmcmd	=x86.=parse_operand =@src,cnt
+		call	x86.parse_operand, @dest,dest
+		call	x86.parse_operand, @src,cnt
 
 		check	@dest.size = 0
 		jyes	operand_size_not_specified
@@ -1081,10 +1119,10 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 	    shift_rm_cl:
 		check	@dest.size < 2
 		jyes	shift_r8_cl
-		asmcmd	=x86.=store_instruction 0D3h,=@dest,postbyte
+		xcall	x86.store_instruction, (0D3h),@dest,(postbyte)
 		exit
 	      shift_r8_cl:
-		asmcmd	=x86.=store_instruction 0D2h,=@dest,postbyte
+		xcall	x86.store_instruction, (0D2h),@dest,(postbyte)
 		exit
 
 	    shift_rm_imm:
@@ -1094,13 +1132,13 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 	      shift_rm16_imm:
 		check	@src.imm
 		jno	done
-		asmcmd	=x86.=store_instruction 0D1h,=@dest,postbyte
+		xcall	x86.store_instruction, (0D1h),@dest,(postbyte)
 		compute @src.imm, @src.imm - 1
 		jump	shift_rm16_imm
 	      shift_rm8_imm:
 		check	@src.imm
 		jno	done
-		asmcmd	=x86.=store_instruction 0D0h,=@dest,postbyte
+		xcall	x86.store_instruction, (0D0h),@dest,(postbyte)
 		compute @src.imm, @src.imm - 1
 		jump	shift_rm8_imm
 	      done:
@@ -1119,7 +1157,7 @@ end iterate
 
 calminstruction call? dest*
 
-	asmcmd	=x86.=parse_jump_operand =@dest,dest
+	call	x86.parse_jump_operand, @dest,dest
 
 	check	@dest.type = 'imm'
 	jyes	call_imm
@@ -1159,14 +1197,14 @@ calminstruction call? dest*
 	check	@dest.jump_type & @dest.jump_type <> 'far'
 	jyes	invalid_operand
       call_rm_far:
-	asmcmd	=x86.=store_instruction 0FFh,=@dest,11b
+	xcall	x86.store_instruction, (0FFh),@dest,(11b)
 	exit
 
       call_rm_word:
 	check	@dest.jump_type & @dest.jump_type <> 'near'
 	jyes	invalid_operand
       call_rm_near:
-	asmcmd	=x86.=store_instruction 0FFh,=@dest,10b
+	xcall	x86.store_instruction, (0FFh),@dest,(10b)
 	exit
 
     call_imm:
@@ -1186,7 +1224,7 @@ end calminstruction
 
 calminstruction jmp? dest*
 
-	asmcmd	=x86.=parse_jump_operand =@dest,dest
+	call	x86.parse_jump_operand, @dest,dest
 
 	check	@dest.type = 'imm'
 	jyes	jmp_imm
@@ -1226,14 +1264,14 @@ calminstruction jmp? dest*
 	check	@dest.jump_type & @dest.jump_type <> 'far'
 	jyes	invalid_operand
       jmp_rm_far:
-	asmcmd	=x86.=store_instruction 0FFh,=@dest,101b
+	xcall	x86.store_instruction, (0FFh),@dest,(101b)
 	exit
 
       jmp_rm_word:
 	check	@dest.jump_type & @dest.jump_type <> 'near'
 	jyes	invalid_operand
       jmp_rm_near:
-	asmcmd	=x86.=store_instruction 0FFh,=@dest,100b
+	xcall	x86.store_instruction, (0FFh),@dest,(100b)
 	exit
 
     jmp_imm:
@@ -1295,7 +1333,7 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 
 	calminstruction instr? dest*
 
-		asmcmd	=x86.=parse_jump_operand =@dest,dest
+		call	x86.parse_jump_operand, @dest,dest
 
 		check	@dest.type <> 'imm' & ( @dest.jump_type & @dest.jump_type <> 'short' )
 		jyes	invalid_operand
@@ -1341,7 +1379,7 @@ iterate <instr,opcode>, loopnz,0E0h, loopne,0E0h, loopz,0E1h, loope,0E1h, loop,0
 
 	calminstruction instr? dest*
 
-		asmcmd	=x86.=parse_jump_operand =@dest,dest
+		call	x86.parse_jump_operand, @dest,dest
 
 		check	@dest.type = 'imm' & ( @dest.jump_type = 'short' | ~ @dest.jump_type )
 		jno	invalid_operand
@@ -1406,8 +1444,8 @@ calminstruction aad? number:10
 end calminstruction
 
 calminstruction movs? dest*,src*
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 	local	size
 	check	@dest.size = 0 & @src.size = 0
 	jyes	operand_size_not_specified
@@ -1442,8 +1480,8 @@ calminstruction movs? dest*,src*
 end calminstruction
 
 calminstruction cmps? src*,dest*
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 	local	size
 	check	@dest.size = 0 & @src.size = 0
 	jyes	operand_size_not_specified
@@ -1478,7 +1516,7 @@ calminstruction cmps? src*,dest*
 end calminstruction
 
 calminstruction stos? dest*
-	asmcmd	=x86.=parse_operand =@dest,dest
+	call	x86.parse_operand, @dest,dest
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -1498,7 +1536,7 @@ calminstruction stos? dest*
 end calminstruction
 
 calminstruction lods? src*
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @src,src
 	check	@src.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -1522,7 +1560,7 @@ calminstruction lods? src*
 end calminstruction
 
 calminstruction scas? dest*
-	asmcmd	=x86.=parse_operand =@dest,dest
+	call	x86.parse_operand, @dest,dest
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -1542,7 +1580,7 @@ calminstruction scas? dest*
 end calminstruction
 
 calminstruction xlat? src*
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @src,src
 	check	@src.size > 1
 	jno	size_ok
 	asmcmd	=err 'invalid operand size'
@@ -1561,8 +1599,8 @@ calminstruction xlat? src*
 end calminstruction
 
 calminstruction in? dest*,src*
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 	check	@dest.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'
@@ -1592,8 +1630,8 @@ calminstruction in? dest*,src*
 end calminstruction
 
 calminstruction out? dest*,src*
-	asmcmd	=x86.=parse_operand =@dest,dest
-	asmcmd	=x86.=parse_operand =@src,src
+	call	x86.parse_operand, @dest,dest
+	call	x86.parse_operand, @src,src
 	check	@src.size
 	jyes	size_ok
 	asmcmd	=err 'operand size not specified'

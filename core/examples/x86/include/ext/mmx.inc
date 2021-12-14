@@ -15,7 +15,7 @@ if ~ defined MMX
 		local	size, type, mod, rm, imm
 		local	i, sym, cmd
 
-		asmcmd	=x86.=parse_operand namespace, operand
+		call	x86.parse_operand, namespace, operand
 
 		arrange type, namespace.=type
 		arrange size, namespace.=size
@@ -48,15 +48,15 @@ if ~ defined MMX
 	end calminstruction
 
 	calminstruction MMX.basic_instruction ext,dest,src
-		asmcmd	=MMX.=parse_operand =@dest,dest
-		asmcmd	=MMX.=parse_operand =@src,src
+		call	MMX.parse_operand, @dest,dest
+		call	MMX.parse_operand, @src,src
 		check	(@src.size or @dest.size) and not 8
 		jno	size_ok
 		asmcmd	=err 'invalid operand size'
 	    size_ok:
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jno	invalid_combination_of_operands
-		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
 		exit
 	    invalid_combination_of_operands:
 		asmcmd	=err 'invalid combination of operands'
@@ -74,8 +74,8 @@ if ~ defined MMX
 	end iterate
 
 	calminstruction movq? dest*,src*
-		asmcmd	=MMX.=parse_operand =@dest,dest
-		asmcmd	=MMX.=parse_operand =@src,src
+		call	MMX.parse_operand, @dest,dest
+		call	MMX.parse_operand, @src,src
 		check	(@src.size or @dest.size) and not 8
 		jno	size_ok
 		asmcmd	=err 'invalid operand size'
@@ -87,16 +87,16 @@ if ~ defined MMX
 		asmcmd	=err 'invalid combination of operands'
 		exit
 	    mmreg_mem:
-		asmcmd	=x86.=store_instruction <0Fh,6Fh>,=@src,=@dest.=rm
+		xcall	x86.store_instruction, <0Fh,6Fh>,@src,@dest.rm
 		exit
 	    mem_mmreg:
-		asmcmd	=x86.=store_instruction <0Fh,7Fh>,=@dest,=@src.=rm
+		xcall	x86.store_instruction, <0Fh,7Fh>,@dest,@src.rm
 		exit
 	end calminstruction
 
 	calminstruction movd? dest*,src*
-		asmcmd	=MMX.=parse_operand =@dest,dest
-		asmcmd	=MMX.=parse_operand =@src,src
+		call	MMX.parse_operand, @dest,dest
+		call	MMX.parse_operand, @src,src
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'reg')
 		jyes	mmreg_rm
 		check	(@dest.type = 'mem' | @dest.type = 'reg') & @src.type = 'mmreg'
@@ -108,19 +108,19 @@ if ~ defined MMX
 		jno	mmreg_rm_ok
 		asmcmd	=err 'invalid operand size'
 	      mmreg_rm_ok:
-		asmcmd	=x86.=store_instruction <0Fh,6Eh>,=@src,=@dest.=rm
+		xcall	x86.store_instruction, <0Fh,6Eh>,@src,@dest.rm
 		exit
 	    rm_mmreg:
 		check	@dest.size and not 4
 		jno	rm_mmreg_ok
 		asmcmd	=err 'invalid operand size'
 	      rm_mmreg_ok:
-		asmcmd	=x86.=store_instruction <0Fh,7Eh>,=@dest,=@src.=rm
+		xcall	x86.store_instruction, <0Fh,7Eh>,@dest,@src.rm
 	end calminstruction
 
 	calminstruction MMX.bit_shift_instruction ext,dest,src
-		asmcmd	=MMX.=parse_operand =@dest,dest
-		asmcmd	=MMX.=parse_operand =@src,src
+		call	MMX.parse_operand, @dest,dest
+		call	MMX.parse_operand, @src,src
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jyes	mmreg_rm
 		check	@dest.type = 'mmreg' & @src.type = 'imm'
@@ -132,7 +132,7 @@ if ~ defined MMX
 		jno	mmreg_rm_ok
 		asmcmd	=err 'invalid operand size'
 	      mmreg_rm_ok:
-		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
 		exit
 	    mmreg_imm:
 		check	@src.size and not 1
@@ -142,7 +142,7 @@ if ~ defined MMX
 		local	iext, irm
 		compute iext, 70h+(ext and 0Fh)
 		compute irm, ((ext shr 4)-0Ch) shl 1
-		asmcmd	=x86.=store_instruction <0Fh,iext>,=@dest,irm,1,=@src.=imm
+		xcall	x86.store_instruction, <0Fh,iext>,@dest,irm,byte,@src.imm
 	end calminstruction
 
 	iterate <instr,opcode>, psrlw,0D1h, psrld,0D2h, psrlq,0D3h, psrad,0E2h, psraw,0E1h, psllw,0F1h, pslld,0F2h, psllq,0F3h

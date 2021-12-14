@@ -20,7 +20,7 @@ if ~ defined SSE
 		local	size, type, mod, rm, imm
 		local	i, sym, cmd
 
-		asmcmd	=x86.=parse_operand namespace, operand
+		call	x86.parse_operand, namespace, operand
 
 		arrange type, namespace.=type
 		arrange size, namespace.=size
@@ -68,8 +68,8 @@ if ~ defined SSE
 	end calminstruction
 
 	calminstruction SSE.basic_instruction pre,ext,msize,dest,src
-		asmcmd	=SSE.=parse_operand =@dest,dest
-		asmcmd	=SSE.=parse_operand =@src,src
+		call	SSE.parse_operand, @dest,dest
+		call	SSE.parse_operand, @src,src
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jno	invalid_combination_of_operands
 		check	@dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16)
@@ -77,16 +77,16 @@ if ~ defined SSE
 		asmcmd	=err 'invalid operand size'
 	    size_ok:
 		compute @src.opcode_prefix, pre
-		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
 		exit
 	    invalid_combination_of_operands:
 		asmcmd	=err 'invalid combination of operands'
 	end calminstruction
 
 	calminstruction SSE.basic_instruction_imm8 pre,ext,msize,dest,src,aux
-		asmcmd	=SSE.=parse_operand =@dest,dest
-		asmcmd	=SSE.=parse_operand =@src,src
-		asmcmd	=x86.=parse_operand =@aux,aux
+		call	SSE.parse_operand, @dest,dest
+		call	SSE.parse_operand, @src,src
+		call	x86.parse_operand, @aux,aux
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
 		jno	invalid_combination_of_operands
 		check	@dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16) | @aux.size and not 1
@@ -94,7 +94,7 @@ if ~ defined SSE
 		asmcmd	=err 'invalid operand size'
 	    size_ok:
 		compute @src.opcode_prefix, pre
-		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm,1,=@aux.=imm
+		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm,byte,@aux.imm
 		exit
 	    invalid_combination_of_operands:
 		asmcmd	=err 'invalid combination of operands'

@@ -1381,7 +1381,8 @@ alm_call:
 	stosd
 	mov	eax,ebx
 	stosd
-	cmp	[embedded_context],alm_adjusted_context
+	mov	eax,alm_adjusted_context
+	cmp	[embedded_context],eax
 	jne	alm_call_argument
 	mov	eax,[line_context]
 	mov	[embedded_context],eax

@@ -352,24 +352,24 @@ if ~ defined SSE2
 	end calminstruction
 
 	calminstruction MMX.basic_instruction ext,dest,src
-		asmcmd	=SSE.=parse_operand =@dest,dest
-		asmcmd	=SSE.=parse_operand =@src,src
+		call	SSE.parse_operand, @dest,dest
+		call	SSE.parse_operand, @src,src
 		check	@src.size and not @dest.size
 		jno	size_ok
 		asmcmd	=err 'operand sizes do not match'
 	    size_ok:
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jno	invalid_combination_of_operands
-		asmcmd	=MMX.=select_operand_prefix =@src,=@dest.=size
-		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		call	MMX.select_operand_prefix, @src,@dest.size
+		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
 		exit
 	    invalid_combination_of_operands:
 		asmcmd	=err 'invalid combination of operands'
 	end calminstruction
 
 	calminstruction MMX.bit_shift_instruction ext,dest,src
-		asmcmd	=SSE.=parse_operand =@dest,dest
-		asmcmd	=SSE.=parse_operand =@src,src
+		call	SSE.parse_operand, @dest,dest
+		call	SSE.parse_operand, @src,src
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jyes	mmreg_rm
 		check	@dest.type = 'mmreg' & @src.type = 'imm'
@@ -381,8 +381,8 @@ if ~ defined SSE2
 		jno	mmreg_rm_ok
 		asmcmd	=err 'operand sizes do not match'
 	      mmreg_rm_ok:
-		asmcmd	=MMX.=select_operand_prefix =@src,=@dest.=size
-		asmcmd	=x86.=store_instruction <0Fh,ext>,=@src,=@dest.=rm
+		call	MMX.select_operand_prefix, @src,@dest.size
+		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
 		exit
 	    mmreg_imm:
 		check	@src.size and not 1
@@ -392,8 +392,8 @@ if ~ defined SSE2
 		local	iext, irm
 		compute iext, 70h+(ext and 0Fh)
 		compute irm, ((ext shr 4)-0Ch) shl 1
-		asmcmd	=MMX.=select_operand_prefix =@dest,=@dest.=size
-		asmcmd	=x86.=store_instruction <0Fh,iext>,=@dest,irm,1,=@src.=imm
+		call	MMX.select_operand_prefix, @dest,@dest.size
+		xcall	x86.store_instruction, <0Fh,iext>,@dest,irm,byte,@src.imm
 	end calminstruction
 
 	iterate <instr,ext>, paddq,0D4h, pmuludq,0F4h, psubq,0FBh

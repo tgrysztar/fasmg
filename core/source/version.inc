@@ -1,1 +1,1 @@
-VERSION equ "jiqd"
+VERSION equ "jist"

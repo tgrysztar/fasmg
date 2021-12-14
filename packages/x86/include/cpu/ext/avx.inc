@@ -57,7 +57,7 @@ if ~ defined AVX
 		local	size, type, mod, rm, imm
 		local	i, sym, cmd
 
-		asmcmd	=x86.=parse_operand namespace, operand
+		call	x86.parse_operand, namespace, operand
 
 		arrange type, namespace.=type
 		arrange size, namespace.=size
@@ -266,16 +266,19 @@ if ~ defined AVX
 		jyes	immediate_32bit
 		check	imm_size = 8
 		jno	immediate_ok
-		asmcmd	=x86.=simm32 imm
+		call	x86.simm32, imm
 		jump	immediate_ok
 	    immediate_32bit:
-		asmcmd	=dd imm
+		compute x86.imm, +imm
+		asmcmd	=dd =x86.=imm
 		jump	immediate_ok
 	    immediate_16bit:
-		asmcmd	=dw imm
+		compute x86.imm, +imm
+		asmcmd	=dw =x86.=imm
 		jump	immediate_ok
 	    immediate_8bit:
-		asmcmd	=db imm
+		compute x86.imm, +imm
+		asmcmd	=db =x86.=imm
 	    immediate_ok:
 
 	end calminstruction

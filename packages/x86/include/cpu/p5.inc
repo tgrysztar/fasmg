@@ -23,7 +23,7 @@ iterate <instr,opcode>, wrmsr,<0Fh,30h>, rdtsc,<0Fh,31h>, rdmsr,<0Fh,32h>, rdpmc
 end iterate
 
 calminstruction cmpxchg8b? dest*
-	asmcmd	=x86.=parse_operand =@dest,dest
+	call	x86.parse_operand, @dest,dest
 	check	@dest.type = 'mem'
 	jyes	operand_ok
 	asmcmd	=err 'invalid operand'
@@ -33,7 +33,7 @@ calminstruction cmpxchg8b? dest*
 	jno	size_ok
 	asmcmd	=err 'invalid operand size'
     size_ok:
-	asmcmd	=x86.=store_instruction <0Fh,0C7h>,=@dest,1
+	xcall	x86.store_instruction, <0Fh,0C7h>,@dest,(1)
 end calminstruction
 
 include '80387.inc'

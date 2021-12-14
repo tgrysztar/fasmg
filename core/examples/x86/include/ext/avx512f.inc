@@ -48,7 +48,7 @@ if ~ defined AVX_512
 		local	size, type, mod, rm, imm
 		local	i, sym, cmd
 
-		asmcmd	=x86.=parse_operand namespace, operand
+		call	x86.parse_operand, namespace, operand
 
 		arrange type, namespace.=type
 		arrange size, namespace.=size
@@ -142,7 +142,7 @@ if ~ defined AVX_512
 		jyes	k1z
 		match	operand {k1}, operand
 		jyes	k1
-		asmcmd	=AVX_512.=parse_operand namespace, operand
+		call	AVX_512.parse_operand, namespace, operand
 		exit
 	    k1z:
 		compute z, 80h
@@ -150,7 +150,7 @@ if ~ defined AVX_512
 	    k1:
 		compute z, 0
 	    masked:
-		asmcmd	=AVX_512.=parse_operand namespace, operand
+		call	AVX_512.parse_operand, namespace, operand
 		arrange sym, namespace.=type
 		check	z & sym = 'mem'
 		jyes	invalid_mask
@@ -171,10 +171,10 @@ if ~ defined AVX_512
 		transform operand
 		match	operand {k1}, operand
 		jyes	k1
-		asmcmd	=AVX_512.=parse_operand namespace, operand
+		call	AVX_512.parse_operand, namespace, operand
 		exit
 	    k1:
-		asmcmd	=AVX_512.=parse_operand namespace, operand
+		call	AVX_512.parse_operand, namespace, operand
 		arrange sym, namespace.=type
 		check	k1 eq 1 elementof k1 & 1 metadataof k1 relativeto AVX_512.maskreg & 1 metadataof k1 - AVX_512.maskreg > 0
 		jno	invalid_mask
@@ -195,14 +195,14 @@ if ~ defined AVX_512
 		transform operand
 		match	operand {broadcast}, operand
 		jyes	mem_bcst
-		asmcmd	=AVX_512.=parse_operand namespace, operand
+		call	AVX_512.parse_operand, namespace, operand
 		exit
 
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
 
 	    mem_bcst:
-		asmcmd	=AVX_512.=parse_operand namespace, operand
+		call	ACX_512.parse_operand, namespace, operand
 		arrange sym, namespace.=type
 		check	sym = 'mem'
 		jno	invalid_operand
@@ -590,16 +590,19 @@ if ~ defined AVX_512
 		jyes	immediate_32bit
 		check	imm_size = 8
 		jno	immediate_ok
-		asmcmd	=x86.=simm32 imm
+		call	x86.simm32, imm
 		jump	immediate_ok
 	    immediate_32bit:
-		asmcmd	=dd imm
+		compute x86.imm, +imm
+		asmcmd	=dd =x86.=imm
 		jump	immediate_ok
 	    immediate_16bit:
-		asmcmd	=dw imm
+		compute x86.imm, +imm
+		asmcmd	=dw =x86.=imm
 		jump	immediate_ok
 	    immediate_8bit:
-		asmcmd	=db imm
+		compute x86.imm, +imm
+		asmcmd	=db =x86.=imm
 	    immediate_ok:
 
 	end calminstruction
@@ -2665,10 +2668,10 @@ if ~ defined AVX_512
 		transform operand
 		match	operand {k1}, operand
 		jyes	k1
-		asmcmd	=AVX_512.=parse_vsib_operand namespace, operand
+		call	AVX_512.parse_vsib_operand, namespace, operand
 		exit
 	    k1:
-		asmcmd	=AVX_512.=parse_vsib_operand namespace, operand
+		call	AVX_512.parse_vsib_operand, namespace, operand
 		arrange sym, namespace.=type
 		check	k1 eq 1 elementof k1 & 1 metadataof k1 relativeto AVX_512.maskreg & 1 metadataof k1 - AVX_512.maskreg > 0
 		jno	invalid_mask
