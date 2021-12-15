@@ -175,7 +175,7 @@ iterate <instr,vex_mpw,opcode>, vcvtps2qq,VEX_66_0F_W0,7Bh, vcvtps2uqq,VEX_66_0F
 			AVX_512.parse_operand@src src
 			AVX_512.parse_er@src er,32
 		else
-			AVX_512.parse_operand_bcst@src src_er,4
+			AVX_512.parse_bcst_operand@src src_er,4
 		end match
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if (@src.type = 'mem' & @src.size and not (@dest.size shr 1)) | (@src.type = 'mmreg' & (@dest.size shr 1 - 1) and not 15 + 16 <> @src.size)
@@ -200,7 +200,7 @@ iterate <instr,vex_mpw,opcode>, vcvtqq2ps,VEX_0F_W1,5Bh, vcvtuqq2ps,VEX_F2_0F_W1
 			AVX_512.parse_operand@src src
 			AVX_512.parse_er@src er
 		else
-			AVX_512.parse_operand_bcst@src src_er,8
+			AVX_512.parse_bcst_operand@src src_er,8
 		end match
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if @src.size = 0
@@ -229,7 +229,7 @@ iterate <instr,vex_mpw,opcode>, vcvttps2qq,VEX_66_0F_W0,7Ah, vcvttps2uqq,VEX_66_
 			AVX_512.parse_operand@src src
 			AVX_512.parse_sae @src,sae
 		else
-			AVX_512.parse_operand_bcst@src src_sae,4
+			AVX_512.parse_bcst_operand@src src_sae,4
 		end match
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if (@src.type = 'mem' & @src.size and not (@dest.size shr 1)) | (@src.type = 'mmreg' & (@dest.size shr 1 - 1) and not 15 + 16 <> @src.size)
@@ -291,7 +291,7 @@ iterate <instr,unit,vex_mpw>, vfpclasspd,8,VEX_66_0F3A_W1, vfpclassps,4,VEX_66_0
 
 	macro instr? dest*,src*,aux*
 		AVX_512.parse_k1_operand@dest dest
-		AVX_512.parse_operand_bcst@src src,unit
+		AVX_512.parse_bcst_operand@src src,unit
 		x86.parse_operand@aux aux
 		if @dest.type = 'maskreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
 			if @src.size = 0

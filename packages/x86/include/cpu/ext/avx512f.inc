@@ -166,7 +166,7 @@ if ~ defined AVX_512
 
 			end calminstruction
 
-			calminstruction AVX_512.parse_operand_bcst#context operand,unit
+			calminstruction AVX_512.parse_bcst_operand#context operand,unit
 
 				transform operand
 				match	operand {broadcast}, operand
@@ -597,6 +597,8 @@ if ~ defined AVX_512
 		check	displacement_size
 		jno	no_displacement_compression
 		compute displacement, displacement
+		check	(mode > 16 & rm = 5) | (mode = 16 & rm = 6)
+		jyes	no_displacement_compression
 		check	memsize
 		jyes	displacement_compression
 		compute memsize, vsize
@@ -752,7 +754,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand@src2 src2
 			AVX_512.parse_er@src2 er
 		else
-			AVX_512.parse_operand_bcst@src2 src_er,unit
+			AVX_512.parse_bcst_operand@src2 src_er,unit
 		end match
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 			if @src.size <> @dest.size | @src2.size and not @dest.size
@@ -771,7 +773,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand@src2 src2
 			AVX_512.parse_sae@src2 sae
 		else
-			AVX_512.parse_operand_bcst@src2 src_sae,unit
+			AVX_512.parse_bcst_operand@src2 src_sae,unit
 		end match
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 			if @src.size <> @dest.size | @src2.size and not @dest.size
@@ -786,7 +788,7 @@ if ~ defined AVX_512
 	macro AVX_512.basic_instruction_bcst_sae_imm8 vex_mpw,evex_f,opcode,unit,dest,src,src2,aux&
 		AVX_512.parse_k1z_operand@dest dest
 		AVX_512.parse_operand@src src
-		AVX_512.parse_operand_bcst@src2 src2,unit
+		AVX_512.parse_bcst_operand@src2 src2,unit
 		match sae=,imm, aux
 			AVX_512.parse_sae@src2 sae
 			x86.parse_operand@aux imm
@@ -806,7 +808,7 @@ if ~ defined AVX_512
 	macro AVX_512.basic_instruction_bcst vex_mpw,evex_f,opcode,unit,dest,src,src2
 		AVX_512.parse_k1z_operand@dest dest
 		AVX_512.parse_operand@src src
-		AVX_512.parse_operand_bcst@src2 src2,unit
+		AVX_512.parse_bcst_operand@src2 src2,unit
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 			if @src.size <> @dest.size | @src2.size and not @dest.size
 				err 'operand sizes do not match'
@@ -820,7 +822,7 @@ if ~ defined AVX_512
 	macro AVX_512.basic_instruction_bcst_imm8 vex_mpw,evex_f,opcode,unit,dest,src,src2,aux
 		AVX_512.parse_k1z_operand@dest dest
 		AVX_512.parse_operand@src src
-		AVX_512.parse_operand_bcst@src2 src2,unit
+		AVX_512.parse_bcst_operand@src2 src2,unit
 		x86.parse_operand@aux aux
 		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
 			if @aux.size and not 1
@@ -942,7 +944,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand@src src
 			AVX_512.parse_er@src er
 		else
-			AVX_512.parse_operand_bcst@src src_er,unit
+			AVX_512.parse_bcst_operand@src src_er,unit
 		end match
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if @src.size and not @dest.size
@@ -960,7 +962,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand@src src
 			AVX_512.parse_sae@src sae
 		else
-			AVX_512.parse_operand_bcst@src src_sae,unit
+			AVX_512.parse_bcst_operand@src src_sae,unit
 		end match
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if @src.size and not @dest.size
@@ -974,7 +976,7 @@ if ~ defined AVX_512
 
 	macro AVX_512.single_source_instruction_bcst_sae_imm8 vex_mpw,evex_f,opcode,unit,dest,src,aux&
 		AVX_512.parse_k1z_operand@dest dest
-		AVX_512.parse_operand_bcst@src src,unit
+		AVX_512.parse_bcst_operand@src src,unit
 		match sae=,imm, aux
 			AVX_512.parse_sae@src sae
 			x86.parse_operand@aux imm
@@ -995,7 +997,7 @@ if ~ defined AVX_512
 
 	macro AVX_512.single_source_instruction_bcst vex_mpw,evex_f,opcode,unit,dest,src&
 		AVX_512.parse_k1z_operand@dest dest
-		AVX_512.parse_operand_bcst@src src,unit
+		AVX_512.parse_bcst_operand@src src,unit
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'
@@ -1179,7 +1181,7 @@ if ~ defined AVX_512
 		macro instr? dest*,src*,src2*,aux*
 			AVX_512.parse_k1z_operand@dest dest
 			AVX_512.parse_operand@src src
-			AVX_512.parse_operand_bcst@src2 src2,unit
+			AVX_512.parse_bcst_operand@src2 src2,unit
 			x86.parse_operand@aux aux
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
 				if @dest.size < 32 | @aux.size and not 1
@@ -1272,7 +1274,7 @@ if ~ defined AVX_512
 		macro instr? dest*,src*,src2*,aux*&
 			AVX_512.parse_k1_operand@dest dest
 			AVX_512.parse_operand@src src
-			AVX_512.parse_operand_bcst@src2 src2,unit
+			AVX_512.parse_bcst_operand@src2 src2,unit
 			match sae=,imm, aux
 				AVX_512.parse_sae@src2 sae
 				x86.parse_operand@aux imm
@@ -1473,7 +1475,7 @@ if ~ defined AVX_512
 
 		macro instr? dest*,src*
 			AVX_512.parse_k1z_operand@dest dest
-			AVX_512.parse_operand_bcst@src src,4
+			AVX_512.parse_bcst_operand@src src,4
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if (@src.type = 'mem' & @src.size and not (@dest.size shr 1)) | (@src.type = 'mmreg' & (@dest.size shr 1 - 1) and not 15 + 16 <> @src.size)
 					err 'invalid operand size'
@@ -1497,7 +1499,7 @@ if ~ defined AVX_512
 				AVX_512.parse_operand@src src
 				AVX_512.parse_er@src er
 			else
-				AVX_512.parse_operand_bcst@src src_er,8
+				AVX_512.parse_bcst_operand@src src_er,8
 			end match
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if @src.size = 0
@@ -1526,7 +1528,7 @@ if ~ defined AVX_512
 				AVX_512.parse_operand@src src
 				AVX_512.parse_sae@src sae
 			else
-				AVX_512.parse_operand_bcst@src src_sae,4
+				AVX_512.parse_bcst_operand@src src_sae,4
 			end match
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if (@src.type = 'mem' & @src.size and not (@dest.size shr 1)) | (@src.type = 'mmreg' & (@dest.size shr 1 - 1) and not 15 + 16 <> @src.size)
@@ -1551,7 +1553,7 @@ if ~ defined AVX_512
 				AVX_512.parse_operand@src src
 				AVX_512.parse_sae@src sae
 			else
-				AVX_512.parse_operand_bcst@src src_sae,8
+				AVX_512.parse_bcst_operand@src src_sae,8
 			end match
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				if @src.size = 0
@@ -1703,7 +1705,7 @@ if ~ defined AVX_512
 
 	iterate <instr,evex_f,opcode>, vcvtsi2sd,EVEX_AS_VEX,2Ah, vcvtusi2sd,EVEX_REQUIRED,7Bh
 
-		macro vcvtsi2sd? dest*,src*,src_er*&
+		macro instr? dest*,src*,src_er*&
 			AVX_512.parse_operand@dest dest
 			AVX_512.parse_operand@src src
 			match src2=,er, src_er
@@ -1735,7 +1737,7 @@ if ~ defined AVX_512
 
 	iterate <instr,evex_f,opcode>, vcvtsi2ss,EVEX_AS_VEX,2Ah, vcvtusi2ss,EVEX_REQUIRED,7Bh
 
-		macro vcvtsi2ss? dest*,src*,src_er*&
+		macro instr? dest*,src*,src_er*&
 			AVX_512.parse_operand@dest dest
 			AVX_512.parse_operand@src src
 			match src2=,er, src_er
@@ -1996,8 +1998,8 @@ if ~ defined AVX_512
 
 		macro instr? dest*,src*,src2*
 			AVX_512.parse_k1z_operand@dest dest
-			AVX_512.parse_operand_bcst@src src,unit
-			AVX_512.parse_operand_bcst@src2 src2,unit
+			AVX_512.parse_bcst_operand@src src,unit
+			AVX_512.parse_bcst_operand@src2 src2,unit
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
@@ -2140,7 +2142,7 @@ if ~ defined AVX_512
 
 		macro instr? dest*,src*,aux*
 			AVX_512.parse_k1z_operand@dest dest
-			AVX_512.parse_operand_bcst@src src,unit
+			AVX_512.parse_bcst_operand@src src,unit
 			x86.parse_operand@aux aux
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
 				if @src.size and not @dest.size | @aux.size and not 1
@@ -2160,7 +2162,7 @@ if ~ defined AVX_512
 			AVX_512.parse_k1z_operand@dest dest
 			AVX_512.parse_operand@src2 src2
 			if @src2.type = 'imm'
-				AVX_512.parse_operand_bcst@src src,4
+				AVX_512.parse_bcst_operand@src src,4
 			else
 				AVX_512.parse_operand@src src
 			end if
@@ -2196,7 +2198,7 @@ if ~ defined AVX_512
 			AVX_512.parse_k1z_operand@dest dest
 			AVX_512.parse_operand@src2 src2
 			if @src2.type = 'imm'
-				AVX_512.parse_operand_bcst@src src,8
+				AVX_512.parse_bcst_operand@src src,8
 			else
 				AVX_512.parse_operand@src src
 			end if
@@ -2235,7 +2237,7 @@ if ~ defined AVX_512
 		macro instr? dest*,src*,src2*
 			AVX_512.parse_k1_operand@dest dest
 			AVX_512.parse_operand@src src
-			AVX_512.parse_operand_bcst@src2 src2,4
+			AVX_512.parse_bcst_operand@src2 src2,4
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src2.size and not @src.size
 					err 'operand sizes do not match'
@@ -2258,7 +2260,7 @@ if ~ defined AVX_512
 		macro instr? dest*,src*,src2*
 			AVX_512.parse_k1_operand@dest dest
 			AVX_512.parse_operand@src src
-			AVX_512.parse_operand_bcst@src2 src2,8
+			AVX_512.parse_bcst_operand@src2 src2,8
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src2.size and not @src.size
 					err 'operand sizes do not match'
@@ -2281,7 +2283,7 @@ if ~ defined AVX_512
 		macro instr? dest*,src*,src2*
 			AVX_512.parse_k1_operand@dest dest
 			AVX_512.parse_operand@src src
-			AVX_512.parse_operand_bcst@src2 src2,unit
+			AVX_512.parse_bcst_operand@src2 src2,unit
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src2.size and not @src.size
 					err 'operand sizes do not match'
@@ -2299,7 +2301,7 @@ if ~ defined AVX_512
 		macro instr? dest*,src*,src2*,aux*
 			AVX_512.parse_k1_operand@dest dest
 			AVX_512.parse_operand@src src
-			AVX_512.parse_operand_bcst@src2 src2,unit
+			AVX_512.parse_bcst_operand@src2 src2,unit
 			x86.parse_operand@aux aux
 			if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
 				if @src2.size and not @src.size | @aux.size and not 1
@@ -2336,7 +2338,7 @@ if ~ defined AVX_512
 
 		macro instr? dest*,src*,aux*
 			AVX_512.parse_k1z_operand@dest dest
-			AVX_512.parse_operand_bcst@src src,8
+			AVX_512.parse_bcst_operand@src src,8
 			x86.parse_operand@aux aux
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
 				if @dest.size < 32 | @aux.size and not 1
@@ -2357,7 +2359,7 @@ if ~ defined AVX_512
 		macro instr? dest*,src*,src2*
 			AVX_512.parse_k1z_operand@dest dest
 			AVX_512.parse_operand@src src
-			AVX_512.parse_operand_bcst@src2 src2,4
+			AVX_512.parse_bcst_operand@src2 src2,4
 			if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @dest.size < 32
 					err 'invalid operand size'

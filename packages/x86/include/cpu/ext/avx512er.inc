@@ -14,7 +14,7 @@ iterate <instr,unit,vex_mpw,opcode>, vexp2ps,4,VEX_66_0F38_W0,0C8h, vexp2pd,4,VE
 			AVX_512.parse_operand@src src
 			AVX_512.parse_sae@src sae
 		else
-			AVX_512.parse_operand_bcst@src src_sae,unit
+			AVX_512.parse_bcst_operand@src src_sae,unit
 		end match
 		if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 			if @dest.size <> 64

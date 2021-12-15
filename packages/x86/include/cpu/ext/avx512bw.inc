@@ -178,7 +178,7 @@ iterate <instr,opcode>, vpmaddubsw,4, vpmaxsb,3Ch, vpmaxuw,3Eh, vpminsb,38h, vpm
 
 end iterate
 
-iterate <instr,opcode>, vpcmpeqb,74h, pcmpeqw,75h, vpcmpgtb,64h, vpcmpgtw,65h
+iterate <instr,opcode>, vpcmpeqb,74h, vpcmpeqw,75h, vpcmpgtb,64h, vpcmpgtw,65h
 
 	macro instr? dest*,src*,src2*
 		AVX_512.parse_k1_operand@dest dest
