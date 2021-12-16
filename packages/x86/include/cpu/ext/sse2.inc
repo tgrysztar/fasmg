@@ -62,10 +62,10 @@ if ~ defined SSE2
 			end if
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				@src.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,ext>,@dest.rm
 			else if @dest.type = 'mem' & @src.type = 'mmreg'
 				@dest.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext+1>,@dest,@src.rm
+				x86.store_instruction@dest <0Fh,ext+1>,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -81,13 +81,13 @@ if ~ defined SSE2
 					err 'invalid operand size'
 				end if
 				@src.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,ext>,@dest.rm
 			else if @dest.type = 'mem' & @src.type = 'mmreg'
 				if @dest.size and not 8 | @src.size <> 16
 					err 'invalid operand size'
 				end if
 				@dest.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext+1>,@dest,@src.rm
+				x86.store_instruction@dest <0Fh,ext+1>,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -102,13 +102,13 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 0F2h
-			x86.store_instruction <0Fh,10h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,10h>,@dest.rm
 		else if @dest.type = 'mem' & @src.type = 'mmreg'
 			if @dest.size and not 8 | @src.size <> 16
 				err 'invalid operand size'
 			end if
 			@dest.opcode_prefix = 0F2h
-			x86.store_instruction <0Fh,11h>,@dest,@src.rm
+			x86.store_instruction@dest <0Fh,11h>,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -134,10 +134,10 @@ if ~ defined SSE2
 			end if
 			if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 				@src.opcode_prefix = pre
-				x86.store_instruction <0Fh,6Fh>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,6Fh>,@dest.rm
 			else if @dest.type = 'mem' & @src.type = 'mmreg'
 				@dest.opcode_prefix = pre
-				x86.store_instruction <0Fh,7Fh>,@dest,@src.rm
+				x86.store_instruction@dest <0Fh,7Fh>,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -153,7 +153,7 @@ if ~ defined SSE2
 					err 'invalid operand size'
 				end if
 				@dest.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext>,@dest,@src.rm
+				x86.store_instruction@dest <0Fh,ext>,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -168,7 +168,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 66h
-			x86.store_instruction <0Fh,50h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,50h>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -182,7 +182,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 66h
-			x86.store_instruction <0Fh,0F7h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,0F7h>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -197,7 +197,7 @@ if ~ defined SSE2
 					err 'invalid operand size'
 				end if
 				@src.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,ext>,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -252,7 +252,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 0F2h
-			x86.store_instruction <0Fh,0D6h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,0D6h>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -266,7 +266,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 0F3h
-			x86.store_instruction <0Fh,0D6h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,0D6h>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -280,7 +280,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 66h
-			x86.store_instruction <0Fh,2Ah>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,2Ah>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -295,9 +295,9 @@ if ~ defined SSE2
 			else if @dest.size <> 16 | @src.size < 4
 				err 'invalid operand size'
 			end if
-			x86.select_operand_prefix @src,@src.size
+			x86.select_operand_prefix@src @src.size
 			@src.opcode_prefix = 0F2h
-			x86.store_instruction <0Fh,2Ah>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,2Ah>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -312,7 +312,7 @@ if ~ defined SSE2
 					err 'invalid operand size'
 				end if
 				@src.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,ext>,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -327,9 +327,9 @@ if ~ defined SSE2
 				if @dest.size < 4 | (@src.type = 'mem' & @src.size and not 8) | (@src.type = 'mmreg' & @src.size <>16)
 					err 'invalid operand size'
 				end if
-				x86.select_operand_prefix @src,@dest.size
+				x86.select_operand_prefix@src @dest.size
 				@src.opcode_prefix = 0F2h
-				x86.store_instruction <0Fh,ext>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,ext>,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -361,7 +361,7 @@ if ~ defined SSE2
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jno	invalid_combination_of_operands
 		call	MMX.select_operand_prefix, @src,@dest.size
-		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
+		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    invalid_combination_of_operands:
 		asmcmd	=err 'invalid combination of operands'
@@ -382,7 +382,7 @@ if ~ defined SSE2
 		asmcmd	=err 'operand sizes do not match'
 	      mmreg_rm_ok:
 		call	MMX.select_operand_prefix, @src,@dest.size
-		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
+		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    mmreg_imm:
 		check	@src.size and not 1
@@ -393,7 +393,7 @@ if ~ defined SSE2
 		compute iext, 70h+(ext and 0Fh)
 		compute irm, ((ext shr 4)-0Ch) shl 1
 		call	MMX.select_operand_prefix, @dest,@dest.size
-		xcall	x86.store_instruction, <0Fh,iext>,@dest,irm,byte,@src.imm
+		xcall	x86.store_instruction@dest, <0Fh,iext>,irm,byte,@src.imm
 	end calminstruction
 
 	iterate <instr,ext>, paddq,0D4h, pmuludq,0F4h, psubq,0FBh
@@ -410,20 +410,20 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			if @dest.size = 8
-				x86.store_instruction <0Fh,6Fh>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,6Fh>,@dest.rm
 			else
 				@src.opcode_prefix = 0F3h
-				x86.store_instruction <0Fh,7Eh>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,7Eh>,@dest.rm
 			end if
 		else if @dest.type = 'mem' & @src.type = 'mmreg'
 			if @dest.size and not 8
 				err 'invalid operand size'
 			end if
 			if @src.size = 8
-				x86.store_instruction <0Fh,7Fh>,@dest,@src.rm
+				x86.store_instruction@dest <0Fh,7Fh>,@src.rm
 			else
 				@dest.opcode_prefix = 66h
-				x86.store_instruction <0Fh,0D6h>,@dest,@src.rm
+				x86.store_instruction@dest <0Fh,0D6h>,@src.rm
 			end if
 		else if @dest.type = 'reg' & @src.type = 'mmreg'
 			if @dest.size <> 8
@@ -433,7 +433,7 @@ if ~ defined SSE2
 				@dest.opcode_prefix = 66h
 			end if
 			@dest.prefix = 48h
-			x86.store_instruction <0Fh,7Eh>,@dest,@src.rm
+			x86.store_instruction@dest <0Fh,7Eh>,@src.rm
 		else if @dest.type = 'mmreg' & @src.type = 'reg'
 			if @src.size <> 8
 				err 'invalid operand size'
@@ -442,7 +442,7 @@ if ~ defined SSE2
 				@src.opcode_prefix = 66h
 			end if
 			@src.prefix = 48h
-			x86.store_instruction <0Fh,6Eh>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,6Eh>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -456,13 +456,13 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			MMX.select_operand_prefix @src,@dest.size
-			x86.store_instruction <0Fh,6Eh>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,6Eh>,@dest.rm
 		else if (@dest.type = 'mem' | @dest.type = 'reg') & @src.type = 'mmreg'
 			if @dest.size and not 4
 				err 'invalid operand size'
 			end if
 			MMX.select_operand_prefix @dest,@src.size
-			x86.store_instruction <0Fh,7Eh>,@dest,@src.rm
+			x86.store_instruction@dest <0Fh,7Eh>,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -477,7 +477,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			MMX.select_operand_prefix @src,@dest.size
-			x86.store_instruction <0Fh,0C4h>,@src,@dest.rm,1,@aux.imm
+			x86.store_instruction@src <0Fh,0C4h>,@dest.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -495,7 +495,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			MMX.select_operand_prefix @src,@src.size
-			x86.store_instruction <0Fh,0C5h>,@src,@dest.rm,1,@aux.imm
+			x86.store_instruction@src <0Fh,0C5h>,@dest.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -511,7 +511,7 @@ if ~ defined SSE2
 					err 'invalid operand size'
 				end if
 				@src.opcode_prefix = pre
-				x86.store_instruction <0Fh,70h>,@src,@dest.rm,1,@aux.imm
+				x86.store_instruction@src <0Fh,70h>,@dest.rm,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -526,7 +526,7 @@ if ~ defined SSE2
 				err 'invalid operand size'
 			end if
 			MMX.select_operand_prefix @src,@src.size
-			x86.store_instruction <0Fh,0D7h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,0D7h>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -541,7 +541,7 @@ if ~ defined SSE2
 					err 'invalid operand size'
 				end if
 				@dest.opcode_prefix = 66h
-				x86.store_instruction <0Fh,73h>,@dest,postbyte,1,@aux.imm
+				x86.store_instruction@dest <0Fh,73h>,postbyte,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -557,7 +557,7 @@ if ~ defined SSE2
 					err 'invalid operand size'
 				end if
 				@src.opcode_prefix = 66h
-				x86.store_instruction <0Fh,ext>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,ext>,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -573,8 +573,8 @@ if ~ defined SSE2
 			else if @src.size <> 4 & @src.size <> 8
 				err 'invalid operand size'
 			end if
-			x86.select_operand_prefix @dest,@src.size
-			x86.store_instruction <0Fh,0C3h>,@dest,@src.rm
+			x86.select_operand_prefix@dest @src.size
+			x86.store_instruction@dest <0Fh,0C3h>,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -586,7 +586,7 @@ if ~ defined SSE2
 			if @src.size and not 1
 				err 'invalid operand size'
 			end if
-			x86.store_instruction <0Fh,0AEh>,@src,7
+			x86.store_instruction@src <0Fh,0AEh>,7
 		else
 			err 'invalid operand'
 		end if

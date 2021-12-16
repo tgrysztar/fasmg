@@ -9,7 +9,7 @@ iterate <instr,prefix,ext,postbyte>, vmxon,0F3h,0C7h,6, vmclear,66h,0C7h,6,  \
 				err 'invalid operand size'
 			else
 				@src.opcode_prefix = prefix
-				x86.store_instruction <0Fh,ext>,@src,postbyte
+				x86.store_instruction@src <0Fh,ext>,postbyte
 			end if
 		else
 			err 'invalid operand'
@@ -43,7 +43,7 @@ macro vmread? dest*,src*
 		else if @dest.size and not @src.size
 			err 'operand sizes do not match'
 		end if
-		x86.store_instruction <0Fh,78h>,@dest,@src.rm
+		x86.store_instruction@dest <0Fh,78h>,@src.rm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -58,7 +58,7 @@ macro vmwrite? dest*,src*
 		else if @src.size and not @dest.size
 			err 'operand sizes do not match'
 		end if
-		x86.store_instruction <0Fh,79h>,@src,@dest.rm
+		x86.store_instruction@src <0Fh,79h>,@dest.rm
 	else
 		err 'invalid combination of operands'
 	end if

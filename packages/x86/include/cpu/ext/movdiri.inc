@@ -11,7 +11,7 @@ macro movdiri? dest*,src*
 		else if @src.size <> 4
 			err 'invalid operand size'
 		end if
-		x86.store_instruction <0Fh,38h,0F9h>,@dest,@src.rm
+		x86.store_instruction@dest <0Fh,38h,0F9h>,@src.rm
 	else
 		err 'invalid combination of operands'
 	end if

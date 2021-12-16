@@ -15,9 +15,9 @@ macro andn? dest*,src*,src2*
 			if x86.mode < 64
 				err 'instruction requires long mode'
 			end if
-			AVX.store_instruction 16,VEX_0F38_W1,0F2h,@src2,@dest.rm,@src.rm
+			AVX.store_instruction@src2 16,VEX_0F38_W1,0F2h,@dest.rm,@src.rm
 		else
-			AVX.store_instruction 16,VEX_0F38_W0,0F2h,@src2,@dest.rm,@src.rm
+			AVX.store_instruction@src2 16,VEX_0F38_W0,0F2h,@dest.rm,@src.rm
 		end if
 	else
 		err 'invalid combination of operands'
@@ -38,9 +38,9 @@ macro bextr? dest*,src*,src2*
 			if x86.mode < 64
 				err 'instruction requires long mode'
 			end if
-			AVX.store_instruction 16,VEX_0F38_W1,0F7h,@src,@dest.rm,@src2.rm
+			AVX.store_instruction@src 16,VEX_0F38_W1,0F7h,@dest.rm,@src2.rm
 		else
-			AVX.store_instruction 16,VEX_0F38_W0,0F7h,@src,@dest.rm,@src2.rm
+			AVX.store_instruction@src 16,VEX_0F38_W0,0F7h,@dest.rm,@src2.rm
 		end if
 	else
 		err 'invalid combination of operands'
@@ -62,9 +62,9 @@ iterate <instr,opcode,postbyte>, blsi,0F3h,3, blmsk,0F3h,2, blsr,0F3h,1
 				if x86.mode < 64
 					err 'instruction requires long mode'
 				end if
-				AVX.store_instruction 16,VEX_0F38_W1,opcode,@src,postbyte,@dest.rm
+				AVX.store_instruction@src 16,VEX_0F38_W1,opcode,postbyte,@dest.rm
 			else
-				AVX.store_instruction 16,VEX_0F38_W0,opcode,@src,postbyte,@dest.rm
+				AVX.store_instruction@src 16,VEX_0F38_W0,opcode,postbyte,@dest.rm
 			end if
 		else
 			err 'invalid combination of operands'
@@ -84,8 +84,8 @@ iterate <instr,opcode>, lzcnt,0BDh, tzcnt,0BCh
 			end if
 			@src.opcode_prefix = 0F3h
 			if @dest.size > 1
-				x86.select_operand_prefix @src,@dest.size
-				x86.store_instruction <0Fh,opcode>,@src,@dest.rm
+				x86.select_operand_prefix@src @dest.size
+				x86.store_instruction@src <0Fh,opcode>,@dest.rm
 			else
 				err 'invalid operand size'
 			end if

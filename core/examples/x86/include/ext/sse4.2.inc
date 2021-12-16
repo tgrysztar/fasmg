@@ -22,10 +22,10 @@ macro crc32? dest*,src*
 		end if
 		@src.opcode_prefix = 0F2h
 		if @src.size > 1
-			x86.select_operand_prefix @src,@src.size
-			x86.store_instruction <0Fh,38h,0F1h>,@src,@dest.rm
+			x86.select_operand_prefix@src @src.size
+			x86.store_instruction@src <0Fh,38h,0F1h>,@dest.rm
 		else if @src.size > 0
-			x86.store_instruction <0Fh,38h,0F0h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,38h,0F0h>,@dest.rm
 		else
 			err 'operand size not specified'
 		end if
@@ -43,8 +43,8 @@ macro popcnt? dest*,src*
 		end if
 		@src.opcode_prefix = 0F3h
 		if @dest.size > 1
-			x86.select_operand_prefix @src,@dest.size
-			x86.store_instruction <0Fh,0B8h>,@src,@dest.rm
+			x86.select_operand_prefix@src @dest.size
+			x86.store_instruction@src <0Fh,0B8h>,@dest.rm
 		else
 			err 'invalid operand size'
 		end if

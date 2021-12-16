@@ -24,7 +24,7 @@ if ~ defined i80387
 			call	x87.parse_operand@src, src
 			check	@src.type = 'streg'
 			jno	invalid_operand
-			xcall	x86.store_instruction, (0DDh),@src,(postbyte)
+			xcall	x86.store_instruction@src, (0DDh),(postbyte)
 			exit
 		    invalid_operand:
 			asmcmd	=err 'invalid operand'
@@ -41,7 +41,7 @@ if ~ defined i80387
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			xcall	x86.store_instruction, (0D9h),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -61,7 +61,7 @@ if ~ defined i80387
 			check	@dest.type = 'mem'
 			jno	invalid_operand
 			assemble x86.o16
-			xcall	x86.store_instruction, (0D9h),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -81,7 +81,7 @@ if ~ defined i80387
 			check	@dest.type = 'mem'
 			jno	invalid_operand
 			assemble x86.o32
-			xcall	x86.store_instruction, (0D9h),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -100,7 +100,7 @@ if ~ defined i80387
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			xcall	x86.store_instruction, (0DDh),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -120,7 +120,7 @@ if ~ defined i80387
 			check	@dest.type = 'mem'
 			jno	invalid_operand
 			assemble x86.o16
-			xcall	x86.store_instruction, (0DDh),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -139,7 +139,7 @@ if ~ defined i80387
 			check	@dest.type = 'mem'
 			jno	invalid_operand
 			assemble x86.o32
-			xcall	x86.store_instruction, (0DDh),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'

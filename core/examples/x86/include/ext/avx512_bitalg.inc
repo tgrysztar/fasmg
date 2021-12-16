@@ -22,7 +22,7 @@ macro vpshufbitqmb? dest*,src*,src2*
 		if @src2.size and not @src.size
 			err 'operand sizes do not match'
 		end if
-		AVX_512.store_instruction @src.size,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,8Fh,@src2,@dest.mask,@dest.rm,@src.rm
+		AVX_512.store_instruction@src2 @src.size,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,8Fh,@dest.mask,@dest.rm,@src.rm
 	else
 		err 'invalid combination of operands'
 	end if

@@ -26,8 +26,8 @@ iterate <cond,code>, o,0, no,1, c,2, b,2, nae,2, nc,3, nb,3, ae,3, z,4, e,4, nz,
 		jno	cmov_rm_reg_ok
 		asmcmd	=err 'operand sizes do not match'
 	      cmov_rm_reg_ok:
-		call	x86.select_operand_prefix, @src,@dest.size
-		xcall	x86.store_instruction, <0Fh,40h+code>,@src,@dest.rm
+		call	x86.select_operand_prefix@src, @dest.size
+		xcall	x86.store_instruction@src, <0Fh,40h+code>,@dest.rm
 	end calminstruction
 
 end iterate

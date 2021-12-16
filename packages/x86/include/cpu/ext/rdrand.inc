@@ -2,8 +2,8 @@
 macro rdrand? dest*
 	x86.parse_operand@dest dest
 	if @dest.type = 'reg'
-		x86.select_operand_prefix @dest,@dest.size
-		x86.store_instruction <0Fh,0C7h>,@dest,6
+		x86.select_operand_prefix@dest @dest.size
+		x86.store_instruction@dest <0Fh,0C7h>,6
 	else
 		err 'invalid operand'
 	end if

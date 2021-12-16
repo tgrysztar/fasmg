@@ -33,7 +33,7 @@ calminstruction cmpxchg8b? dest*
 	jno	size_ok
 	asmcmd	=err 'invalid operand size'
     size_ok:
-	xcall	x86.store_instruction, <0Fh,0C7h>,@dest,(1)
+	xcall	x86.store_instruction@dest, <0Fh,0C7h>,(1)
 end calminstruction
 
 include '80387.inc'

@@ -4,7 +4,7 @@ iterate <instr,postbyte>, xsave,4, xrstor,5
 	macro instr? src*
 		x86.parse_operand@src src
 		if @src.type = 'mem'
-			x86.store_instruction <0Fh,0AEh>,@src,postbyte
+			x86.store_instruction@src <0Fh,0AEh>,postbyte
 		else
 			err 'invalid operand'
 		end if
@@ -14,8 +14,8 @@ iterate <instr,postbyte>, xsave,4, xrstor,5
 		if x86.mode = 64
 			x86.parse_operand@src src
 			if @src.type = 'mem'
-				x86.select_operand_prefix @src,8
-				x86.store_instruction <0Fh,0AEh>,@src,postbyte
+				x86.select_operand_prefix@src 8
+				x86.store_instruction@src <0Fh,0AEh>,postbyte
 			else
 				err 'invalid operand'
 			end if

@@ -22,7 +22,7 @@ iterate <instr,unit,vex_mpw,opcode>, vexp2ps,4,VEX_66_0F38_W0,0C8h, vexp2pd,4,VE
 			else if @src.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,vex_mpw,EVEX_REQUIRED,opcode,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if

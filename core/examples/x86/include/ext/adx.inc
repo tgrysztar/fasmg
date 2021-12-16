@@ -13,7 +13,7 @@ iterate <instr,pfx>, adcx,66h, adox,0F3h
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = pfx
-			x86.store_instruction <0Fh,38h,0F6h>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,38h,0F6h>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if

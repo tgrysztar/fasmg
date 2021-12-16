@@ -25,7 +25,7 @@ calminstruction arpl? dest*,src*
     invalid_operand_size:
 	asmcmd	=err 'invalid operand size'
     size_ok:
-	xcall	x86.store_instruction, (63h),@dest,@src.rm
+	xcall	x86.store_instruction@dest, (63h),@src.rm
 	exit
     invalid_combination_of_operands:
 	asmcmd	=err 'invalid combination of operands'
@@ -44,7 +44,7 @@ iterate <instr,ext,postbyte>, sldt,0,0, str,0,1, lldt,0,2, ltr,0,3, verr,0,4, ve
 		asmcmd	=err 'invalid operand'
 		exit
 	    operand_ok:
-		xcall	x86.store_instruction, <0Fh,ext>,@dest,(postbyte)
+		xcall	x86.store_instruction@dest, <0Fh,ext>,(postbyte)
 	end calminstruction
 
 end iterate
@@ -62,7 +62,7 @@ iterate <instr,postbyte>, lgdt,2, lidt,3, sgdt,0, sidt,1
 		jno	store_instruction
 		asmcmd	=err 'invalid operand size'
 	    store_instruction:
-		xcall	x86.store_instruction, <0Fh,1>,@dest,(postbyte)
+		xcall	x86.store_instruction@dest, <0Fh,1>,(postbyte)
 		exit
 	end calminstruction
 
@@ -79,7 +79,7 @@ iterate <instr,ext>, lar,2, lsl,3
 		jno	size_ok
 		asmcmd	=err 'invalid operand size'
 	    size_ok:
-		xcall	x86.store_instruction, <0Fh,ext>,@src,@dest.rm
+		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    invalid_combination_of_operands:
 		asmcmd	=err 'invalid combination of operands'

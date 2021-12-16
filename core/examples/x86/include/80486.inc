@@ -20,11 +20,11 @@ iterate <instr,ext>, cmpxchg,0B0h, xadd,0C0h
 	      size_ok:
 		check	@src.size > 1
 		jno	xadd_rm_reg_8bit
-		call	x86.select_operand_prefix, @dest,@src.size
-		xcall	x86.store_instruction, <0Fh,ext+1>,@dest,@src.rm
+		call	x86.select_operand_prefix@dest, @src.size
+		xcall	x86.store_instruction@dest, <0Fh,ext+1>,@src.rm
 		exit
 	      xadd_rm_reg_8bit:
-		xcall	x86.store_instruction, <0Fh,ext>,@dest,@src.rm
+		xcall	x86.store_instruction@dest, <0Fh,ext>,@src.rm
 	end calminstruction
 
 end iterate
@@ -49,7 +49,7 @@ calminstruction invlpg? dest*
 	asmcmd	=err 'invalid operand'
 	exit
     operand_ok:
-	xcall	x86.store_instruction, <0Fh,1>,@dest,(7)
+	xcall	x86.store_instruction@dest, <0Fh,1>,(7)
 end calminstruction
 
 iterate <instr,opcode>, invd,<0Fh,8>, wbinvd,<0Fh,9>

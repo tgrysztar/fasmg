@@ -7,8 +7,8 @@ iterate <instr,postbyte>, rdfsbase,0, rdgsbase,1, wrfsbase,2, wrgsbase,3
 			if @dest.type = 'reg'
 				if @dest.size >= 4
 					@dest.opcode_prefix = 0F3h
-					x86.select_operand_prefix @dest,@dest.size
-					x86.store_instruction <0Fh,0AEh>,@dest,postbyte
+					x86.select_operand_prefix@dest @dest.size
+					x86.store_instruction@dest <0Fh,0AEh>,postbyte
 				else
 					err 'invalid operand size'
 				end if

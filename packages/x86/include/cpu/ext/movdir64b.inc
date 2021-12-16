@@ -15,7 +15,7 @@ macro movdir64b? dest*,src*
 			err 'invalid operand size'
 		end if
 		@src.opcode_prefix = 66h
-		x86.store_instruction <0Fh,38h,0F8h>,@src,@dest.rm
+		x86.store_instruction@src <0Fh,38h,0F8h>,@dest.rm
 	else
 		err 'invalid combination of operands'
 	end if

@@ -17,9 +17,9 @@ iterate <instr,opcode>, bzhi,0F5h
 				if x86.mode < 64
 					err 'instruction requires long mode'
 				end if
-				AVX.store_instruction 16,VEX_0F38_W1,opcode,@src,@dest.rm,@src2.rm
+				AVX.store_instruction@src 16,VEX_0F38_W1,opcode,@dest.rm,@src2.rm
 			else
-				AVX.store_instruction 16,VEX_0F38_W0,opcode,@src,@dest.rm,@src2.rm
+				AVX.store_instruction@src 16,VEX_0F38_W0,opcode,@dest.rm,@src2.rm
 			end if
 		else
 			err 'invalid combination of operands'
@@ -44,9 +44,9 @@ iterate <instr,vex_mp,opcode>, mulx,VEX_F2_0F38,0F6h, pdep,VEX_F2_0F38,0F5h, pex
 				if x86.mode < 64
 					err 'instruction requires long mode'
 				end if
-				AVX.store_instruction 16,vex_mp#_W1,opcode,@src2,@dest.rm,@src.rm
+				AVX.store_instruction@src2 16,vex_mp#_W1,opcode,@dest.rm,@src.rm
 			else
-				AVX.store_instruction 16,vex_mp#_W0,opcode,@src2,@dest.rm,@src.rm
+				AVX.store_instruction@src2 16,vex_mp#_W0,opcode,@dest.rm,@src.rm
 			end if
 		else
 			err 'invalid combination of operands'
@@ -69,9 +69,9 @@ macro rorx? dest*,src*,src2*
 			if x86.mode < 64
 				err 'instruction requires long mode'
 			end if
-			AVX.store_instruction 16,VEX_F2_0F3A_W1,0F0h,@src,@dest.rm,,1,@src2.imm
+			AVX.store_instruction@src 16,VEX_F2_0F3A_W1,0F0h,@dest.rm,,1,@src2.imm
 		else
-			AVX.store_instruction 16,VEX_F2_0F3A_W0,0F0h,@src,@dest.rm,,1,@src2.imm
+			AVX.store_instruction@src 16,VEX_F2_0F3A_W0,0F0h,@dest.rm,,1,@src2.imm
 		end if
 	else
 		err 'invalid combination of operands'
@@ -94,9 +94,9 @@ iterate <instr,vex_mp,opcode>, sarx,VEX_F3_0F38,0F7h, shlx,VEX_66_0F38,0F7h, shr
 				if x86.mode < 64
 					err 'instruction requires long mode'
 				end if
-				AVX.store_instruction 16,vex_mp#_W1,opcode,@src,@dest.rm,@src2.rm
+				AVX.store_instruction@src 16,vex_mp#_W1,opcode,@dest.rm,@src2.rm
 			else
-				AVX.store_instruction 16,vex_mp#_W0,opcode,@src,@dest.rm,@src2.rm
+				AVX.store_instruction@src 16,vex_mp#_W0,opcode,@dest.rm,@src2.rm
 			end if
 		else
 			err 'invalid combination of operands'

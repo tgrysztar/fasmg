@@ -28,7 +28,7 @@ calminstruction push? src*
 	exit
 
     push_mem:
-	xcall	x86.store_instruction, (0FFh),@src,(110b)
+	xcall	x86.store_instruction@src, (0FFh),(110b)
 	exit
 
     push_reg:
@@ -81,7 +81,7 @@ calminstruction x86.pop_instruction size:0,dest*
 	exit
 
     pop_mem:
-	xcall	x86.store_instruction, (8Fh),@dest,(0)
+	xcall	x86.store_instruction@dest, (8Fh),(0)
 	exit
 
     pop_reg:
@@ -218,10 +218,10 @@ calminstruction imul? dest*,src&
 	jno	invalid_combination_of_operands
 	check	@dest.size < 2
 	jyes	imul_rm_8bit
-	xcall	x86.store_instruction, (0F7h),@dest,(5)
+	xcall	x86.store_instruction@dest, (0F7h),(5)
 	exit
       imul_rm_8bit:
-	xcall	x86.store_instruction, (0F6h),@dest,(5)
+	xcall	x86.store_instruction@dest, (0F6h),(5)
 	exit
 
     imul_reg_rm_imm:
@@ -229,12 +229,12 @@ calminstruction imul? dest*,src&
 	jyes	imul_reg_rm_simm
 	check	@aux.imm relativeto 0 & @aux.imm - 10000h >= -80h & @aux.imm < 10000h
 	jyes	imul_reg_rm_simm_wrap
-	xcall	x86.store_instruction, (69h),@src,@dest.rm,size,@aux.imm
+	xcall	x86.store_instruction@src, (69h),@dest.rm,size,@aux.imm
 	exit
       imul_reg_rm_simm_wrap:
 	compute @aux.imm, @aux.imm - 1 shl (size shl 3)
       imul_reg_rm_simm:
-	xcall	x86.store_instruction, (6Bh),@src,@dest.rm,byte,@aux.imm
+	xcall	x86.store_instruction@src, (6Bh),@dest.rm,byte,@aux.imm
 	exit
 
 end calminstruction
@@ -263,28 +263,28 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 	    shift_rm_cl:
 		check	@dest.size < 2
 		jyes	shift_r8_cl
-		xcall	x86.store_instruction, (0D3h),@dest,(postbyte)
+		xcall	x86.store_instruction@dest, (0D3h),(postbyte)
 		exit
 	      shift_r8_cl:
-		xcall	x86.store_instruction, (0D2h),@dest,(postbyte)
+		xcall	x86.store_instruction@dest, (0D2h),(postbyte)
 		exit
 	    shift_rm_imm:
 		check	@dest.size < 2
 		jyes	shift_rm8_imm
 		check	@src.imm = 1
 		jyes	shift_rm_1
-		xcall	x86.store_instruction, (0C1h),@dest,(postbyte),byte,@src.imm
+		xcall	x86.store_instruction@dest, (0C1h),(postbyte),byte,@src.imm
 		exit
 	      shift_rm_1:
-		xcall	x86.store_instruction, (0D1h),@dest,(postbyte)
+		xcall	x86.store_instruction@dest, (0D1h),(postbyte)
 		exit
 	      shift_rm8_imm:
 		check	@src.imm = 1
 		jyes	shift_rm8_1
-		xcall	x86.store_instruction, (0C0h),@dest,(postbyte),byte,@src.imm
+		xcall	x86.store_instruction@dest, (0C0h),(postbyte),byte,@src.imm
 		exit
 	      shift_rm8_1:
-		xcall	x86.store_instruction, (0D0h),@dest,(postbyte)
+		xcall	x86.store_instruction@dest, (0D0h),(postbyte)
 		exit
 
 	    operand_size_not_specified:
@@ -381,7 +381,7 @@ calminstruction bound? dest*,src*
 	jno	size_ok
 	asmcmd	=err 'operand sizes do not match'
     size_ok:
-	xcall	x86.store_instruction, (62h),@src,@dest.rm
+	xcall	x86.store_instruction@src, (62h),@dest.rm
 	exit
     invalid_operand_size:
 	asmcmd	=err 'invalid operand size'

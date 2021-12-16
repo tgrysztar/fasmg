@@ -22,7 +22,7 @@ iterate <instr,opcode>, vp4dpwssd,52h, vp4dpwssds,53h
 				err 'operand sizes do not match'
 			end if
 			@src2.memsize = 0
-			AVX_512.store_instruction @dest.size,VEX_F2_0F38_W0,EVEX_REQUIRED,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction@src2 @dest.size,VEX_F2_0F38_W0,EVEX_REQUIRED,opcode,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if

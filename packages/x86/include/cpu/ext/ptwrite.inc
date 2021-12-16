@@ -8,10 +8,10 @@ macro ptwrite? src*
 	end if
 	if @src.type = 'reg' | @src.type = 'mem'
 		if @src.size = 8
-			x86.select_operand_prefix @src,8
+			x86.select_operand_prefix@src 8
 		end if
 		@src.opcode_prefix = 0F3h
-		x86.store_instruction <0Fh,0AEh>,@src,4
+		x86.store_instruction@src <0Fh,0AEh>,4
 	else
 		err 'invalid operand'
 	end if

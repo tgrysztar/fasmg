@@ -11,7 +11,7 @@ iterate <instr,vex_mpw,opcode>, vpbroadcastmb2q,VEX_F3_0F38_W1,2Ah, vpbroadcastm
 		AVX_512.parse_operand@dest dest
 		AVX_512.parse_operand@src src
 		if @dest.type = 'mmreg' & @src.type = 'maskreg'
-			AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,0,@dest.rm
+			AVX_512.store_instruction@src @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,0,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if

@@ -48,7 +48,7 @@ iterate <instr,vex_mpw,opcode>, vpcompressb,VEX_66_0F38_W0,63h, vpcompressw,VEX_
 			if @dest.size and not @src.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm
+			AVX_512.store_instruction@dest @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if

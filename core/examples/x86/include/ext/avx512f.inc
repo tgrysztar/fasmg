@@ -471,281 +471,254 @@ if ~ defined AVX_512
 
 			end calminstruction
 
+			calminstruction AVX_512.store_instruction#context vsize*,vex_mpw*,evex_f*,opcode*,mask*,reg*,vreg:0,imm_size:0,immediate
+
+				check	segment_prefix
+				jno	segment_prefix_ok
+
+				check	mode = 64
+				jyes	segment_in_long_mode
+				check	mode = 16 & ( rm = 2 | rm = 3 | ( mod > 0 & rm = 6 ) )
+				jyes	ss_segment_default
+				check	mode = 32 & ( ( mod > 0 & rm = 5 ) | ( rm = 4 & base = 4 ) | ( mod > 0 & rm = 4 & base = 5 ) )
+				jyes	ss_segment_default
+
+			    ds_segment_default:
+				check	segment_prefix = 3Eh
+				jyes	segment_prefix_ok
+				jump	store_segment_prefix
+			    ss_segment_default:
+				check	segment_prefix = 36h
+				jyes	segment_prefix_ok
+				jump	store_segment_prefix
+			    segment_in_long_mode:
+				check	segment_prefix < 64h
+				jyes	segment_prefix_ok
+			    store_segment_prefix:
+				asmcmd	=db segment_prefix
+			    segment_prefix_ok:
+
+				check	mod <> 11b & mode <> x86.mode
+				jno	addressing_prefix_ok
+				check	mode = 64 | (mode = 16 & x86.mode = 64)
+				jno	store_addressing_prefix
+				asmcmd	=err 'illegal addressing mode'
+			    store_addressing_prefix:
+				asmcmd	=db 67h
+			    addressing_prefix_ok:
+
+				compute evex, vex_mpw
+				compute evex_flags, evex_f
+
+				check	evex_b
+				jno	evex_L'L
+				compute evex, evex or evex_b shl 20
+			    evex_L'L:
+				check	mod = 11b & evex_b & rounding >= 0
+				jyes	evex_rounding
+				check	vsize = 64
+				jyes	evex_L'
+				check	evex_flags and EVEX_VL & AVX512VL = 0
+				jno	evex_L
+				compute evex_flags, evex_flags or EVEX_FORBIDDEN
+			    evex_L:
+				check	vsize = 32
+				jno	evex_mask
+				compute evex, evex or 1 shl 21
+				jump	evex_mask
+			    evex_L':
+				compute evex, evex or 1 shl 22
+				jump	evex_mask
+			    evex_rounding:
+				compute evex, evex or rounding shl 21
+
+			    evex_mask:
+				check	mask
+				jno	evex_X
+				compute evex, evex or mask shl 16
+
+			    evex_X:
+				check	rm and 10000b | (mod <> 11b & mode > 16 & rm = 4 & index and 1000b)
+				jno	evex_B
+				compute evex, evex or 1 shl 6
+			    evex_B:
+				check	rm and 1000b | (mod <> 11b & mode > 16 & rm = 4 & base and 1000b)
+				jno	evex_R'
+				compute evex, evex or 1 shl 5
+			    evex_R':
+				check	reg and 10000b
+				jno	evex_R
+				compute evex, evex or 1 shl 4
+			    evex_R:
+				check	reg and 1000b
+				jno	evex_V'
+				compute evex, evex or 1 shl 7
+			    evex_V':
+				check	vreg and 10000b
+				jno	evex_vvvv
+				compute evex, evex or 1 shl 19
+			    evex_vvvv:
+				compute evex, evex or (vreg and 1111b) shl 11
+
+				check	x86.mode < 64 & evex and 00001000_01000000_11110000b
+				jno	allowed
+				asmcmd	=err 'instruction requires long mode'
+			    allowed:
+
+				local	evex_displacement_size, compressed_displacement
+
+				check	displacement_size
+				jno	no_displacement_compression
+				compute displacement, displacement
+				check	(mode > 16 & rm = 5) | (mode = 16 & rm = 6)
+				jyes	no_displacement_compression
+				check	memsize
+				jyes	displacement_compression
+				compute memsize, vsize
+			    displacement_compression:
+				check	displacement relativeto 0 & displacement mod? memsize = 0
+				jno	displacement_incompressible
+				compute compressed_displacement, displacement / memsize
+				check	compressed_displacement < 80h & compressed_displacement >= -80h
+				jyes	displacement_compressed
+				check	compressed_displacement - 1 shl mode >= -80h & compressed_displacement < 1 shl mode
+				jno	displacement_incompressible
+				compute compressed_displacement, compressed_displacement - 1 shl mode
+			    displacement_compressed:
+				compute evex_displacement_size, 1
+				jump	choose_prefix
+			    displacement_incompressible:
+				compute evex_displacement_size, 4
+				check	mode > 16
+				jyes	choose_prefix
+				compute evex_displacement_size, 2
+				jump	choose_prefix
+			    no_displacement_compression:
+				compute evex_displacement_size, displacement_size
+
+			    choose_prefix:
+				check	evex_flags and EVEX_REQUIRED | evex and 11011111_00000000_00010000b | rm and 10000b
+				jyes	evex_required
+				check	~ evex_flags and EVEX_FORBIDDEN & evex_displacement_size + 1 < displacement_size
+				jyes	evex
+				jump	vex
+			    evex_required:
+				check	evex_flags and EVEX_FORBIDDEN
+				jno	evex
+				asmcmd	=err 'invalid operand'
+
+			    vex:
+				local	byte2, byte3
+				compute vex, evex and 11111011_11111111b or (evex and 1 shl 21) shr (21-10)
+				check	vex and 10000000_01111111b <> 1
+				jyes	vex_3byte
+			    vex_2byte:
+				compute byte2, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
+				asmcmd	=db 0C5h,byte2
+				jump	evex_done
+			    vex_3byte:
+				compute byte2, (vex and 11111111b) xor 11100000b
+				compute byte3, (vex shr 8) xor 01111000b
+				asmcmd	=db 0C4h,byte2,byte3
+				jump	evex_done
+
+			    evex:
+				compute evex, evex or 1 shl 10
+				check	evex_flags and EVEX_W1
+				jno	evex_4byte
+				compute evex, evex or 1 shl 15
+			    evex_4byte:
+				compute evex, 62h + (evex xor 00001000_01111000_11110000b) shl 8
+				asmcmd	=dd evex
+				check	mod <> 11b & mod <> 0 & evex_displacement_size > 0
+				jno	evex_done
+				compute displacement_size, evex_displacement_size
+				check	evex_displacement_size = 1
+				jyes	evex_compressed_displacement
+				compute mod, 2
+				jump	evex_done
+			    evex_compressed_displacement:
+				compute displacement, compressed_displacement
+				compute mod, 1
+			    evex_done:
+
+				local	modrm, sib
+
+				compute modrm, mod shl 6 + (reg and 111b) shl 3 + rm and 111b
+				asmcmd	=db opcode, modrm
+
+				check	mod <> 11b & rm = 4 & mode <> 16
+				jno	sib_ok
+				compute sib, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
+				asmcmd	=db sib
+			    sib_ok:
+
+				check	displacement_size = 1
+				jyes	displacement_8bit
+				check	displacement_size = 2
+				jyes	displacement_16bit
+				check	displacement_size = 4 | displacement_size = 8
+				jno	displacement_ok
+
+				check	auto_relative
+				jno	auto_relative_ok
+				check	imm_size < 8
+				jyes	adjust_auto_relative_displacement
+				compute displacement, displacement - ($ + 4 + 4)
+				jump	auto_relative_ok
+			      adjust_auto_relative_displacement:
+				compute displacement, displacement - ($ + 4 + imm_size)
+			      auto_relative_ok:
+
+				check	mode = 64 & displacement relativeto 0
+				jno	displacement_ready
+				check	displacement - 1 shl 64 >= -80000000h & displacement < 1 shl 64
+				jyes	adjust_displacement_wrap
+				check	displacement >= -80000000h & displacement < 80000000h
+				jyes	displacement_ready
+				asmcmd	=err 'address value out of signed range'
+			      adjust_displacement_wrap:
+				compute displacement, displacement - 1 shl 64
+			      displacement_ready:
+
+				asmcmd	=dd context.=displacement
+
+				jump	displacement_ok
+			    displacement_16bit:
+				asmcmd	=dw context.=displacement
+				jump	displacement_ok
+			    displacement_8bit:
+				asmcmd	=db context.=displacement
+			    displacement_ok:
+
+				check	imm_size = 1
+				jyes	immediate_8bit
+				check	imm_size = 2
+				jyes	immediate_16bit
+				check	imm_size = 4
+				jyes	immediate_32bit
+				check	imm_size = 8
+				jno	immediate_ok
+				call	x86.simm32, immediate
+				jump	immediate_ok
+			    immediate_32bit:
+				compute context.imm, +immediate
+				asmcmd	=dd context.=imm
+				jump	immediate_ok
+			    immediate_16bit:
+				compute context.imm, +immediate
+				asmcmd	=dw context.=imm
+				jump	immediate_ok
+			    immediate_8bit:
+				compute context.imm, +immediate
+				asmcmd	=db context.=imm
+			    immediate_ok:
+
+			end calminstruction
+
 		end namespace
 
 	end iterate
-
-	calminstruction AVX_512.store_instruction vsize*,vex_mpw*,evex_f*,opcode*,rm_operand*,mask*,reg*,vreg:0,imm_size:0,imm
-
-		local	evex, evex_flags
-		local	segment_prefix, evex_b, rounding, memsize
-		local	mode, mod, rm
-		local	scale, index, base
-		local	displacement, displacement_size, auto_relative
-		local	evex_displacement_size, compressed_displacement
-		local	sym
-
-		arrange segment_prefix, rm_operand.=segment_prefix
-		arrange evex_b, rm_operand.=evex_b
-		arrange rounding, rm_operand.=rounding
-		arrange memsize, rm_operand.=memsize
-
-		arrange mode, rm_operand.=mode
-		arrange mod, rm_operand.=mod
-		arrange rm, rm_operand.=rm
-
-		arrange scale, rm_operand.=scale
-		arrange index, rm_operand.=index
-		arrange base, rm_operand.=base
-
-		arrange displacement_size, rm_operand.=displacement_size
-		arrange displacement, rm_operand.=displacement
-		arrange auto_relative, rm_operand.=auto_relative
-
-		check	segment_prefix
-		jno	segment_prefix_ok
-
-		check	mode = 64
-		jyes	segment_in_long_mode
-		check	mode = 16 & ( rm = 2 | rm = 3 | ( mod > 0 & rm = 6 ) )
-		jyes	ss_segment_default
-		check	mode = 32 & ( ( mod > 0 & rm = 5 ) | ( rm = 4 & base = 4 ) | ( mod > 0 & rm = 4 & base = 5 ) )
-		jyes	ss_segment_default
-
-	    ds_segment_default:
-		check	segment_prefix = 3Eh
-		jyes	segment_prefix_ok
-		jump	store_segment_prefix
-	    ss_segment_default:
-		check	segment_prefix = 36h
-		jyes	segment_prefix_ok
-		jump	store_segment_prefix
-	    segment_in_long_mode:
-		check	segment_prefix < 64h
-		jyes	segment_prefix_ok
-	    store_segment_prefix:
-		asmcmd	=db segment_prefix
-	    segment_prefix_ok:
-
-		check	mod <> 11b & mode <> x86.mode
-		jno	addressing_prefix_ok
-		check	mode = 64 | (mode = 16 & x86.mode = 64)
-		jno	store_addressing_prefix
-		asmcmd	=err 'illegal addressing mode'
-	    store_addressing_prefix:
-		asmcmd	=db 67h
-	    addressing_prefix_ok:
-
-		compute evex, vex_mpw
-		compute evex_flags, evex_f
-
-		check	evex_b
-		jno	evex_L'L
-		compute evex, evex or evex_b shl 20
-	    evex_L'L:
-		check	mod = 11b & evex_b & rounding >= 0
-		jyes	evex_rounding
-		check	vsize = 64
-		jyes	evex_L'
-		check	evex_flags and EVEX_VL & AVX512VL = 0
-		jno	evex_L
-		compute evex_flags, evex_flags or EVEX_FORBIDDEN
-	    evex_L:
-		check	vsize = 32
-		jno	evex_mask
-		compute evex, evex or 1 shl 21
-		jump	evex_mask
-	    evex_L':
-		compute evex, evex or 1 shl 22
-		jump	evex_mask
-	    evex_rounding:
-		compute evex, evex or rounding shl 21
-
-	    evex_mask:
-		check	mask
-		jno	evex_X
-		compute evex, evex or mask shl 16
-
-	    evex_X:
-		check	rm and 10000b | (mod <> 11b & mode > 16 & rm = 4 & index and 1000b)
-		jno	evex_B
-		compute evex, evex or 1 shl 6
-	    evex_B:
-		check	rm and 1000b | (mod <> 11b & mode > 16 & rm = 4 & base and 1000b)
-		jno	evex_R'
-		compute evex, evex or 1 shl 5
-	    evex_R':
-		check	reg and 10000b
-		jno	evex_R
-		compute evex, evex or 1 shl 4
-	    evex_R:
-		check	reg and 1000b
-		jno	evex_V'
-		compute evex, evex or 1 shl 7
-	    evex_V':
-		check	vreg and 10000b
-		jno	evex_vvvv
-		compute evex, evex or 1 shl 19
-	    evex_vvvv:
-		compute evex, evex or (vreg and 1111b) shl 11
-
-		check	x86.mode < 64 & evex and 00001000_01000000_11110000b
-		jno	allowed
-		asmcmd	=err 'instruction requires long mode'
-	    allowed:
-
-		check	displacement_size
-		jno	no_displacement_compression
-		compute displacement, displacement
-		check	(mode > 16 & rm = 5) | (mode = 16 & rm = 6)
-		jyes	no_displacement_compression
-		check	memsize
-		jyes	displacement_compression
-		compute memsize, vsize
-	    displacement_compression:
-		check	displacement relativeto 0 & displacement mod? memsize = 0
-		jno	displacement_incompressible
-		compute compressed_displacement, displacement / memsize
-		check	compressed_displacement < 80h & compressed_displacement >= -80h
-		jyes	displacement_compressed
-		check	compressed_displacement - 1 shl mode >= -80h & compressed_displacement < 1 shl mode
-		jno	displacement_incompressible
-		compute compressed_displacement, compressed_displacement - 1 shl mode
-	    displacement_compressed:
-		compute evex_displacement_size, 1
-		jump	choose_prefix
-	    displacement_incompressible:
-		compute evex_displacement_size, 4
-		check	mode > 16
-		jyes	choose_prefix
-		compute evex_displacement_size, 2
-		jump	choose_prefix
-	    no_displacement_compression:
-		compute evex_displacement_size, displacement_size
-
-	    choose_prefix:
-		check	evex_flags and EVEX_REQUIRED | evex and 11011111_00000000_00010000b | rm and 10000b
-		jyes	evex_required
-		check	~ evex_flags and EVEX_FORBIDDEN & evex_displacement_size + 1 < displacement_size
-		jyes	evex
-		jump	vex
-	    evex_required:
-		check	evex_flags and EVEX_FORBIDDEN
-		jno	evex
-		asmcmd	=err 'invalid operand'
-
-	    vex:
-		local	byte2, byte3
-		compute vex, evex and 11111011_11111111b or (evex and 1 shl 21) shr (21-10)
-		check	vex and 10000000_01111111b <> 1
-		jyes	vex_3byte
-	    vex_2byte:
-		compute byte2, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
-		asmcmd	=db 0C5h,byte2
-		jump	evex_done
-	    vex_3byte:
-		compute byte2, (vex and 11111111b) xor 11100000b
-		compute byte3, (vex shr 8) xor 01111000b
-		asmcmd	=db 0C4h,byte2,byte3
-		jump	evex_done
-
-	    evex:
-		compute evex, evex or 1 shl 10
-		check	evex_flags and EVEX_W1
-		jno	evex_4byte
-		compute evex, evex or 1 shl 15
-	    evex_4byte:
-		compute evex, 62h + (evex xor 00001000_01111000_11110000b) shl 8
-		asmcmd	=dd evex
-		check	mod <> 11b & mod <> 0 & evex_displacement_size > 0
-		jno	evex_done
-		compute displacement_size, evex_displacement_size
-		check	evex_displacement_size = 1
-		jyes	evex_compressed_displacement
-		compute mod, 2
-		jump	evex_done
-	    evex_compressed_displacement:
-		arrange sym, rm_operand.=displacement
-		publish sym, compressed_displacement
-		compute mod, 1
-	    evex_done:
-
-		local	modrm, sib
-
-		compute modrm, mod shl 6 + (reg and 111b) shl 3 + rm and 111b
-		asmcmd	=db opcode, modrm
-
-		check	mod <> 11b & rm = 4 & mode <> 16
-		jno	sib_ok
-		compute sib, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
-		asmcmd	=db sib
-	    sib_ok:
-
-		check	displacement_size = 1
-		jyes	displacement_8bit
-		check	displacement_size = 2
-		jyes	displacement_16bit
-		check	displacement_size = 4 | displacement_size = 8
-		jno	displacement_ok
-
-		check	auto_relative
-		jno	auto_relative_ok
-		check	imm_size < 8
-		jyes	adjust_auto_relative_displacement
-		compute displacement, displacement - ($ + 4 + 4)
-		jump	auto_relative_ok
-	      adjust_auto_relative_displacement:
-		compute displacement, displacement - ($ + 4 + imm_size)
-	      auto_relative_ok:
-
-		check	mode = 64 & displacement relativeto 0
-		jno	displacement_ready
-		check	displacement - 1 shl 64 >= -80000000h & displacement < 1 shl 64
-		jyes	adjust_displacement_wrap
-		check	displacement >= -80000000h & displacement < 80000000h
-		jyes	displacement_ready
-		asmcmd	=err 'address value out of signed range'
-	      adjust_displacement_wrap:
-		compute displacement, displacement - 1 shl 64
-	      displacement_ready:
-
-		arrange sym, rm_operand.=displacement
-		publish sym, displacement
-
-		asmcmd	=dd rm_operand.=displacement
-
-		jump	displacement_ok
-	    displacement_16bit:
-		asmcmd	=dw rm_operand.=displacement
-		jump	displacement_ok
-	    displacement_8bit:
-		asmcmd	=db rm_operand.=displacement
-	    displacement_ok:
-
-		check	imm_size = 1
-		jyes	immediate_8bit
-		check	imm_size = 2
-		jyes	immediate_16bit
-		check	imm_size = 4
-		jyes	immediate_32bit
-		check	imm_size = 8
-		jno	immediate_ok
-		call	x86.simm32, imm
-		jump	immediate_ok
-	    immediate_32bit:
-		compute x86.imm, +imm
-		asmcmd	=dd =x86.=imm
-		jump	immediate_ok
-	    immediate_16bit:
-		compute x86.imm, +imm
-		asmcmd	=dw =x86.=imm
-		jump	immediate_ok
-	    immediate_8bit:
-		compute x86.imm, +imm
-		asmcmd	=db =x86.=imm
-	    immediate_ok:
-
-	end calminstruction
 
 	macro AVX_512.basic_instruction_bcst_er vex_mpw,evex_f,opcode,unit,dest,src,src_er&
 		AVX_512.parse_k1z_operand@dest dest
@@ -760,7 +733,7 @@ if ~ defined AVX_512
 			if @src.size <> @dest.size | @src2.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -779,7 +752,7 @@ if ~ defined AVX_512
 			if @src.size <> @dest.size | @src2.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -799,7 +772,7 @@ if ~ defined AVX_512
 			if @src.size <> @dest.size | @src2.size and not @dest.size | @aux.size and not 1
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -813,7 +786,7 @@ if ~ defined AVX_512
 			if @src.size <> @dest.size | @src2.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -830,7 +803,7 @@ if ~ defined AVX_512
 			else if @src.size <> @dest.size | @src2.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -852,7 +825,7 @@ if ~ defined AVX_512
 				err 'operand sizes do not match'
 			end if
 			@src2.memsize = unit
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -874,7 +847,7 @@ if ~ defined AVX_512
 				err 'operand sizes do not match'
 			end if
 			@src2.memsize = unit
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -897,7 +870,7 @@ if ~ defined AVX_512
 				err 'operand sizes do not match'
 			end if
 			@src2.memsize = unit
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -914,7 +887,7 @@ if ~ defined AVX_512
 				err 'operand sizes do not match'
 			end if
 			@src2.memsize = unit
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -932,7 +905,7 @@ if ~ defined AVX_512
 				err 'operand sizes do not match'
 			end if
 			@src2.memsize = unit
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+			AVX_512.store_instruction@src2 @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -950,7 +923,7 @@ if ~ defined AVX_512
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -968,7 +941,7 @@ if ~ defined AVX_512
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -989,7 +962,7 @@ if ~ defined AVX_512
 			else if @src.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm,,1,@aux.imm
+			AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1002,7 +975,7 @@ if ~ defined AVX_512
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1018,7 +991,7 @@ if ~ defined AVX_512
 				err 'operand sizes do not match'
 			end if
 			@src.memsize = unit
-			AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1108,7 +1081,7 @@ if ~ defined AVX_512
 				err 'invalid operand size'
 			end if
 			@src2.memsize = 4
-			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,18h,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,18h,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1122,7 +1095,7 @@ if ~ defined AVX_512
 				err 'invalid operand size'
 			end if
 			@src.memsize = 8
-			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_W1+EVEX_VL,19h,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W0,EVEX_W1+EVEX_VL,19h,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1138,16 +1111,16 @@ if ~ defined AVX_512
 					err 'invalid operand size'
 				end if
 				@src.memsize = msize
-				AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX,opcode,@dest.mask,@dest.rm
 			else if @dest.type = 'mmreg' & @src.type = 'reg'
 				if @src.size <> msize & (@src.size <> 4 | msize = 8)
 					err 'invalid operand size'
 				end if
 				@src.memsize = msize
 				if msize = 8
-					AVX_512.store_instruction @dest.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode_g,@src,@dest.mask,@dest.rm
+					AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode_g,@dest.mask,@dest.rm
 				else
-					AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode_g,@src,@dest.mask,@dest.rm
+					AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode_g,@dest.mask,@dest.rm
 				end if
 			else
 				err 'invalid combination of operands'
@@ -1167,7 +1140,7 @@ if ~ defined AVX_512
 					err 'invalid operand size'
 				end if
 				@src.memsize = msize
-				AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1189,7 +1162,7 @@ if ~ defined AVX_512
 				else if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+				AVX_512.store_instruction@src2 @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1206,7 +1179,7 @@ if ~ defined AVX_512
 				err 'invalid operand size'
 			end if
 			@dest.memsize = 4
-			AVX_512.store_instruction 16,VEX_66_0F3A_W0,EVEX_AS_VEX,17h,@dest,0,@src.rm,,1,@aux.imm
+			AVX_512.store_instruction@dest 16,VEX_66_0F3A_W0,EVEX_AS_VEX,17h,0,@src.rm,,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1222,7 +1195,7 @@ if ~ defined AVX_512
 				err 'invalid operand size'
 			end if
 			@src2.memsize = 4
-			AVX_512.store_instruction 16,VEX_66_0F3A_W0,EVEX_AS_VEX,21h,@src2,0,@dest.rm,@src.rm,1,@aux.imm
+			AVX_512.store_instruction@src2 16,VEX_66_0F3A_W0,EVEX_AS_VEX,21h,0,@dest.rm,@src.rm,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1240,7 +1213,7 @@ if ~ defined AVX_512
 					err 'invalid operand size'
 				end if
 				@dest.memsize = msize
-				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm,,1,@aux.imm
+				AVX_512.store_instruction@dest @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@src.rm,,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1261,7 +1234,7 @@ if ~ defined AVX_512
 					err 'invalid operand size'
 				end if
 				@src2.memsize = msize
-				AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+				AVX_512.store_instruction@src2 @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1287,14 +1260,14 @@ if ~ defined AVX_512
 				else if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,EVEX_FORBIDDEN,0C2h,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+				AVX_512.store_instruction@src2 @src.size,vex_mpw,EVEX_FORBIDDEN,0C2h,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 			else if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
 				if @aux.size and not 1
 					err 'invalid operand size'
 				else if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,evex_mpw,EVEX_REQUIRED+EVEX_VL,0C2h,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+				AVX_512.store_instruction@src2 @src.size,evex_mpw,EVEX_REQUIRED+EVEX_VL,0C2h,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1321,7 +1294,7 @@ if ~ defined AVX_512
 					err 'operand sizes do not match'
 				end if
 				@src2.memsize = unit
-				AVX_512.store_instruction @src.size,vex_mpw,EVEX_FORBIDDEN,0C2h,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+				AVX_512.store_instruction@src2 @src.size,vex_mpw,EVEX_FORBIDDEN,0C2h,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 			else if @dest.type = 'maskreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'imm'
 				if @src.size <> 16 | (@src2.type = 'mem' & @src2.size and not unit) | @aux.size and not 1
 					err 'invalid operand size'
@@ -1329,7 +1302,7 @@ if ~ defined AVX_512
 					err 'operand sizes do not match'
 				end if
 				@src2.memsize = unit
-				AVX_512.store_instruction @src.size,evex_mpw,EVEX_REQUIRED,0C2h,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+				AVX_512.store_instruction@src2 @src.size,evex_mpw,EVEX_REQUIRED,0C2h,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1377,7 +1350,7 @@ if ~ defined AVX_512
 					err 'operand sizes do not match'
 				end if
 				@src.memsize = unit
-				AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1392,7 +1365,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand@src src
 			AVX_512.parse_operand@src2 src2
 			if @dest.type = 'maskreg' & @src.type = 'maskreg' & @src2.type = 'maskreg'
-				AVX.store_instruction 32,VEX_0F_W0,opcode,@src2,@dest.rm,@src.rm
+				AVX.store_instruction@src2 32,VEX_0F_W0,opcode,@dest.rm,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1406,7 +1379,7 @@ if ~ defined AVX_512
 			AVX_512.parse_operand@dest dest
 			AVX_512.parse_operand@src src
 			if @dest.type = 'maskreg' & @src.type = 'maskreg'
-				AVX.store_instruction 16,VEX_0F_W0,opcode,@src,@dest.rm
+				AVX.store_instruction@src 16,VEX_0F_W0,opcode,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1421,22 +1394,22 @@ if ~ defined AVX_512
 			if @src.type = 'mem' & @src.size and not 2
 				err 'invalid operand size'
 			end if
-			AVX.store_instruction 16,VEX_0F_W0,90h,@src,@dest.rm
+			AVX.store_instruction@src 16,VEX_0F_W0,90h,@dest.rm
 		else if @dest.type = 'mem' & @src.type = 'maskreg'
 			if @dest.size and not 2
 				err 'invalid operand size'
 			end if
-			AVX.store_instruction 16,VEX_0F_W0,91h,@dest,@src.rm
+			AVX.store_instruction@dest 16,VEX_0F_W0,91h,@src.rm
 		else if @dest.type = 'maskreg' & @src.type = 'reg'
 			if @src.size <> 4
 				err 'invalid operand size'
 			end if
-			AVX.store_instruction 16,VEX_0F_W0,92h,@src,@dest.rm
+			AVX.store_instruction@src 16,VEX_0F_W0,92h,@dest.rm
 		else if @dest.type = 'reg' & @src.type = 'maskreg'
 			if @dest.size <> 4
 				err 'invalid operand size'
 			end if
-			AVX.store_instruction 16,VEX_0F_W0,93h,@src,@dest.rm
+			AVX.store_instruction@src 16,VEX_0F_W0,93h,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1452,7 +1425,7 @@ if ~ defined AVX_512
 				if @aux.size and not 1
 					err 'invalid operand size'
 				end if
-				AVX.store_instruction 16,vex_mpw,opcode,@src,@dest.rm,,1,@aux.imm
+				AVX.store_instruction@src 16,vex_mpw,opcode,@dest.rm,,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1465,7 +1438,7 @@ if ~ defined AVX_512
 		AVX_512.parse_operand@src src
 		AVX_512.parse_operand@src2 src2
 		if @dest.type = 'maskreg' & @src.type = 'maskreg' & @src2.type = 'maskreg'
-			AVX.store_instruction 32,VEX_66_0F_W0,4Bh,@src2,@dest.rm,@src.rm
+			AVX.store_instruction@src2 32,VEX_66_0F_W0,4Bh,@dest.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1483,7 +1456,7 @@ if ~ defined AVX_512
 				if @src.memsize = 0
 					@src.memsize = @dest.size shr 1
 				end if
-				AVX_512.store_instruction @dest.size,VEX_F3_0F_W0,evex_f,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @dest.size,VEX_F3_0F_W0,evex_f,opcode,@dest.mask,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1512,7 +1485,7 @@ if ~ defined AVX_512
 				if (@src.size shr 1 - 1) and not 15 + 16 <> @dest.size | @src.size > 64
 					err 'invalid operand size'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @src.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1537,7 +1510,7 @@ if ~ defined AVX_512
 				if @src.memsize = 0
 					@src.memsize = @dest.size shr 1
 				end if
-				AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1566,7 +1539,7 @@ if ~ defined AVX_512
 				if (@src.size shr 1 - 1) and not 15 + 16 <> @dest.size | @src.size > 64
 					err 'invalid operand size'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,evex_f,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @src.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1607,7 +1580,7 @@ if ~ defined AVX_512
 			if @src.memsize = 0
 				@src.memsize = @dest.size shr 1
 			end if
-			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,13h,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,13h,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1629,7 +1602,7 @@ if ~ defined AVX_512
 			if @dest.memsize = 0
 				@dest.memsize = @src.size shr 1
 			end if
-			AVX_512.store_instruction @src.size,VEX_66_0F3A_W0,EVEX_AS_VEX+EVEX_VL,1Dh,@dest,@dest.mask,@src.rm,,1,@aux.imm
+			AVX_512.store_instruction@dest @src.size,VEX_66_0F3A_W0,EVEX_AS_VEX+EVEX_VL,1Dh,@dest.mask,@src.rm,,1,@aux.imm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1654,9 +1627,9 @@ if ~ defined AVX_512
 					if x86.mode < 64
 						err 'instruction requires long mode'
 					end if
-					AVX_512.store_instruction 16,vex_mp#_W1,evex_f,opcode,@src,0,@dest.rm
+					AVX_512.store_instruction@src 16,vex_mp#_W1,evex_f,opcode,0,@dest.rm
 				else
-					AVX_512.store_instruction 16,vex_mp#_W0,evex_f,opcode,@src,0,@dest.rm
+					AVX_512.store_instruction@src 16,vex_mp#_W0,evex_f,opcode,0,@dest.rm
 				end if
 			else
 				err 'invalid combination of operands'
@@ -1684,9 +1657,9 @@ if ~ defined AVX_512
 					if x86.mode < 64
 						err 'instruction requires long mode'
 					end if
-					AVX_512.store_instruction 16,vex_mp#_W1,evex_f,opcode,@src,0,@dest.rm
+					AVX_512.store_instruction@src 16,vex_mp#_W1,evex_f,opcode,0,@dest.rm
 				else
-					AVX_512.store_instruction 16,vex_mp#_W0,evex_f,opcode,@src,0,@dest.rm
+					AVX_512.store_instruction@src 16,vex_mp#_W0,evex_f,opcode,0,@dest.rm
 				end if
 			else
 				err 'invalid combination of operands'
@@ -1724,9 +1697,9 @@ if ~ defined AVX_512
 					if x86.mode < 64
 						err 'instruction requires long mode'
 					end if
-					AVX_512.store_instruction 16,VEX_F2_0F_W1,evex_f,opcode,@src2,0,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 16,VEX_F2_0F_W1,evex_f,opcode,0,@dest.rm,@src.rm
 				else
-					AVX_512.store_instruction 16,VEX_F2_0F_W0,evex_f,opcode,@src2,0,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 16,VEX_F2_0F_W0,evex_f,opcode,0,@dest.rm,@src.rm
 				end if
 			else
 				err 'invalid combination of operands'
@@ -1756,9 +1729,9 @@ if ~ defined AVX_512
 					if x86.mode < 64
 						err 'instruction requires long mode'
 					end if
-					AVX_512.store_instruction 16,VEX_F3_0F_W1,evex_f,opcode,@src2,0,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 16,VEX_F3_0F_W1,evex_f,opcode,0,@dest.rm,@src.rm
 				else
-					AVX_512.store_instruction 16,VEX_F3_0F_W0,evex_f,opcode,@src2,0,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 16,VEX_F3_0F_W0,evex_f,opcode,0,@dest.rm,@src.rm
 				end if
 			else
 				err 'invalid combination of operands'
@@ -1779,12 +1752,12 @@ if ~ defined AVX_512
 				if @src.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,vex_mpw,evex_f,opcode_rm,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode_rm,@dest.mask,@dest.rm
 			else if @dest.type = 'mem' & @src.type = 'mmreg'
 				if @dest.size and not @src.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,evex_f,opcode_mr,@dest,@dest.mask,@src.rm
+				AVX_512.store_instruction@dest @src.size,vex_mpw,evex_f,opcode_mr,@dest.mask,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1800,13 +1773,13 @@ if ~ defined AVX_512
 				err 'invalid operand size'
 			end if
 			@src.memsize = 4
-			AVX_512.store_instruction 16,VEX_66_0F_W0,EVEX_AS_VEX,6Eh,@src,0,@dest.rm
+			AVX_512.store_instruction@src 16,VEX_66_0F_W0,EVEX_AS_VEX,6Eh,0,@dest.rm
 		else if (@dest.type = 'reg' | @dest.type = 'mem') & @src.type = 'mmreg'
 			if @dest.size and not 4 | @src.size <> 16
 				err 'operand sizes do not match'
 			end if
 			@dest.memsize = 4
-			AVX_512.store_instruction 16,VEX_66_0F_W0,EVEX_AS_VEX,7Eh,@dest,0,@src.rm
+			AVX_512.store_instruction@dest 16,VEX_66_0F_W0,EVEX_AS_VEX,7Eh,0,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1820,13 +1793,13 @@ if ~ defined AVX_512
 				err 'invalid operand size'
 			end if
 			@src.memsize = 8
-			AVX_512.store_instruction 16,VEX_F3_0F_W0,EVEX_W1,7Eh,@src,0,@dest.rm
+			AVX_512.store_instruction@src 16,VEX_F3_0F_W0,EVEX_W1,7Eh,0,@dest.rm
 		else if @dest.type = 'mem' & @src.type = 'mmreg'
 			if @dest.size and not 8 | @src.size <> 16
 				err 'invalid operand size'
 			end if
 			@dest.memsize = 8
-			AVX_512.store_instruction 16,VEX_66_0F_W0,EVEX_W1,0D6h,@dest,0,@src.rm
+			AVX_512.store_instruction@dest 16,VEX_66_0F_W0,EVEX_W1,0D6h,0,@src.rm
 		else if @dest.type = 'mmreg' & @src.type = 'reg'
 			if @dest.size <> 16 | @src.size <> 8
 				err 'invalid operand size'
@@ -1834,7 +1807,7 @@ if ~ defined AVX_512
 			if x86.mode < 64
 				err 'instruction requires long mode'
 			end if
-			AVX_512.store_instruction 16,VEX_66_0F_W1,EVEX_W1,6Eh,@src,0,@dest.rm
+			AVX_512.store_instruction@src 16,VEX_66_0F_W1,EVEX_W1,6Eh,0,@dest.rm
 		else if @dest.type = 'reg' & @src.type = 'mmreg'
 			if @dest.size <> 8 | @src.size <> 16
 				err 'invalid operand size'
@@ -1842,7 +1815,7 @@ if ~ defined AVX_512
 			if x86.mode < 64
 				err 'instruction requires long mode'
 			end if
-			AVX_512.store_instruction 16,VEX_66_0F_W1,EVEX_W1,7Eh,@dest,0,@src.rm
+			AVX_512.store_instruction@dest 16,VEX_66_0F_W1,EVEX_W1,7Eh,0,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1863,7 +1836,7 @@ if ~ defined AVX_512
 				end if
 				@src.memsize = @dest.size
 			end if
-			AVX_512.store_instruction @dest.size,VEX_F2_0F_W0,EVEX_W1+EVEX_VL,12h,@src,@dest.mask,@dest.rm
+			AVX_512.store_instruction@src @dest.size,VEX_F2_0F_W0,EVEX_W1+EVEX_VL,12h,@dest.mask,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1881,7 +1854,7 @@ if ~ defined AVX_512
 				else if @src.size <> @dest.size | @src2.size <> @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction 16,VEX_0F_W0,EVEX_AS_VEX,opcode,@src2,0,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 16,VEX_0F_W0,EVEX_AS_VEX,opcode,0,@dest.rm,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1900,7 +1873,7 @@ if ~ defined AVX_512
 						err 'invalid operand size'
 					end if
 					@dest.memsize = 8
-					AVX_512.store_instruction 16,vex_mpw,evex_f,opcode+1,@dest,0,@src.rm
+					AVX_512.store_instruction@dest 16,vex_mpw,evex_f,opcode+1,0,@src.rm
 				else
 					err 'invalid combination of operands'
 				end if
@@ -1911,7 +1884,7 @@ if ~ defined AVX_512
 						err 'invalid operand size'
 					end if
 					@src2.memsize = 8
-					AVX_512.store_instruction 16,vex_mpw,evex_f,opcode,@src2,0,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 16,vex_mpw,evex_f,opcode,0,@dest.rm,@src.rm
 				else
 					err 'invalid combination of operands'
 				end if
@@ -1929,7 +1902,7 @@ if ~ defined AVX_512
 				if @dest.size and not @src.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,evex_f,opcode,@dest,0,@src.rm
+				AVX_512.store_instruction@dest @src.size,vex_mpw,evex_f,opcode,0,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -1944,7 +1917,7 @@ if ~ defined AVX_512
 			if @src.size and not @dest.size
 				err 'operand sizes do not match'
 			end if
-			AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,2Ah,@src,0,@dest.rm
+			AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,2Ah,0,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -1961,13 +1934,13 @@ if ~ defined AVX_512
 						err 'invalid operand size'
 					end if
 					@src.memsize = msize
-					AVX_512.store_instruction 16,vex_mpw,evex_f,10h,@src,@dest.mask,@dest.rm
+					AVX_512.store_instruction@src 16,vex_mpw,evex_f,10h,@dest.mask,@dest.rm
 				else if @dest.type = 'mem' & @src.type = 'mmreg'
 					if @dest.size and not msize | @src.size <> 16
 						err 'invalid operand size'
 					end if
 					@dest.memsize = msize
-					AVX_512.store_instruction 16,vex_mpw,evex_f,11h,@dest,@dest.mask,@src.rm
+					AVX_512.store_instruction@dest 16,vex_mpw,evex_f,11h,@dest.mask,@src.rm
 				else
 					err 'invalid combination of operands'
 				end if
@@ -1977,7 +1950,7 @@ if ~ defined AVX_512
 					if @dest.size <> 16 | @src.size <> 16 | @src2.size <> 16
 						err 'invalid operand size'
 					end if
-					AVX_512.store_instruction 16,vex_mpw,evex_f,10h,@src2,@dest.mask,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 16,vex_mpw,evex_f,10h,@dest.mask,@dest.rm,@src.rm
 				else
 					err 'invalid combination of operands'
 				end if
@@ -2004,14 +1977,14 @@ if ~ defined AVX_512
 				if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,evex_f,opcode_rrm,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F38_W0,evex_f,opcode_rrm,@dest.mask,@dest.rm,@src.rm
 			else if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @src2.type = 'imm'
 				if @src2.size and not 1
 					err 'invalid operand size'
 				else if @src.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,VEX_66_0F3A_W0,evex_f,opcode_rri,@src,@dest.mask,@dest.rm,,1,@src2.imm
+				AVX_512.store_instruction@src @dest.size,VEX_66_0F3A_W0,evex_f,opcode_rri,@dest.mask,@dest.rm,,1,@src2.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2103,7 +2076,7 @@ if ~ defined AVX_512
 				else if @src.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,vex_mpw,EVEX_AS_VEX+EVEX_VL,70h,@src,@dest.mask,@dest.rm,,1,@aux.imm
+				AVX_512.store_instruction@src @dest.size,vex_mpw,EVEX_AS_VEX+EVEX_VL,70h,@dest.mask,@dest.rm,,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2148,7 +2121,7 @@ if ~ defined AVX_512
 				if @src.size and not @dest.size | @aux.size and not 1
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,72h,@src,@dest.mask,postbyte,@dest.rm,1,@aux.imm
+				AVX_512.store_instruction@src @dest.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,72h,@dest.mask,postbyte,@dest.rm,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2173,7 +2146,7 @@ if ~ defined AVX_512
 				else if @src.size <> @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX,opcode_rrm,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F_W0,EVEX_AS_VEX,opcode_rrm,@dest.mask,@dest.rm,@src.rm
 			else if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem') & @src2.type = 'imm'
 				if @src2.size and not 1
 					err 'invalid operand size'
@@ -2181,9 +2154,9 @@ if ~ defined AVX_512
 					err 'operand sizes do not match'
 				end if
 				if @src.type = 'mem'
-					AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
+					AVX_512.store_instruction@src @dest.size,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,postbyte,@dest.rm,1,@src2.imm
 				else
-					AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
+					AVX_512.store_instruction@src @dest.size,VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode,@dest.mask,postbyte,@dest.rm,1,@src2.imm
 				end if
 			else
 				err 'invalid combination of operands'
@@ -2210,9 +2183,9 @@ if ~ defined AVX_512
 					err 'operand sizes do not match'
 				end if
 				if `instr = 'vpsraq'
-					AVX_512.store_instruction @dest.size,VEX_66_0F_W1,EVEX_REQUIRED+EVEX_VL,opcode_rrm,@src2,@dest.mask,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 @dest.size,VEX_66_0F_W1,EVEX_REQUIRED+EVEX_VL,opcode_rrm,@dest.mask,@dest.rm,@src.rm
 				else
-					AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_W1+EVEX_VL,opcode_rrm,@src2,@dest.mask,@dest.rm,@src.rm
+					AVX_512.store_instruction@src2 @dest.size,VEX_66_0F_W0,EVEX_W1+EVEX_VL,opcode_rrm,@dest.mask,@dest.rm,@src.rm
 				end if
 			else if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem') & @src2.type = 'imm'
 				if @src2.size and not 1
@@ -2221,9 +2194,9 @@ if ~ defined AVX_512
 					err 'operand sizes do not match'
 				end if
 				if @src.type = 'mem' | `instr = 'vpsraq'
-					AVX_512.store_instruction @dest.size,VEX_66_0F_W1,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
+					AVX_512.store_instruction@src @dest.size,VEX_66_0F_W1,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,postbyte,@dest.rm,1,@src2.imm
 				else
-					AVX_512.store_instruction @dest.size,VEX_66_0F_W0,EVEX_W1+EVEX_VL,opcode,@src,@dest.mask,postbyte,@dest.rm,1,@src2.imm
+					AVX_512.store_instruction@src @dest.size,VEX_66_0F_W0,EVEX_W1+EVEX_VL,opcode,@dest.mask,postbyte,@dest.rm,1,@src2.imm
 				end if
 			else
 				err 'invalid combination of operands'
@@ -2242,12 +2215,12 @@ if ~ defined AVX_512
 				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @src.size,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.rm
 			else if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,VEX_66_0F_W0,EVEX_FORBIDDEN,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @src.size,VEX_66_0F_W0,EVEX_FORBIDDEN,opcode,@dest.mask,@dest.rm,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2265,12 +2238,12 @@ if ~ defined AVX_512
 				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @src.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.rm
 			else if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg')
 				if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,VEX_66_0F38_W0,EVEX_FORBIDDEN,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @src.size,VEX_66_0F38_W0,EVEX_FORBIDDEN,opcode,@dest.mask,@dest.rm,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2288,7 +2261,7 @@ if ~ defined AVX_512
 				if @src2.size and not @src.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2307,7 +2280,7 @@ if ~ defined AVX_512
 				if @src2.size and not @src.size | @aux.size and not 1
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
+				AVX_512.store_instruction@src2 @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.rm,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2326,7 +2299,7 @@ if ~ defined AVX_512
 				if (@src.type = 'mmreg' & @src.size <> (@src.memsize-1) and not 15 + 16) | (@src.type = 'mem' & @src.size and not @src.memsize)
 					err 'invalid operand size'
 				end if
-				AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,@src,@dest.mask,@dest.rm
+				AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,@dest.mask,@dest.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2346,7 +2319,7 @@ if ~ defined AVX_512
 				else if @src.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,VEX_66_0F3A_W1,EVEX_AS_VEX+EVEX_VL,opcode,@src,@dest.mask,@dest.rm,,1,@aux.imm
+				AVX_512.store_instruction@src @dest.size,VEX_66_0F3A_W1,EVEX_AS_VEX+EVEX_VL,opcode,@dest.mask,@dest.rm,,1,@aux.imm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2366,7 +2339,7 @@ if ~ defined AVX_512
 				else if @src.size <> @dest.size | @src2.size and not @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,@src2,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2459,7 +2432,7 @@ if ~ defined AVX_512
 				if @dest.size and not @src.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm
+				AVX_512.store_instruction@dest @src.size,vex_mpw,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2565,7 +2538,7 @@ if ~ defined AVX_512
 				if (@dest.type = 'mmreg' & @dest.size <> (@dest.memsize-1) and not 15 + 16) | (@dest.type = 'mem' & @dest.size and not @dest.memsize)
 					err 'invalid operand size'
 				end if
-				AVX_512.store_instruction @src.size,VEX_F3_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm
+				AVX_512.store_instruction@dest @src.size,VEX_F3_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2586,7 +2559,7 @@ if ~ defined AVX_512
 						err 'disallowed combination of registers'
 					end if
 					@src.memsize = 4
-					AVX_512.store_instruction @src.visize,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm,@src.index and 10000b
+					AVX_512.store_instruction@src @src.visize,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.index and 10000b
 				else
 					err 'invalid combination of operands'
 				end if
@@ -2602,7 +2575,7 @@ if ~ defined AVX_512
 					else if @dest.rm = @aux.rm | @dest.rm = @src.index | @aux.rm = @src.index
 						err 'disallowed combination of registers'
 					end if
-					AVX.store_instruction @src.visize,VEX_66_0F38_W0,opcode,@src,@dest.rm,@aux.rm
+					AVX.store_instruction@src @src.visize,VEX_66_0F38_W0,opcode,@dest.rm,@aux.rm
 				else
 					err 'invalid combination of operands'
 				end if
@@ -2624,7 +2597,7 @@ if ~ defined AVX_512
 						err 'disallowed combination of registers'
 					end if
 					@src.memsize = 8
-					AVX_512.store_instruction @dest.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode,@src,@dest.mask,@dest.rm,@src.index and 10000b
+					AVX_512.store_instruction@src @dest.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@dest.rm,@src.index and 10000b
 				else
 					err 'invalid combination of operands'
 				end if
@@ -2640,7 +2613,7 @@ if ~ defined AVX_512
 					else if @dest.rm = @aux.rm | @dest.rm = @src.index | @aux.rm = @src.index
 						err 'disallowed combination of registers'
 					end if
-					AVX.store_instruction @dest.size,VEX_66_0F38_W1,opcode,@src,@dest.rm,@aux.rm
+					AVX.store_instruction@src @dest.size,VEX_66_0F38_W1,opcode,@dest.rm,@aux.rm
 				else
 					err 'invalid combination of operands'
 				end if
@@ -2661,7 +2634,7 @@ if ~ defined AVX_512
 					err 'disallowed combination of registers'
 				end if
 				@dest.memsize = 4
-				AVX_512.store_instruction @dest.visize,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm,@dest.index and 10000b
+				AVX_512.store_instruction@dest @dest.visize,VEX_66_0F38_W0,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@src.rm,@dest.index and 10000b
 			else
 				err 'invalid combination of operands'
 			end if
@@ -2681,7 +2654,7 @@ if ~ defined AVX_512
 					err 'disallowed combination of registers'
 				end if
 				@dest.memsize = 8
-				AVX_512.store_instruction @src.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode,@dest,@dest.mask,@src.rm,@dest.index and 10000b
+				AVX_512.store_instruction@dest @src.size,VEX_66_0F38_W1,EVEX_REQUIRED+EVEX_VL,opcode,@dest.mask,@src.rm,@dest.index and 10000b
 			else
 				err 'invalid combination of operands'
 			end if

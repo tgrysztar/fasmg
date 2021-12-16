@@ -5,11 +5,11 @@ macro fisttp? src*
 	x86.parse_operand@src src
 	if @src.type = 'mem'
 		if @src.size = 2
-			x86.store_instruction 0DFh,@src,1
+			x86.store_instruction@src 0DFh,1
 		else if @src.size = 4
-			x86.store_instruction 0DBh,@src,1
+			x86.store_instruction@src 0DBh,1
 		else if @src.size = 8
-			x86.store_instruction 0DDh,@src,1
+			x86.store_instruction@src 0DDh,1
 		else if @src.size
 			err 'invalid operand size'
 		else
@@ -47,7 +47,7 @@ macro lddqu? dest*,src*
 	end if
 	if @dest.type = 'mmreg' & @src.type = 'mem'
 		@src.opcode_prefix = 0F2h
-		x86.store_instruction <0Fh,0F0h>,@src,@dest.rm
+		x86.store_instruction@src <0Fh,0F0h>,@dest.rm
 	else
 		err 'invalid combination of operands'
 	end if

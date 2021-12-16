@@ -108,10 +108,10 @@ if ~ defined i8087
 		    unknown_size:
 			asmcmd	=err 'operand size not specified'
 		    mem_dword:
-			xcall	x86.store_instruction, (0D8h),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0D8h),(postbyte)
 			exit
 		    mem_qword:
-			xcall	x86.store_instruction, (0DCh),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0DCh),(postbyte)
 			exit
 		    st:
 			local	modrm
@@ -187,10 +187,10 @@ if ~ defined i8087
 		    unknown_size:
 			asmcmd	=err 'operand size not specified'
 		    mem_dword: st:
-			xcall	x86.store_instruction, (0D8h),@src,(postbyte)
+			xcall	x86.store_instruction@src, (0D8h),(postbyte)
 			exit
 		    mem_qword:
-			xcall	x86.store_instruction, (0DCh),@src,(postbyte)
+			xcall	x86.store_instruction@src, (0DCh),(postbyte)
 			exit
 		    invalid_operand:
 			asmcmd	=err 'invalid operand'
@@ -215,10 +215,10 @@ if ~ defined i8087
 		    unknown_size:
 			asmcmd	=err 'operand size not specified'
 		    mem_word:
-			xcall	x86.store_instruction, (0DEh),@src,(postbyte)
+			xcall	x86.store_instruction@src, (0DEh),(postbyte)
 			exit
 		    mem_dword:
-			xcall	x86.store_instruction, (0DAh),@src,(postbyte)
+			xcall	x86.store_instruction@src, (0DAh),(postbyte)
 			exit
 		    invalid_operand:
 			asmcmd	=err 'invalid operand'
@@ -245,13 +245,13 @@ if ~ defined i8087
 	    unknown_size:
 		asmcmd	=err 'operand size not specified'
 	    mem_dword: st:
-		xcall	x86.store_instruction, (0D9h),@src,(0)
+		xcall	x86.store_instruction@src, (0D9h),(0)
 		exit
 	    mem_qword:
-		xcall	x86.store_instruction, (0DDh),@src,(0)
+		xcall	x86.store_instruction@src, (0DDh),(0)
 		exit
 	    mem_tword:
-		xcall	x86.store_instruction, (0DBh),@src,(5)
+		xcall	x86.store_instruction@src, (0DBh),(5)
 		exit
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
@@ -274,10 +274,10 @@ if ~ defined i8087
 	    unknown_size:
 		asmcmd	=err 'operand size not specified'
 	    mem_dword:
-		xcall	x86.store_instruction, (0D9h),@dest,(2)
+		xcall	x86.store_instruction@dest, (0D9h),(2)
 		exit
 	    mem_qword: st:
-		xcall	x86.store_instruction, (0DDh),@dest,(2)
+		xcall	x86.store_instruction@dest, (0DDh),(2)
 		exit
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
@@ -302,13 +302,13 @@ if ~ defined i8087
 	    unknown_size:
 		asmcmd	=err 'operand size not specified'
 	    mem_dword:
-		xcall	x86.store_instruction, (0D9h),@dest,(3)
+		xcall	x86.store_instruction@dest, (0D9h),(3)
 		exit
 	    mem_qword: st:
-		xcall	x86.store_instruction, (0DDh),@dest,(3)
+		xcall	x86.store_instruction@dest, (0DDh),(3)
 		exit
 	    mem_tword:
-		xcall	x86.store_instruction, (0DBh),@dest,(7)
+		xcall	x86.store_instruction@dest, (0DBh),(7)
 		exit
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
@@ -331,13 +331,13 @@ if ~ defined i8087
 	    unknown_size:
 		asmcmd	=err 'operand size not specified'
 	    mem_word:
-		xcall	x86.store_instruction, (0DFh),@src,(0)
+		xcall	x86.store_instruction@src, (0DFh),(0)
 		exit
 	    mem_dword:
-		xcall	x86.store_instruction, (0DBh),@src,(0)
+		xcall	x86.store_instruction@src, (0DBh),(0)
 		exit
 	    mem_qword:
-		xcall	x86.store_instruction, (0DFh),@src,(5)
+		xcall	x86.store_instruction@src, (0DFh),(5)
 		exit
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
@@ -358,10 +358,10 @@ if ~ defined i8087
 	    unknown_size:
 		asmcmd	=err 'operand size not specified'
 	    mem_word:
-		xcall	x86.store_instruction, (0DFh),@dest,(2)
+		xcall	x86.store_instruction@dest, (0DFh),(2)
 		exit
 	    mem_dword:
-		xcall	x86.store_instruction, (0DBh),@dest,(2)
+		xcall	x86.store_instruction@dest, (0DBh),(2)
 		exit
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
@@ -384,13 +384,13 @@ if ~ defined i8087
 	    unknown_size:
 		asmcmd	=err 'operand size not specified'
 	    mem_word:
-		xcall	x86.store_instruction, (0DFh),@dest,(3)
+		xcall	x86.store_instruction@dest, (0DFh),(3)
 		exit
 	    mem_dword:
-		xcall	x86.store_instruction, (0DBh),@dest,(3)
+		xcall	x86.store_instruction@dest, (0DBh),(3)
 		exit
 	    mem_qword:
-		xcall	x86.store_instruction, (0DFh),@dest,(7)
+		xcall	x86.store_instruction@dest, (0DFh),(7)
 		exit
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
@@ -413,13 +413,13 @@ if ~ defined i8087
 	    unknown_size:
 		asmcmd	=err 'operand size not specified'
 	    mem_word:
-		xcall	x86.store_instruction, (0DFh),@dest,(1)
+		xcall	x86.store_instruction@dest, (0DFh),(1)
 		exit
 	    mem_dword:
-		xcall	x86.store_instruction, (0DBh),@dest,(1)
+		xcall	x86.store_instruction@dest, (0DBh),(1)
 		exit
 	    mem_qword:
-		xcall	x86.store_instruction, (0DDh),@dest,(1)
+		xcall	x86.store_instruction@dest, (0DDh),(1)
 		exit
 	    invalid_operand:
 		asmcmd	=err 'invalid operand'
@@ -433,7 +433,7 @@ if ~ defined i8087
 			jno	invalid_operand
 			check	@src.size and not 10
 			jyes	invalid_operand_size
-			xcall	x86.store_instruction, (0DFh),@src,(postbyte)
+			xcall	x86.store_instruction@src, (0DFh),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -485,7 +485,7 @@ if ~ defined i8087
 		assemble x87.fnstsw_ax
 		exit
 	    mem:
-		xcall	x86.store_instruction, (0DDh),@dest,(7)
+		xcall	x86.store_instruction@dest, (0DDh),(7)
 		exit
 	    invalid_operand_size:
 		asmcmd	=err 'invalid operand size'
@@ -502,7 +502,7 @@ if ~ defined i8087
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			xcall	x86.store_instruction, (0D9h),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -521,7 +521,7 @@ if ~ defined i8087
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			xcall	x86.store_instruction, (0D9h),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'
@@ -540,7 +540,7 @@ if ~ defined i8087
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			xcall	x86.store_instruction, (0DDh),@dest,(postbyte)
+			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
 			asmcmd	=err 'invalid operand size'

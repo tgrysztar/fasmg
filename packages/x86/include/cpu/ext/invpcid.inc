@@ -7,7 +7,7 @@ macro invpcid? dest*,src*
 			err 'invalid operand size'
 		end if
 		@src.opcode_prefix = 66h
-		x86.store_instruction <0Fh,38h,82h>,@src,@dest.rm
+		x86.store_instruction@src <0Fh,38h,82h>,@dest.rm
 	else
 		err 'invalid combination of operands'
 	end if

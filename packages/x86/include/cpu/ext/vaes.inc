@@ -14,7 +14,7 @@ if defined AVX_512
 					err 'operand sizes do not match'
 				end if
 				@src2.memsize = 0
-				AVX_512.store_instruction @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,@src2,0,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,0,@dest.rm,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if

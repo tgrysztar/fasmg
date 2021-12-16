@@ -23,7 +23,7 @@ iterate <instr,supp>, pblendvb,10h, blendvps,14h, blendvpd,15h
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 66h
-			x86.store_instruction <0Fh,38h,supp>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,38h,supp>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -55,7 +55,7 @@ macro extractps? dest*,src*,sel*
 			err 'invalid operand size'
 		end if
 		@dest.opcode_prefix = 66h
-		x86.store_instruction <0Fh,3Ah,17h>,@dest,@src.rm,1,@aux.imm
+		x86.store_instruction@dest <0Fh,3Ah,17h>,@src.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -70,7 +70,7 @@ macro pinsrb? dest*,src*,sel*
 			err 'invalid operand size'
 		end if
 		@src.opcode_prefix = 66h
-		x86.store_instruction <0Fh,3Ah,20h>,@src,@dest.rm,1,@aux.imm
+		x86.store_instruction@src <0Fh,3Ah,20h>,@dest.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -85,7 +85,7 @@ macro pinsrd? dest*,src*,sel*
 			err 'invalid operand size'
 		end if
 		@src.opcode_prefix = 66h
-		x86.store_instruction <0Fh,3Ah,22h>,@src,@dest.rm,1,@aux.imm
+		x86.store_instruction@src <0Fh,3Ah,22h>,@dest.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -104,7 +104,7 @@ macro pinsrq? dest*,src*,sel*
 		end if
 		@src.opcode_prefix = 66h
 		@src.rex_prefix = 48h
-		x86.store_instruction <0Fh,3Ah,22h>,@src,@dest.rm,1,@aux.imm
+		x86.store_instruction@src <0Fh,3Ah,22h>,@dest.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -122,7 +122,7 @@ macro pextrb? dest*,src*,sel*
 			err 'invalid operand size'
 		end if
 		@dest.opcode_prefix = 66h
-		x86.store_instruction <0Fh,3Ah,14h>,@dest,@src.rm,1,@aux.imm
+		x86.store_instruction@dest <0Fh,3Ah,14h>,@src.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -140,13 +140,13 @@ macro pextrw? dest*,src*,sel*
 			err 'invalid operand size'
 		end if
 		MMX.select_operand_prefix @src,@src.size
-		x86.store_instruction <0Fh,0C5h>,@src,@dest.rm,1,@aux.imm
+		x86.store_instruction@src <0Fh,0C5h>,@dest.rm,1,@aux.imm
 	else if @dest.type = 'mem' & (@src.type = 'mmreg' & @src.size = 16) & @aux.type = 'imm'
 		if @dest.size and not 2 | @aux.size and not 1
 			err 'invalid operand size'
 		end if
 		@dest.opcode_prefix = 66h
-		x86.store_instruction <0Fh,3Ah,15h>,@dest,@src.rm,1,@aux.imm
+		x86.store_instruction@dest <0Fh,3Ah,15h>,@src.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -164,7 +164,7 @@ macro pextrd? dest*,src*,sel*
 			err 'invalid operand size'
 		end if
 		@dest.opcode_prefix = 66h
-		x86.store_instruction <0Fh,3Ah,16h>,@dest,@src.rm,1,@aux.imm
+		x86.store_instruction@dest <0Fh,3Ah,16h>,@src.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -183,7 +183,7 @@ macro pextrq? dest*,src*,sel*
 		end if
 		@dest.opcode_prefix = 66h
 		@dest.rex_prefix = 48h
-		x86.store_instruction <0Fh,3Ah,16h>,@dest,@src.rm,1,@aux.imm
+		x86.store_instruction@dest <0Fh,3Ah,16h>,@src.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
 	end if
@@ -197,7 +197,7 @@ macro movntdqa? dest*,src*
 			err 'invalid operand size'
 		end if
 		@src.opcode_prefix = 66h
-		x86.store_instruction <0Fh,38h,2Ah>,@src,@dest.rm
+		x86.store_instruction@src <0Fh,38h,2Ah>,@dest.rm
 	else
 		err 'invalid combination of operands'
 	end if

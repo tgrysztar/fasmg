@@ -110,7 +110,7 @@ if ~ defined MPX
 				err 'invalid operand size'
 			end if
 			@src.opcode_prefix = 0F3h
-			x86.store_instruction <0Fh,1Bh>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,1Bh>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -127,7 +127,7 @@ if ~ defined MPX
 				err 'invalid address'
 			end if
 			@src.opcode_prefix = 66h
-			x86.store_instruction <0Fh,1Ah>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,1Ah>,@dest.rm
 		else if @dest.type = 'mem' & @src.type = 'bnd'
 			if (x86.mode = 64 & @dest.size and not 16) | (x86.mode < 64 & @dest.size and not 8)
 				err 'invalid operand size'
@@ -136,7 +136,7 @@ if ~ defined MPX
 				err 'invalid address'
 			end if
 			@dest.opcode_prefix = 66h
-			x86.store_instruction <0Fh,1Bh>,@dest,@src.rm
+			x86.store_instruction@dest <0Fh,1Bh>,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -155,7 +155,7 @@ if ~ defined MPX
 					err 'invalid address'
 				end if
 				@src.opcode_prefix = prefix
-				x86.store_instruction <0Fh,ext>,@src,@dest.rm
+				x86.store_instruction@src <0Fh,ext>,@dest.rm
 			else
 				err 'invalid operand'
 			end if
@@ -170,7 +170,7 @@ if ~ defined MPX
 			if @src.scale > 1 | ( @src.split & ~ 0 scaleof @src.index_part eq 0 )
 				err 'invalid index'
 			end if
-			x86.store_instruction <0Fh,1Ah>,@src,@dest.rm
+			x86.store_instruction@src <0Fh,1Ah>,@dest.rm
 		else
 			err 'invalid combination of operands'
 		end if
@@ -184,7 +184,7 @@ if ~ defined MPX
 				if @dest.scale > 1 | ( @dest.split & ~ 0 scaleof @dest.index_part eq 0 )
 					err 'invalid index'
 				end if
-				x86.store_instruction <0Fh,1Bh>,@dest,@src.rm
+				x86.store_instruction@dest <0Fh,1Bh>,@src.rm
 			else
 				err 'invalid combination of operands'
 			end if
