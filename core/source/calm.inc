@@ -1655,6 +1655,8 @@ calm_arrange:
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_NUMERIC
 	je	arrange_numeric_value
+	cmp	al,VALTYPE_PLAIN
+	je	arrange_plain_value
 	cmp	al,VALTYPE_SYMBOLIC
 	jne	arrange_unsupported_value
 	mov	ecx,[edx+ValueDefinition.value_length]
@@ -1701,6 +1703,21 @@ calm_arrange:
     arrange_empty_value:
 	add	esi,8
 	jmp	arrange_token
+    arrange_plain_value:
+	mov	edx,[edx+ValueDefinition.value]
+	mov	al,30h
+	stosb
+	mov	ebx,edi
+	xor	eax,eax
+	stosd
+	mov	eax,edx
+    store_plain_bytes:
+	inc	dword [ebx]
+	stosb
+	shr	eax,8
+	jnz	store_plain_bytes
+	add	esi,8
+	jmp	arrange_by_pattern
     arrange_unsupported_value:
 	mov	edx,_invalid_symbol_value
 	jmp	arrange_failed_reference
