@@ -371,7 +371,7 @@ if ~ defined AVX_512
 				jno	invalid_address
 				compute scale, 1 scaleof index_registers
 				compute index, 0 scaleof (1 metadataof index_registers)
-				check	scale > 2 & scale <> 4 & scale <> 8
+				check	scale and (scale-1) | scale > 8
 				jyes	invalid_address
 				check	1 metadataof index_registers relativeto SSE.reg
 				jyes	xmm_index

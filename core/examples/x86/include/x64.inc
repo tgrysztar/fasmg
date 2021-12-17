@@ -531,7 +531,7 @@ iterate context, @dest,@src,@src2,@aux
 			jyes	switch_to_index
 			check	(x86.mode = 64 | segment_prefix = 3Eh) & base = 5 & scale = 1
 			jyes	switch_to_base
-			check	scale > 2 & scale <> 4 & scale <> 8
+			check	scale and (scale-1) | scale > 8
 			jyes	invalid_address
 			jump	setup_displacement
 		      forbidden_index:
