@@ -1716,6 +1716,8 @@ calm_arrange:
 	stosb
 	shr	eax,8
 	jnz	store_plain_bytes
+	test	byte [edi-1],80h
+	jnz	store_plain_bytes
 	add	esi,8
 	jmp	arrange_by_pattern
     arrange_unsupported_value:
@@ -2496,8 +2498,11 @@ calm_publish_variable:
 	mov	al,[edx+ValueDefinition.type]
 	cmp	al,VALTYPE_SYMBOLIC
 	jb	calm_invalid_value
+	cmp	al,VALTYPE_PLAIN
+	je	calm_value_type_ok
 	cmp	al,VALTYPE_AREA
 	ja	calm_invalid_value
+    calm_value_type_ok:
 	mov	[value_type],al
 	mov	[value],edx
 	mov	ebx,[label_leaf]
