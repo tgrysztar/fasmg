@@ -165,6 +165,7 @@ malloc_growable:
 	mov	[ecx+FreeMemory.right],edx
 	mov	[edx+FreeMemory.left],ecx
 	mov	[malloc_freelist],edx
+	jmp	finish_malloc
     depleted_freelist:
 	and	[malloc_freelist],0
 	jmp	finish_malloc
