@@ -1,8 +1,8 @@
 
 match ,{
 
-	include 'macro/struct.inc'
-	include '../linux/import32.inc'
+	include 'ccall.inc'
+	include 'struct.inc'
 
 } match -,{
 else

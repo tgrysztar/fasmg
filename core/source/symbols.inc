@@ -70,7 +70,7 @@ SYMTREE_LOCAL = 1
 SYMTREE_WITH_CASEINSENSITIVE_PARAMETERS = 2
 
 NAMESPACE_UNATTACHED = 1
-NAMESPACE_CURRENT_LABEL_TO_CONFIRM = 2
+NAMESPACE_LABEL_FORWARDING = 2
 NAMESPACE_CALM = 10h
 NAMESPACE_LOCAL = 20h
 
@@ -1386,7 +1386,7 @@ detect_mispredictions:
     browse_from_root:
 	xor	eax,eax
 	mov	[ebx+SymbolTree_Root.current_label],eax
-	and	[ebx+SymbolTree_Root.flags],not NAMESPACE_CURRENT_LABEL_TO_CONFIRM
+	and	[ebx+SymbolTree_Root.flags],not NAMESPACE_LABEL_FORWARDING
 	test	[ebx+SymbolTree_Root.attributes],SYMTREE_LOCAL
 	jnz	browse_local_tree
 	add	ebx,sizeof.SymbolTree_Root

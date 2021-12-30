@@ -13,48 +13,17 @@ struct FreeMemory
 	left dd ?		; previous free block in cyclic list
 ends
 
-VALLOC_MIN = 40000h
-
-valloc:
+assert defined valloc
 ; in: ecx = requested minimum size
 ; out: eax - allocated block, ecx = allocated size, zero if failed
 ; preserves: ebx, esi, edi
 ; note:
-;  this function requests raw memory from the OS;
-;  it may allocate much more memory than requested (even entire available memory),
+;  valloc is called to request raw memory from the OS;
+;  it is encouraged to allocate more memory than requested (even entire available memory),
 ;  the obtained memory is kept indefinitely in the pool for malloc
 ;  and should be released by OS automatically when the process ends;
 ;  if the OS does not do it automatically, additional list of the memory areas
 ;  may need to be maintained to release them before exit
-	cmp	ecx,VALLOC_MIN
-	jbe	valloc_size_minimum
-	dec	ecx
-	and	ecx,(-1) shl 12
-	add	ecx,1 shl 12
-	jmp	valloc_size_ready
-    valloc_size_minimum:
-	mov	ecx,VALLOC_MIN
-    valloc_size_ready:
-	push	ebx esi edi
-	push	ecx
-	mov	ebx,ecx
-	shr	ebx,16
-	mov	ax,501h
-	int	31h
-	movzx	eax,cx
-	pop	ecx
-	jc	valloc_failed
-	shl	ebx,16
-	or	eax,ebx
-	mov	edx,main
-	shl	edx,4
-	sub	eax,edx
-	pop	edi esi ebx
-	ret
-    valloc_failed:
-	xor	ecx,ecx
-	pop	edi esi ebx
-	retn
 
 malloc:
 malloc_fixed:
@@ -330,8 +299,8 @@ realloc:
 if used mcheck
 
     mcheck:
-	pushfd
-	pushad
+	pushf
+	push	eax ebx ecx edx
 	mov	eax,[malloc_freelist]
 	test	eax,eax
 	jz	integrity_verified
@@ -367,8 +336,8 @@ if used mcheck
 	cmp	eax,[malloc_freelist]
 	jne	verify_freelist
       integrity_verified:
-	popad
-	popfd
+	pop	edx ecx ebx eax
+	popf
 	retn
 
 end if

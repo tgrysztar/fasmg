@@ -1,7 +1,7 @@
 
 match ,{
 
-	include 'macro/struct.inc'
+	include '../../libc/struct.inc'
 	include '32on64.inc'
 
 } match -,{
@@ -453,10 +453,10 @@ segment readable executable
 	ret
 
   include 'system.inc'
-  include 'malloc.inc'
 
   use32on64
 
+  include '../../malloc.inc'
   include '../../assembler.inc'
   include '../../symbols.inc'
   include '../../expressions.inc'
@@ -502,18 +502,15 @@ segment readable writeable
 
   align 16
 
-  malloc_hint dd 480000h
-  malloc_ffirst dd 0
-  malloc_flast dd 0
-  malloc_fbrk dd 0
-  malloc_lbrk dd 0
-
-  include '../../variables.inc'
-
   argc dq ?
   argv dq ?
   env dq ?
   timestamp dq ?
+
+  include '../../variables.inc'
+
+  mmap_hint dd ?
+  malloc_freelist dd ?
 
   source_path dd ?
   output_path dd ?
@@ -531,5 +528,13 @@ segment readable writeable
   no_logo db ?
 
   path_buffer rb 1000h
+
+segment readable writeable
+
+  align 1000h
+
+  LOCAL_HEAP_SIZE = 1000000h
+
+  local_heap rb LOCAL_HEAP_SIZE
 
 segment readable writeable gnustack

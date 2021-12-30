@@ -936,8 +936,8 @@ assemble_instruction:
 	call	identify_symbol
 	jc	empty_line
 	mov	[label_branch],edx
-	mov	al,[symbol_solid]
-	mov	[label_solid],al
+	mov	al,[symbol_independent]
+	mov	[label_independent],al
 	test	ebx,ebx
 	jz	unrecognized_instruction
 	cmp	[ebx+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
@@ -2325,7 +2325,7 @@ identify_symbol_in_namespace:
 ;   edx - SymbolTree_Foliage, may be null if either ebx or edi is null
 ;   edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
 ;   [symbol_start] - first token of identified symbol
-;   [symbol_solid] = non-zero when initial component of identifier was a name and not a dot
+;   [symbol_independent] = zero when identifier is relative to current label
 ; note:
 ;  when ebx is null but edi is not, the identifier was malformed
 ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
@@ -2349,7 +2349,7 @@ identify_symbol:
 ;   edx - SymbolTree_Foliage, may be null if either ebx or edi is null
 ;   edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
 ;   [symbol_start] - first token of identified symbol (within current embedded value or preprocessed line)
-;   [symbol_solid] = non-zero when initial component of identifier was a name and not a dot
+;   [symbol_independent] = zero when identifier is relative to current label
 ; note:
 ;  when ebx is null but edi is not, the identifier was malformed
 ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
@@ -2369,7 +2369,7 @@ identify_symbol:
 	mov	[recognition_context.base_label],eax
     namespaces_ok:
 	mov	[symbol_start],esi
-	and	[symbol_solid],0
+	and	[symbol_independent],0
 	cmp	[symbol_definition],0
 	setnz	al
 	shl	al,bsf RECOGNIZE_DEFINITION
@@ -2396,7 +2396,7 @@ identify_symbol:
 	call	detect_numeric_symbol
 	jc	return_no_identifier
     valid_starting_name:
-	or	[symbol_solid],1
+	or	[symbol_independent],1
     valid_name:
 	inc	esi
 	mov	[name_token],esi
@@ -2589,6 +2589,13 @@ identify_symbol:
 	jmp	symbol_identified
     identify_current_label:
 	call	get_base_label
+	mov	eax,[local_namespace]
+	test	eax,eax
+	jz	get_label_symbol
+	cmp	edx,[eax+SymbolTree_Root.current_label]
+	jne	get_label_symbol
+	test	[eax+SymbolTree_Root.flags],NAMESPACE_LABEL_FORWARDING
+	setnz	[symbol_independent]
     get_label_symbol:
 	mov	edi,ebx
 	mov	al,[expected_class]

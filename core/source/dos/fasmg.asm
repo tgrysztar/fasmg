@@ -1,7 +1,7 @@
 
 match ,{
 
-	include 'macro/struct.inc'
+	include '../libc/struct.inc'
 
 } match -,{
 else
@@ -570,6 +570,7 @@ segment main use32
 
   include 'system.inc'
 
+  include '../malloc.inc'
   include '../assembler.inc'
   include '../symbols.inc'
   include '../expressions.inc'

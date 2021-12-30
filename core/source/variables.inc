@@ -258,9 +258,9 @@ variables:
     chosen_class db ?
     expected_class db ?
     symbol_definition db ?
-    symbol_solid db ?
+    symbol_independent db ?
     recognizer_setting db ?
-    label_solid db ?
+    label_independent db ?
     value_type db ?
     waiting_for_digit db ?
     literal_exponent_sign db ?

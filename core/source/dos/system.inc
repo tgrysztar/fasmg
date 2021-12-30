@@ -385,4 +385,38 @@ get_environment_variable:
 	pop	edi esi ebx
 	ret
 
-include 'malloc.inc'
+VALLOC_MIN = 40000h
+
+valloc:
+; in: ecx = requested minimum size
+; out: eax - allocated block, ecx = allocated size, zero if failed
+; preserves: ebx, esi, edi
+	cmp	ecx,VALLOC_MIN
+	jbe	valloc_size_minimum
+	dec	ecx
+	and	ecx,(-1) shl 12
+	add	ecx,1 shl 12
+	jmp	valloc_size_ready
+    valloc_size_minimum:
+	mov	ecx,VALLOC_MIN
+    valloc_size_ready:
+	push	ebx esi edi
+	push	ecx
+	mov	ebx,ecx
+	shr	ebx,16
+	mov	ax,501h
+	int	31h
+	movzx	eax,cx
+	pop	ecx
+	jc	valloc_failed
+	shl	ebx,16
+	or	eax,ebx
+	mov	edx,main
+	shl	edx,4
+	sub	eax,edx
+	pop	edi esi ebx
+	ret
+    valloc_failed:
+	xor	ecx,ecx
+	pop	edi esi ebx
+	retn

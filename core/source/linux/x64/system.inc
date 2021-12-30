@@ -29,7 +29,7 @@ system_init:
 	mov	eax,201 		; sys_time
 	mov	edi,timestamp
 	syscall
-	call	minit
+	mov	[mmap_hint],local_heap
 	retn
 
 system_shutdown:
@@ -262,3 +262,70 @@ get_environment_variable:
 	and	byte [edi],0
 	pop	rbx
 	ret
+
+VALLOC_MINIMUM_SIZE = 40000h
+
+valloc:
+; in: ecx = requested minimum size
+; out: eax - allocated block, ecx = allocated size, zero if failed
+; preserves: ebx, esi, edi
+	cmp	ecx,VALLOC_MINIMUM_SIZE
+	jbe	valloc_size_minimum
+	dec	ecx
+	and	ecx,(-1) shl 12
+	add	ecx,1 shl 12
+	jmp	valloc_size_ready
+    valloc_size_minimum:
+	mov	ecx,VALLOC_MINIMUM_SIZE
+    valloc_size_ready:
+	push	rbx rsi rdi
+	cmp	[mmap_hint],local_heap
+	jne	valloc_mmap
+	assert	LOCAL_HEAP_SIZE >= VALLOC_MINIMUM_SIZE
+	mov	eax,local_heap
+	mov	ecx,LOCAL_HEAP_SIZE
+	jmp	valloc_ok
+    valloc_mmap:
+	xor	r9d,r9d
+	or	r8,-1
+	mov	r10d,62h		; MAP_PRIVATE + MAP_ANONYMOUS + MAP_32BIT
+	mov	edx,3			; PROT_READ + PROT_WRITE
+	mov	esi,ecx
+	xor	edi,edi
+	mov	eax,9			; sys_mmap
+	syscall
+	cmp	eax,-1
+	je	valloc_mmap_with_hint
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	valloc_mmap_unusable
+	add	ecx,esi
+	jnc	mmap_ok
+    valloc_mmap_unusable:
+	mov	rdi,rax
+	mov	eax,11			; sys_munmap
+	syscall
+    valloc_mmap_with_hint:
+	mov	r10d,22h		; MAP_PRIVATE + MAP_ANONYMOUS
+	mov	edx,3			; PROT_READ + PROT_WRITE
+	mov	edi,[mmap_hint]
+	mov	eax,9			; sys_mmap
+	syscall
+	cmp	eax,-1
+	je	valloc_failed
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	valloc_failed
+	add	ecx,esi
+	jc	valloc_failed
+    mmap_ok:
+	sub	ecx,eax
+    valloc_ok:
+	lea	edx,[eax+ecx]
+	mov	[mmap_hint],edx
+	pop	rdi rsi rbx
+	retn
+    valloc_failed:
+	xor	ecx,ecx
+	pop	rdi rsi rbx
+	retn

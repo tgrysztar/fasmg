@@ -490,7 +490,7 @@ get_macro_definition_symbol:
 ;  when [SymbolTree_Leaf.class] = SYMCLASS_STRUCTURE:
 ;   [label_leaf] - SymbolTree_Leaf of structure label
 ;   [label_branch] - SymbolTree_Foliage of structure label
-;   [label_solid] = non-zero when initial component of label was a name and not a dot
+;   [label_independent] = zero when identifier of structure label is relative to current label
 ; out:
 ;  when done, handler should jump to instruction_assembled with esi containing a pointer moved past the processed part of line,
 ;  or jump directly to assembly_line when the rest of line should be ignored
@@ -641,16 +641,8 @@ define_label:
 	retn
     update_current_label:
 	mov	edx,[label_branch]
-	cmp	[label_solid],0
-	jne	current_label_confirmed
-	mov	eax,[local_namespace]
-	test	eax,eax
-	jz	current_label_ok
-	cmp	edx,[eax+SymbolTree_Root.current_label]
-	jne	current_label_ok
-	test	[eax+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
-	jz	current_label_ok
-      current_label_confirmed:
+	cmp	[label_independent],0
+	je	current_label_ok
 	mov	edi,[edx+SymbolTree_Foliage.root]
 	test	[edi+SymbolTree_Root.flags],NAMESPACE_LOCAL
 	jnz	current_label_ok
@@ -1003,8 +995,8 @@ label_directive:
 	jz	invalid_identifier
 	mov	[label_leaf],ebx
 	mov	[label_branch],edx
-	mov	al,[symbol_solid]
-	mov	[label_solid],al
+	mov	al,[symbol_independent]
+	mov	[label_independent],al
 	and	[metadata_length],0
 	call	peek_at_constituent_value
 	jc	label_at_current_address
@@ -3566,17 +3558,9 @@ use_struc:
 	mov	ebx,[new_local_namespace]
 	mov	eax,[label_branch]
 	mov	[ebx+SymbolTree_Root.current_label],eax
-	cmp	[label_solid],0
-	jne	struc_label_to_confirm
-	mov	edx,[local_namespace]
-	test	edx,edx
-	jz	struc_label_ok
-	cmp	eax,[edx+SymbolTree_Root.current_label]
-	jne	struc_label_ok
-	test	[edx+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
-	jz	struc_label_ok
-      struc_label_to_confirm:
-	or	[ebx+SymbolTree_Root.flags],NAMESPACE_CURRENT_LABEL_TO_CONFIRM
+	cmp	[label_independent],0
+	je	struc_label_ok
+	or	[ebx+SymbolTree_Root.flags],NAMESPACE_LABEL_FORWARDING
       struc_label_ok:
 	cmp	byte [esi],'('
 	jne	prepare_macro_parameters

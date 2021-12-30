@@ -1,7 +1,8 @@
 
 match ,{
 
-	include 'macro/struct.inc'
+	include '../libc/ccall.inc'
+	include '../libc/struct.inc'
 	include 'import32.inc'
 
 } match -,{
