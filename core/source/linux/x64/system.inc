@@ -29,7 +29,7 @@ system_init:
 	mov	eax,201 		; sys_time
 	mov	edi,timestamp
 	syscall
-	mov	[mmap_hint],local_heap
+	or	[local_heap_available],1
 	retn
 
 system_shutdown:
@@ -279,9 +279,11 @@ valloc:
 	mov	ecx,VALLOC_MINIMUM_SIZE
     valloc_size_ready:
 	push	rbx rsi rdi
-	cmp	[mmap_hint],local_heap
-	jne	valloc_mmap
-	assert	LOCAL_HEAP_SIZE >= VALLOC_MINIMUM_SIZE
+	cmp	[local_heap_available],0
+	je	valloc_mmap
+	cmp	ecx,LOCAL_HEAP_SIZE
+	ja	valloc_mmap
+	and	[local_heap_available],0
 	mov	eax,local_heap
 	mov	ecx,LOCAL_HEAP_SIZE
 	jmp	valloc_ok

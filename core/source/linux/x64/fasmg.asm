@@ -527,6 +527,8 @@ segment readable writeable
   verbosity_level dd ?
   no_logo db ?
 
+  local_heap_available db ?
+
   path_buffer rb 1000h
 
 segment readable writeable
