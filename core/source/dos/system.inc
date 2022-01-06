@@ -297,6 +297,7 @@ lseek:
 get_timestamp:
 ; out: edx:eax = timestamp
 ; preserves: ebx, ecx, esi, edi
+; note: during the passes of a single assembly this function should always return the same value
 	mov	eax,dword [timestamp]
 	mov	edx,dword [timestamp+4]
 	retn

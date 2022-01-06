@@ -1599,11 +1599,11 @@ executed:
                 match dest+==src, param
                         dest = dest + src
                 else match dest-==src, param
-                        dest = dest + src
+                        dest = dest - src
                 else match dest++, param
                         dest = dest + 1
                 else match dest--, param
-                        dest = dest + 1
+                        dest = dest - 1
                 else match dest==src, param
                         dest = src
                 else

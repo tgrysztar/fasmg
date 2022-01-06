@@ -1,4 +1,9 @@
 
+; note:
+;  to not interfere with code resolving, all external input must stay unchanged
+;  in subsequent passes of the assembly; for this reason all data read from files is
+;  permanently cached (source texts are cached in tokenized form)
+
 struct FileData
 	length dq ?
 	cache dd ?	; pointer to FileCache
