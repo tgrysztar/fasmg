@@ -502,12 +502,15 @@ segment readable writeable
 
   align 16
 
+  include '../../variables.inc'
+
+  align 16
+
+  timestamp dq ?
+
   argc dq ?
   argv dq ?
   env dq ?
-  timestamp dq ?
-
-  include '../../variables.inc'
 
   mmap_hint dd ?
   malloc_freelist dd ?

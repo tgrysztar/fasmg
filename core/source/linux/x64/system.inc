@@ -264,7 +264,7 @@ get_environment_variable:
 	pop	rbx
 	ret
 
-VALLOC_MINIMUM_SIZE = 40000h
+VALLOC_MINIMUM_SIZE = 100000h
 
 valloc:
 ; in: ecx = requested minimum size

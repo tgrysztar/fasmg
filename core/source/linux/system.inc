@@ -34,49 +34,6 @@ system_init:
 system_shutdown:
 	retn
 
-malloc:
-malloc_fixed:
-malloc_growable:
-; in: ecx = requested size
-; out: eax - allocated block, ecx = allocated size, on error jumps to out_of_memory (does not return)
-; preserves: ebx, esi, edi
-; note:
-;  use of malloc_fixed hints that block will be kept as is until the end of assembly
-;  use of malloc_growable hints that block is likely to be resized
-	push	ebx ecx esi edi
-	cinvoke libc.malloc,ecx
-	pop	edi esi ecx ebx
-	test	eax,eax
-	jz	out_of_memory
-	retn
-realloc:
-; in: eax - memory block, ecx = requested size
-; out: eax - resized block, ecx = allocated size, on error jumps to out_of_memory (does not return)
-; preserves: ebx, esi, edi
-	push	ebx ecx esi edi
-	cinvoke libc.realloc,eax,ecx
-	pop	edi esi ecx ebx
-	test	eax,eax
-	jz	out_of_memory
-	retn
-mfree:
-; in: eax - memory block
-; out: cf set on error
-; preserves: ebx, esi, edi
-; note: eax may have value 0 or -1, it should be treated as invalid input then
-	test	eax,eax
-	jz	interface_error
-	cmp	eax,-1
-	je	interface_error
-	push	ebx esi edi
-	cinvoke libc.free,eax
-	pop	edi esi ebx
-	clc
-	retn
-    interface_error:
-	stc
-	retn
-
 open:
 ; in: edx - path to file
 ; out: ebx = file handle, cf set on error
@@ -108,6 +65,9 @@ open:
 	inc	ecx
 	test	al,al
 	jnz	copy_path
+	retn
+    interface_error:
+	stc
 	retn
 create:
 ; in: edx - path to file
@@ -297,3 +257,42 @@ get_environment_variable:
 	and	byte [edi],0
 	pop	ebx
 	ret
+
+VALLOC_MINIMUM_SIZE = 100000h
+
+valloc:
+; in: ecx = requested minimum size
+; out: eax - allocated block, ecx = allocated size, zero if failed
+; preserves: ebx, esi, edi
+	cmp	ecx,VALLOC_MINIMUM_SIZE
+	jbe	valloc_size_minimum
+	dec	ecx
+	and	ecx,(-1) shl 12
+	add	ecx,1 shl 12
+	jmp	valloc_size_ready
+    valloc_size_minimum:
+	mov	ecx,VALLOC_MINIMUM_SIZE
+    valloc_size_ready:
+	push	ebx edi
+	mov	ebx,mmap_args
+	mov	edi,ebx
+	xor	eax,eax
+	stosd
+	mov	eax,ecx
+	stosd
+	mov	eax,3			; PROT_READ + PROT_WRITE
+	stosd
+	mov	eax,22h 		; MAP_PRIVATE + MAP_ANONYMOUS
+	stosd
+	or	eax,-1
+	stosd
+	xor	eax,eax
+	stosd
+	mov	eax,0x5A		; old_mmap
+	int	0x80
+	cmp	eax,-1
+	jne	valloc_ok
+	xor	ecx,ecx
+    valloc_ok:
+	pop	edi ebx
+	retn

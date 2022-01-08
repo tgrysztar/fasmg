@@ -3,7 +3,6 @@ match ,{
 
 	include '../libc/ccall.inc'
 	include '../libc/struct.inc'
-	include 'import32.inc'
 
 } match -,{
 else
@@ -17,13 +16,6 @@ format ELF executable 3
 entry start
 
 include '../version.inc'
-
-interpreter '/lib/ld-linux.so.2'
-needed 'libc.so.6'
-import libc.malloc,'malloc',\
-       libc.calloc,'calloc',\
-       libc.realloc,'realloc',\
-       libc.free,'free'
 
 struct timeval
 	time_t dd ?
@@ -438,6 +430,7 @@ segment readable executable
 
   include 'system.inc'
 
+  include '../malloc.inc'
   include '../assembler.inc'
   include '../symbols.inc'
   include '../expressions.inc'
@@ -488,6 +481,18 @@ segment readable writeable
 
   include '../variables.inc'
 
+  align 16
+
+  timestamp dq ?
+
+  loff dq ?
+  argc dd ?
+  argv dd ?
+  env dd ?
+
+  mmap_args rd 6
+  malloc_freelist dd ?
+
   source_path dd ?
   output_path dd ?
   maximum_number_of_passes dd ?
@@ -496,11 +501,6 @@ segment readable writeable
   initial_commands_length dd ?
   initial_commands_maximum_length dd ?
 
-  argc dd ?
-  argv dd ?
-  env dd ?
-  timestamp dq ?
-  loff dq ?
 
   start_time timeval
   end_time timeval
