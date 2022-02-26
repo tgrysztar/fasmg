@@ -533,7 +533,7 @@ macro MachO.segment declaration
 				if OFFSET >= $%%
 					store S_ZEROFILL at MachO:MachO.segment#s#_section#%.flags
 					store 0 at MachO:MachO.segment#s#_section#%.size
-				else
+				else if OFFSET
 					FILL = NEXT
 				end if
 			end repeat

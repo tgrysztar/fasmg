@@ -31,7 +31,7 @@ macro ccall? proc*,args&
 		iterate arg, args
 			if sizeof (arg)
 				lea	arguments.%,[arg]
-			else
+			else if ~ arg eq arguments.%
 				mov	arguments.%,arg
 			end if
 		end iterate

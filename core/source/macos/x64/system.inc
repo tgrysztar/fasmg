@@ -5,58 +5,10 @@ LINE_FEED = 0Ah
 
 system_init:
 	ccall	libc.time,timestamp
+	or	[local_heap_available],1
 	retn
 
 system_shutdown:
-	retn
-
-malloc:
-malloc_fixed:
-malloc_growable:
-; in: ecx = requested size
-; out: eax - allocated block, ecx = allocated size, on error jumps to out_of_memory (does not return)
-; preserves: ebx, esi, edi
-; note:
-;  use of malloc_fixed hints that block will be kept as is until the end of assembly
-;  use of malloc_growable hints that block is likely to be resized
-	push	rbx rcx rsi rdi
-	ccall	libc.malloc,rcx
-	pop	rdi rsi rcx rbx
-	test	eax,eax
-	jz	out_of_memory
-	lea	rdx,[rax+rcx-1]
-	shr	rdx,32
-	jnz	out_of_memory
-	retn
-realloc:
-; in: eax - memory block, ecx = requested size
-; out: eax - resized block, ecx = allocated size, on error jumps to out_of_memory (does not return)
-; preserves: ebx, esi, edi
-	push	rbx rcx rsi rdi
-	ccall	libc.realloc,rax,rcx
-	pop	rdi rsi rcx rbx
-	test	eax,eax
-	jz	out_of_memory
-	lea	rdx,[rax+rcx-1]
-	shr	rdx,32
-	jnz	out_of_memory
-	retn
-mfree:
-; in: eax - memory block
-; out: cf set on error
-; preserves: ebx, esi, edi
-; note: eax may have value 0 or -1, it should be treated as invalid input then
-	test	eax,eax
-	jz	interface_error
-	cmp	eax,-1
-	je	interface_error
-	push	rbx rsi rdi
-	ccall	libc.free,rax
-	pop	rdi rsi rbx
-	clc
-	retn
-    interface_error:
-	stc
 	retn
 
 open:
@@ -82,6 +34,9 @@ open:
 	pop	rdx
 	mov	[eax+ebx*8],rdx
 	clc
+	retn
+      interface_error:
+	stc
 	retn
       grow_files_buffer:
 	shl	ecx,4
@@ -263,3 +218,70 @@ get_environment_variable:
 	jecxz	environment_variable_ok
 	and	byte [edi],0
 	ret
+
+VALLOC_MINIMUM_SIZE = 100000h
+
+valloc:
+; in: ecx = requested minimum size
+; out: eax - allocated block, ecx = allocated size, zero if failed
+; preserves: ebx, esi, edi
+	cmp	ecx,VALLOC_MINIMUM_SIZE
+	jbe	valloc_size_minimum
+	dec	ecx
+	and	ecx,(-1) shl 12
+	add	ecx,1 shl 12
+	jmp	valloc_size_ready
+    valloc_size_minimum:
+	mov	ecx,VALLOC_MINIMUM_SIZE
+    valloc_size_ready:
+	push	rbx rsi rdi
+	cmp	[local_heap_available],0
+	je	valloc_mmap
+	cmp	ecx,LOCAL_HEAP_SIZE
+	ja	valloc_mmap
+	and	[local_heap_available],0
+	mov	eax,local_heap
+	mov	ecx,LOCAL_HEAP_SIZE
+	jmp	valloc_ok
+    valloc_mmap:
+	push	rcx
+	ccall	mmap,0,rcx, \
+			3, \		; PROT_READ + PROT_WRITE
+			9002h, \	; MAP_PRIVATE + MAP_ANONYMOUS + MAP_32BIT
+			-1,0
+	pop	rsi
+	cmp	eax,-1
+	je	valloc_mmap_with_hint
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	valloc_mmap_unusable
+	add	ecx,esi
+	jnc	mmap_ok
+    valloc_mmap_unusable:
+	ccall	munmap,rax,rsi
+    valloc_mmap_with_hint:
+	push	rsi
+	mov	edi,[mmap_hint]
+	ccall	mmap,rdi,rsi, \
+			3, \		; PROT_READ + PROT_WRITE
+			1002h, \	; MAP_PRIVATE + MAP_ANONYMOUS
+			-1,0
+	pop	rsi
+	cmp	eax,-1
+	je	valloc_failed
+	mov	ecx,eax
+	cmp	rcx,rax
+	jne	valloc_failed
+	add	ecx,esi
+	jc	valloc_failed  
+    mmap_ok:
+	sub	ecx,eax
+    valloc_ok:
+	lea	edx,[eax+ecx]
+	mov	[mmap_hint],edx
+	pop	rdi rsi rbx
+	retn
+    valloc_failed:
+	xor	ecx,ecx
+	pop	rdi rsi rbx
+	retn
