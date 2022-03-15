@@ -1310,8 +1310,9 @@ clone_source_context:
 	jnz	clone_source_entry
 	retn
     clone_source_entry:
+	assert	SOURCE_FILE < SOURCE_MACRO & SOURCE_MEMORY < SOURCE_MACRO & SOURCE_CALM > SOURCE_MACRO
 	cmp	[esi+SourceEntry.type],SOURCE_MACRO
-	jne	copy_source_entry
+	jb	copy_source_entry
 	mov	edx,[esi+SourceEntry.text]
 	inc	[edx+ValueDefinition.reference_count]
 	cmp	[source_context_affected],0
@@ -1339,8 +1340,9 @@ release_source_context:
 	pop	eax
 	retn
     release_source_entry:
+	assert	SOURCE_FILE < SOURCE_MACRO & SOURCE_MEMORY < SOURCE_MACRO & SOURCE_CALM > SOURCE_MACRO
 	cmp	[eax+SourceEntry.type],SOURCE_MACRO
-	jne	source_entry_released
+	jb	source_entry_released
 	mov	edx,[eax+SourceEntry.text]
 	dec	[edx+ValueDefinition.reference_count]
 	cmp	[source_context_affected],0
