@@ -835,10 +835,6 @@ assembly_line:
 	lodsd
 	stosd
 	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	jmp	preprocess_line_from_macro
     reproduce_context_token:
@@ -1617,11 +1613,6 @@ preprocess_symbol:
 	pop	ecx
 	cmp	[preprocessed_context],0
 	jne	copy_with_preprocessed_context
-	mov	al,cl
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	jmp	parameter_replaced
       copy_token_pointer:

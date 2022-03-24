@@ -367,11 +367,6 @@ read_file_data:
 	adc	dword [file_offset+4],0
 	mov	edx,esi
 	lea	esi,[ebx+sizeof.FileCache+eax]
-	mov	al,cl
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	mov	esi,edx
     next_entry:

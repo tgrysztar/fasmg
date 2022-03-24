@@ -202,11 +202,6 @@ initialize_output:
 	mov	ecx,[ebx+AreaHeader.uninitialized_length]
 	jecxz	output_buffer_ready
 	xor	eax,eax
-	mov	dl,cl
-	shr	ecx,2
-	rep	stosd
-	mov	cl,dl
-	and	cl,11b
 	rep	stosb
 	mov	[ebx+AreaHeader.uninitialized_length],eax
     output_buffer_ready:
@@ -523,11 +518,6 @@ get_current_address_value:
     variable_terms_measured:
 	xchg	ecx,esi
 	sub	ecx,esi
-	mov	al,cl
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	mov	esi,[assembly_workspace.memory_start]
 	mov	ecx,edi

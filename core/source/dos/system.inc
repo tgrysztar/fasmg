@@ -218,10 +218,6 @@ write:
     do_write:
 	push	ecx
 	mov	edi,buffer
-	shr	ecx,2
-	rep	movsd
-	mov	ecx,[esp]
-	and	ecx,11b
 	rep	movsb
 	pop	ecx
 	mov	ah,40h
@@ -254,11 +250,7 @@ read:
 	cmp	ax,cx
 	jne	read_eof
 	mov	esi,buffer
-	mov	ecx,[esp]
-	shr	ecx,2
-	rep	movsd
 	pop	ecx
-	and	ecx,11b
 	rep	movsb
 	or	ebp,ebp
 	jnz	read_loop

@@ -244,12 +244,7 @@ add_block_parameter:
     write_parameter_value:
 	mov	al,[value_type]
 	mov	[edx+ValueDefinition.type],al
-	mov	eax,[edx+ValueDefinition.value_length]
-	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
+	mov	ecx,[edx+ValueDefinition.value_length]
 	rep	movsb
 	mov	ecx,edi
 	pop	edi
@@ -842,11 +837,6 @@ define_symbolic_variable:
 	mov	esi,eax
     copy_symbolic_value:
 	pop	ecx
-	mov	al,cl
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	pop	esi
 	mov	al,20h
@@ -1354,10 +1344,6 @@ evaluate_string:
 	xchg	esi,ebx
 	lodsd
 	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	mov	esi,ebx
     source_fragment_collected:
@@ -1485,11 +1471,6 @@ conditionally_repeated_block:
 	sub	edi,sizeof.ConditionalRepeatData
 	mov	edx,ecx
 	sub	edi,ecx
-	mov	eax,ecx
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	mov	esi,[embedded_context]
 	test	esi,esi
@@ -1985,11 +1966,6 @@ iterator_block:
 	mov	ecx,edx
 	mov	esi,eax
       copy_iterator_value:
-	mov	al,cl
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	mov	eax,[ebx+LineExcerpt.recognition_context]
 	or	eax,[ebx+LineExcerpt.leftover_context]
@@ -3472,11 +3448,6 @@ add_line_to_macro:
       macro_block_ready:
 	test	esi,esi
 	jz	macro_appended
-	mov	al,cl
-	and	al,11b
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
 	rep	movsb
      macro_appended:
 	retn
@@ -4132,10 +4103,6 @@ define_labeled_data:
 	call	initialize_output
 	lodsd
 	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	pop	esi
 	mov	ecx,[data_unit_length]
@@ -4407,11 +4374,6 @@ load_value:
 	jc	data_out_of_area
 	xchg	esi,ebx
 	add	esi,eax
-	mov	dl,cl
-	shr	ecx,2
-	rep	movsd
-	mov	cl,dl
-	and	cl,11b
 	rep	movsb
 	mov	esi,ebx
 	cmp	[value_length],0
@@ -4425,12 +4387,7 @@ load_value:
       load_uninitialized_data:
 	call	prepare_load_length
 	jc	data_out_of_area
-	xor	eax,eax
-	mov	dl,cl
-	shr	ecx,2
-	rep	stosd
-	mov	cl,dl
-	and	cl,11b
+	xor	al,al
 	rep	stosb
 	cmp	[value_length],0
 	je	value_loaded

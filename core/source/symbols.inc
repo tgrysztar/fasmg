@@ -1051,11 +1051,6 @@ create_value_definition:
 	mov	ecx,edi
 	mov	edi,eax
     duplicate_value:
-	mov	eax,ecx
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	pop	edi esi
     value_definition_ready:
@@ -1194,12 +1189,7 @@ assign_value:
 	mov	[edx+ValueDefinition.type],al
 	cmp	al,VALTYPE_PLAIN
 	je	write_plain_value
-	mov	eax,[edx+ValueDefinition.value_length]
-	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
+	mov	ecx,[edx+ValueDefinition.value_length]
 	rep	movsb
     value_written:
 	retn
@@ -1226,13 +1216,7 @@ assign_value:
 	je	update_symbolic_value
 	cmp	al,VALTYPE_PLAIN
 	je	update_plain_value
-	mov	eax,[edx+ValueDefinition.value_length]
-	mov	ecx,eax
-	shr	ecx,2
-	repe	cmpsd
-	jne	value_dword_changed
-	mov	cl,al
-	and	cl,11b
+	mov	ecx,[edx+ValueDefinition.value_length]
 	repe	cmpsb
 	je	value_updated
 	inc	ecx
@@ -1242,16 +1226,6 @@ assign_value:
 	rep	movsb
     value_updated:
 	retn
-    value_dword_changed:
-	or	[next_pass_needed],1
-	inc	ecx
-	sub	esi,4
-	sub	edi,4
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
-	rep	movsb
-	retn
     update_symbolic_value:
 	mov	ecx,[edx+ValueDefinition.value_length]
 	push	edx
@@ -1259,11 +1233,6 @@ assign_value:
 	pop	edx
 	jecxz	value_updated
     value_changed:
-	mov	eax,ecx
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
     changed_value_updated:
 	or	[next_pass_needed],1
@@ -1307,12 +1276,8 @@ expand_value:
 	add	edi,[edx+ValueDefinition.value_length]
     append_zero_bytes:
 	add	[edx+ValueDefinition.value_length],ebx
-	xor	eax,eax
+	xor	al,al
 	mov	ecx,ebx
-	shr	ecx,2
-	rep	stosd
-	mov	cl,bl
-	and	cl,11b
 	rep	stosb
 	retn
 
@@ -1469,11 +1434,6 @@ detect_mispredictions:
 	cmp	ecx,edx
 	jne	link_value_mispredicted
 	jecxz	reset_link_prediction
-	shr	ecx,2
-	repe	cmpsd
-	jne	link_value_mispredicted
-	mov	cl,dl
-	and	cl,11b
 	repe	cmpsb
 	je	reset_link_prediction
     link_value_mispredicted:

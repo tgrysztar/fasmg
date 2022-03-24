@@ -325,10 +325,6 @@ convert_number_back:
 	lea	ebx,[edi+4+(eax+1)*4]
 	mov	edx,edi
 	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	xchg	eax,ecx
 	stosd
@@ -665,10 +661,6 @@ convert_terms_to_numeric_value:
 	lodsd
 	stosd
 	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
       next_numeric_term:
 	add	ebx,sizeof.ExpressionTerm
@@ -1516,10 +1508,6 @@ calculate_parsed_expression:
 	mov	eax,ebx
 	stosd
 	mov	ecx,ebx
-	shr	ecx,2
-	rep	movsd
-	mov	ecx,ebx
-	and	ecx,11b
 	rep	movsb
 	mov	eax,edi
 	sub	eax,[value_workspace.memory_start]
@@ -2567,10 +2555,6 @@ get_numeric_term_value:
 	lodsd
 	stosd
 	mov	ecx,eax
-	shr	ecx,2
-	rep	movsd
-	mov	cl,al
-	and	cl,11b
 	rep	movsb
 	xor	al,al
 	stosb
@@ -3101,10 +3085,6 @@ multiply_term_values:
 	stosd
 	mov	ecx,ebx
 	lodsd
-	shr	ecx,2
-	rep	movsd
-	mov	ecx,ebx
-	and	ecx,11b
 	rep	movsb
 	mov	ecx,eax
 	xor	al,al
@@ -3112,20 +3092,12 @@ multiply_term_values:
 	sub	ecx,ebx
 	mov	eax,ecx
 	stosd
-	shr	ecx,2
-	rep	movsd
-	mov	ecx,eax
-	and	ecx,11b
 	rep	movsb
 	retn
       too_small_to_split:
 	lodsd
 	mov	ecx,eax
 	stosd
-	shr	ecx,2
-	rep	movsd
-	mov	ecx,eax
-	and	ecx,11b
 	rep	movsb
 	xor	eax,eax
 	stosd
@@ -3854,11 +3826,6 @@ shift_term_value_left:
 	add	edi,4
 	mov	ecx,ebx
 	push	ecx
-	shr	ecx,2
-	xor	eax,eax
-	rep	stosd
-	mov	ecx,ebx
-	and	ecx,11b
 	xor	al,al
 	rep	stosb
 	mov	cl,[bit_shift]
