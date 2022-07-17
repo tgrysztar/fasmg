@@ -67,32 +67,32 @@ macro fastcall?: proc*,args&
 	iterate arg, args
 		match =float? val, arg
 			type = 'f'
-			redefine value val
+			value reequ val
 			SSE.parse_operand@src val
 		else match =addr? val, arg
 			type = 'a'
-			redefine value val
+			value reequ val
 			x86.parse_operand@src [val]
 		else match =invoke? func, arg
 			frame
 			invoke func
 			end frame
 			type = 0
-			redefine value rax
+			value reequ rax
 			x86.parse_operand@src rax
 		else match =fastcall? func, arg
 			frame
 			fastcall func
 			end frame
 			type = 0
-			redefine value rax
+			value reequ rax
 			x86.parse_operand@src rax
 		else match first=,rest, arg
 			type = 's'
-			redefine value arg
+			value reequ arg
 		else
 			type = 0
-			redefine value arg
+			value reequ arg
 			SSE.parse_operand@src arg
 			if @src.type = 'imm' & @src.size = 0
 				if value eqtype ''
