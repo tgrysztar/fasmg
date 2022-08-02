@@ -1,0 +1,3 @@
+#GitHub Linguist overrides for language
+*.asm		linguist-language=Assembly
+*.inc		linguist-language=Assembly
