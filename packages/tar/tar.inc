@@ -44,8 +44,8 @@ macro tar_record? name
 
 	org 0
 	data = $%
-	define $% ($%-data)
-	define $%% ($%%-data)
+	define $% ($%?-data)
+	define $%% ($%%?-data)
 
 	macro postponed
 	end macro

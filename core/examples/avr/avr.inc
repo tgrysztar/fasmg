@@ -814,13 +814,19 @@ macro WDR?
 	dw 1001'0101'1010'1000b
 end macro
 
-macro BREAK?
+macro BREAK? %
 	if defined %
 		break	; loop control directive
 	else
 		dw 1001'0101'1001'1000b
 	end if
 end macro
+
+define __EVAL_BREAK eval 'break %'
+
+calminstruction BREAK?
+	assemble __EVAL_BREAK
+end calminstruction
 
 PC? equ ($ shr 1)
 
