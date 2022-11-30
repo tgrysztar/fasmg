@@ -56,6 +56,6 @@ macro _end label
 
 end macro
 
-if ~ definite PE
+if ~ definite PE & ~ definite x86.mode
 	format PE GUI 4.0
 end if
