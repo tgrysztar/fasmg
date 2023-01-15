@@ -32,12 +32,19 @@ macro end?.inlinemacro?!
 	end struc
 end macro
 
-calminstruction ? text&
-	local	head, tail, name, arguments, more
+calminstruction ?! text&
+	local	head, tail, name, arguments, more, i
+	init	i, 0
+	match	=inlinemacro? more, text
+	jyes	ready
 	transform text, inlinemacro
 	jno	ready
+	match	=else? more, text
+	jno	preprocess
+	compute i, i+1
+	arrange text, =__inline__.(=else =if 1) =__inline__.(=__return__.i==1) text =__inline__.(=end =if) =__inline__.(=if ~=definite =__return__.i)
     preprocess:
-	match	head? =__inline__.name(tail?, text
+	match	head? =__inline__.name?(tail?, text
 	jno	ready
 	match	arguments?) tail?, tail
 	jno	ready	; syntax error
@@ -49,13 +56,18 @@ calminstruction ? text&
 	arrange arguments, arguments) more
 	jump	collect
     inline:
-	local	tmp, return, i
-	init	i, 0
+	match	name, name
+	jno	special
+	local	tmp, return
 	compute i, i+1
 	arrange return, =__return__.i
 	arrange tmp, return =inlinemacro.name arguments
 	arrange text, head return tail
 	take	text, tmp
+	jump	preprocess
+    special:
+	arrange text, head tail
+	take	text, arguments
 	jump	preprocess
     ready:
 	assemble text
@@ -63,4 +75,3 @@ calminstruction ? text&
 	take	text, text
 	jyes	preprocess
 end calminstruction
-
