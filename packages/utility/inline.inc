@@ -56,8 +56,8 @@ calminstruction ?! text&
 	arrange arguments, arguments) more
 	jump	collect
     inline:
-	match	name, name
-	jno	special
+	match	, name
+	jyes	special
 	local	tmp, return
 	compute i, i+1
 	arrange return, =__return__.i
