@@ -153,6 +153,11 @@ assembly_init:
 	mov	[eax+SymbolTree_Leaf.class],SYMCLASS_STRUCTURE
 	or	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
 	mov	[label_interceptor_symbol],eax
+	mov	ecx,sizeof.SymbolTree_Leaf
+	call	create_tree_element
+	mov	[eax+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
+	or	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
+	mov	[other_interceptor_symbol],eax
 
 	mov	ecx,400
 	call	malloc_growable
@@ -967,6 +972,9 @@ assemble_instruction:
 	jne	execute_interceptor
 	cmp	[label_interceptor],0
 	jne	execute_label_interceptor
+	mov	ebx,[other_interceptor_symbol]
+	call	get_available_value
+	jnc	execute_other_interceptor
 	mov	edx,_illegal_instruction
 	call	register_error
 	mov	ebx,[label_branch]
@@ -1059,6 +1067,12 @@ assemble_instruction:
 	cmp	[edx+ValueDefinition.type],VALTYPE_CALM
 	je	launch_calm
 	jmp	use_struc
+    execute_other_interceptor:
+	mov	ebx,[other_interceptor_symbol]
+	xor	eax,eax
+	mov	[embedded_context],eax
+	mov	esi,[line_start]
+	jmp	execute_instruction
 instruction_assembled:
 	cmp	[current_constituent],0
 	jne	extra_characters_on_line
@@ -2497,6 +2511,8 @@ identify_symbol:
     symbol_after_question_mark:
 	test	ecx,ecx
 	jnz	alone_question_mark
+	cmp	al,'?'
+	je	repeated_question_mark
 	cmp	[symbol_definition],0
 	jne	no_forced_definition
 	mov	[expected_class],SYMCLASS_EXPRESSION
@@ -2524,6 +2540,22 @@ identify_symbol:
 	jmp	return_no_namespace
     return_interceptor_symbol:
 	mov	ebx,[interceptor_symbol]
+	jmp	return_no_namespace
+    repeated_question_mark:
+	inc	esi
+	xor	ecx,ecx
+	call	move_to_next_symbol
+	jc	return_other_interceptor_symbol
+	cmp	al,'#'
+	jne	return_other_interceptor_symbol
+	call	check_concatenation
+	jnc	symbol_after_question_mark
+    return_other_interceptor_symbol:
+	cmp	[symbol_definition],0
+	je	malformed_identifier
+	cmp	[expected_class],SYMCLASS_INSTRUCTION
+	jne	malformed_identifier
+	mov	ebx,[other_interceptor_symbol]
 	jmp	return_no_namespace
     multiple_dot_operator:
 	mov	ebx,edi

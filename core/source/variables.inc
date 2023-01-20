@@ -34,6 +34,7 @@ variables:
     local_parameter_namespace dd ?
     interceptor_symbol dd ?
     label_interceptor_symbol dd ?
+    other_interceptor_symbol dd ?
     proxy_number dd ?
 
     source_context dd ?

@@ -1032,6 +1032,10 @@ encounters a line with content equal to the argument given to "comment".
                  Any text may follow here.
         ~
 
+An identifier consisting of two question marks can be used to define a special
+instruction that is called only as last resort, on lines that contain no
+recognizable instruction. This allows to intercept lines that would otherwise
+be rejected with error message due to unknown syntax.
   The "mvmacro" is an instruction that takes two arguments, both identifying
 an instruction-class symbols. The definition of a macroinstruction specified
 by the second argument is moved to the symbol identified by the first one.
