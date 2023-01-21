@@ -14,11 +14,11 @@
 ;	org RELOCATABLE_BASE
 ;	align.assume RELOCATABLE_BASE, 10000h
 
-; Use a custom fill:
-;	macro nops? length
-;		db length dup 90h
-;	end macro
-;	align 16, nops
+; Pad with value:
+;	align 16, 90h
+
+; Use a custom command to pad:
+;	align 16, db # dup ($ and 0FFh)
 
 define align? align
 
@@ -54,7 +54,7 @@ calminstruction align?.assume? address*, alignment*
     ok:
 end calminstruction
 
-calminstruction align? alignment*, filler:rb
+calminstruction align? alignment*, filler:rb #
 	local index, address, offset
 	compute offset, 0
 	match alignment | offset, alignment
@@ -88,6 +88,13 @@ calminstruction align? alignment*, filler:rb
 	exit
     align:
 	compute alignment, (alignment-1) - (address-offset+alignment-1) mod alignment
-	arrange alignment, filler alignment
+	local prefix, suffix
+	match prefix? # suffix?, filler
+	jyes custom
+	arrange alignment, =db alignment =dup (filler)
+	assemble alignment
+	exit
+    custom:
+	arrange alignment, prefix alignment suffix
 	assemble alignment
 end calminstruction
