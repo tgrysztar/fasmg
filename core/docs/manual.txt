@@ -246,11 +246,11 @@ them to be interpreted as a single name formed by concatenating the tokens.
 
 This can also be applied to numbers.
   Inside a block defined with "namespace" there is initially no label that would
-be considered base for identifiers starting with dot (however the label that 
-served this purpose earlier is brought back to use after "end namespace").
-A similar thing also happens in the beginning of the source text, before any
-label has been defined. This is connected to a couple of additional rules
-concerning use of dots in identifiers.
+be considered base for identifiers starting with dot (even if there was a label
+that served this purpose outside of the block, it loses this status and is brought
+back to use only after the block is closed with "end namespace"). A similar thing
+also happens in the beginning of the source text, before any label has been defined.
+This is connected to additional rules concerning dots in identifiers.
   When an identifier starts with a dot, but there is no label that would be
 a parent for it, the identifier refers to the descendant of a special symbol
 that resides in the current namespace but has no name. If an identifier starts
@@ -271,8 +271,8 @@ In this example the meaning of the ".child" identifier changes from place to
 place, but the "..other" identifier means the same everywhere.
   When two names inside an identifier are connected with a sequence of two or
 more dots, the identifier refers to the descendant of such special unnamed
-symbol in the namespace specified by the identifier before that sequence of
-dots. The unnamed child namespace is chosen depending on a number of dots and
+symbol in the namespace specified by the partial identifier before that sequence
+of dots. The unnamed child namespace is chosen depending on a number of dots and
 in this case the number of required dots is increased by one. The following
 example demonstrates the two methods of identifying such symbol:
 
@@ -658,7 +658,7 @@ specifying how many bytes to copy.
 
    Table 1   Data directives
   /------------------------------\
-  | Size    | Generate | Reserve |
+  | Unit    | Generate | Reserve |
   | (bytes) | data     | data    |
   |=========|==========|=========|
   | 1       | db       | rb      |
@@ -1035,7 +1035,7 @@ encounters a line with content equal to the argument given to "comment".
 An identifier consisting of two question marks can be used to define a special
 instruction that is called only as last resort, on lines that contain no
 recognizable instruction. This allows to intercept lines that would otherwise
-be rejected with error message due to unknown syntax.
+be rejected with "illegal instruction" message due to unknown syntax.
   The "mvmacro" is an instruction that takes two arguments, both identifying
 an instruction-class symbols. The definition of a macroinstruction specified
 by the second argument is moved to the symbol identified by the first one.
@@ -1136,12 +1136,15 @@ inserted enclosed in parentheses before the name of labeled macroinstruction:
 10. Symbolic variables and recognition context
 
 The "equ" is a built-in labeled instruction that defines symbol of expression
-class with a symbolic value. Such value can contain any text (even an empty
-one) and when it is used in an expression it is equivalent to inserting
-the text of its value in place of its identifier, with an effect similar to
-evaluation of a parameter of macroinstruction.
-  This can lead to a different results than when a standard variable defined
-with "=" is used, as the following example demonstrates:
+class with a symbolic value. Such value contains a snippet of source text
+consisting of any number of tokens (even zero, allowing for an empty value)
+and when it is used in an expression it is equivalent to inserting the text
+of its value in place of its identifier, with an effect similar to
+evaluation of a parameter of macroinstruction (except that a parameter is
+always identified by a single name, while a symbolic value may be hidden
+behind a complex identifier).
+  This can lead to an unexpected outcome compared to the use of standard
+variables defined with "=", as the following example demonstrates:
 
         numeric = 2 + 2
         symbolic equ 2 + 2
@@ -2056,8 +2059,8 @@ to assembly, without any preprocessing (if the text came from an argument to
 the instruction, it already went through preprocessing when that line was prepared).
 
         calminstruction please? cmd&
-		assemble cmd
-	end calminstruction
+                assemble cmd
+        end calminstruction
 
         please display 'Hi!'
 
@@ -2144,9 +2147,9 @@ a text that has this kind of brackets properly balanced.
 
 The brackets selected by the third argument must not be used anywhere in the pattern.
   The "arrange" command is like an inverse of "match", it can build up a text
-containing the values of one or more variables. The first argument defines a variable
-where the constructed text is going to be stored, while the second argument is
-a pattern formed in the same way as for "match" (except that it does not need
+containing the values of one or more symbolic variables. The first argument defines
+a variable where the constructed text is going to be stored, while the second argument
+is a pattern formed in the same way as for "match" (except that it does not need
 to precede a comma with "=" to have it included in the argument).
 All non-name tokens other than "=" and tokens preceded with "=" are copied literally
 into the constructed text and they do not carry any recognition context with them.
@@ -2180,6 +2183,8 @@ that outside of CALM instructions would require use of a "repeat 1" trick):
 
         demo                            ; display 3#0h
 
+This is the only case when a non-symbolic value is converted to symbols that may be
+put into text composed by "arrange", other types are not supported.
   The "compute" command allows to evaluate expressions and assign numeric results to
 variables. The first argument to "compute" defines a target where the result should
 be stored, while the second argument can be any numeric expression, which is
@@ -2268,8 +2273,9 @@ or "transform". Other commands keep it unchanged.
 a namespace. Identifiers in the text given by the first argument are then interpreted
 as symbols in this namespace regardless of their original context.
   The "stringify" is a command that converts text of a variable into a string
-and writes it into the same variable (specified by the only argument). This operation
-is similar to one performed by "`" operator in preprocessing.
+and writes it into the same variable, specified by the only argument. This operation
+is similar to the one performed by "`" operator in preprocessing, but it produces
+a value of string type, not a quoted string.
 
         calminstruction (var) strcalc? val
                 compute val, val        ; compute expression
