@@ -41,14 +41,14 @@ if ~ defined MMX
 		call	MMX.parse_operand@src, src
 		check	(@src.size or @dest.size) and not 8
 		jno	size_ok
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 	    size_ok:
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jno	invalid_combination_of_operands
 		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    invalid_combination_of_operands:
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 	end calminstruction
 
 	iterate <instr,opcode>, punpcklbw,60h, punpcklwd,61h, punpckldq,62h, packsswb,63h, pcmpgtb,64h, pcmpgtw,65h, pcmpgtd,66h, packuswb,67h, punpckhbw,68h, \
@@ -67,13 +67,13 @@ if ~ defined MMX
 		call	MMX.parse_operand@src, src
 		check	(@src.size or @dest.size) and not 8
 		jno	size_ok
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 	    size_ok:
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jyes	mmreg_mem
 		check	@dest.type = 'mem' & @src.type = 'mmreg'
 		jyes	mem_mmreg
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 		exit
 	    mmreg_mem:
 		xcall	x86.store_instruction@src, <0Fh,6Fh>,@dest.rm
@@ -90,19 +90,19 @@ if ~ defined MMX
 		jyes	mmreg_rm
 		check	(@dest.type = 'mem' | @dest.type = 'reg') & @src.type = 'mmreg'
 		jyes	rm_mmreg
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 		exit
 	    mmreg_rm:
 		check	@src.size and not 4
 		jno	mmreg_rm_ok
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 	      mmreg_rm_ok:
 		xcall	x86.store_instruction@src, <0Fh,6Eh>,@dest.rm
 		exit
 	    rm_mmreg:
 		check	@dest.size and not 4
 		jno	rm_mmreg_ok
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 	      rm_mmreg_ok:
 		xcall	x86.store_instruction@dest, <0Fh,7Eh>,@src.rm
 	end calminstruction
@@ -114,19 +114,19 @@ if ~ defined MMX
 		jyes	mmreg_rm
 		check	@dest.type = 'mmreg' & @src.type = 'imm'
 		jyes	mmreg_imm
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 		exit
 	    mmreg_rm:
 		check	@src.size and not 8
 		jno	mmreg_rm_ok
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 	      mmreg_rm_ok:
 		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    mmreg_imm:
 		check	@src.size and not 1
 		jno	rm_mmreg_ok
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 	      rm_mmreg_ok:
 		local	iext, irm
 		compute iext, 70h+(ext and 0Fh)

@@ -74,7 +74,7 @@ if ~ defined AVX_512
 				exit
 
 			    invalid_operand:
-				asmcmd	=err 'invalid operand'
+				err	'invalid operand'
 
 			    xmm_register:
 
@@ -143,7 +143,7 @@ if ~ defined AVX_512
 				compute mask, (1 metadataof k1 - AVX_512.maskreg) or z
 				exit
 			    invalid_mask:
-				asmcmd	=err 'invalid mask'
+				err	'invalid mask'
 
 			end calminstruction
 
@@ -162,7 +162,7 @@ if ~ defined AVX_512
 				compute mask, 1 metadataof k1 - AVX_512.maskreg
 				exit
 			    invalid_mask:
-				asmcmd	=err 'invalid mask'
+				err	'invalid mask'
 
 			end calminstruction
 
@@ -175,7 +175,7 @@ if ~ defined AVX_512
 				exit
 
 			    invalid_operand:
-				asmcmd	=err 'invalid operand'
+				err	'invalid operand'
 
 			    mem_bcst:
 				call	AVX_512.parse_operand#context, operand
@@ -191,12 +191,12 @@ if ~ defined AVX_512
 				compute memsize, size
 				jump	unit_ok
 			    operand_size_not_specified:
-				asmcmd	=err 'operand size not specified'
+				err	'operand size not specified'
 				exit
 			    implied_unit:
 				check	size and not memsize
 				jno	unit_ok
-				asmcmd	=err 'invalid operand size'
+				err	'invalid operand size'
 				exit
 			    unit_ok:
 
@@ -208,7 +208,7 @@ if ~ defined AVX_512
 				jyes	bcst_8
 				match	=1to16?, broadcast
 				jyes	bcst_16
-				asmcmd	=err 'invalid broadcast'
+				err	'invalid broadcast'
 				exit
 			    bcst_2:
 				compute broadcast, 2
@@ -241,7 +241,7 @@ if ~ defined AVX_512
 				match	{ =rz?-=sae? }, operand
 				jyes	rounding_3
 			    invalid_operand:
-				asmcmd	=err 'invalid operand'
+				err	'invalid operand'
 				exit
 			    rounding_0:
 				compute rounding, 0
@@ -275,7 +275,7 @@ if ~ defined AVX_512
 				exit
 
 			    invalid_operand:
-				asmcmd	=err 'invalid operand'
+				err	'invalid operand'
 
 			end calminstruction
 
@@ -441,13 +441,13 @@ if ~ defined AVX_512
 				exit
 
 			  invalid_operand:
-				asmcmd	=err 'invalid operand'
+				err	'invalid operand'
 				exit
 			  invalid_address:
-				asmcmd	=err 'invalid address'
+				err	'invalid address'
 				exit
 			  invalid_address_size:
-				asmcmd	=err 'invalid address size'
+				err	'invalid address size'
 				exit
 
 			end calminstruction
@@ -467,7 +467,7 @@ if ~ defined AVX_512
 				compute mask, 1 metadataof k1 - AVX_512.maskreg
 				exit
 			    invalid_mask:
-				asmcmd	=err 'invalid mask'
+				err	'invalid mask'
 
 			end calminstruction
 
@@ -495,16 +495,16 @@ if ~ defined AVX_512
 				check	segment_prefix < 64h
 				jyes	segment_prefix_ok
 			    store_segment_prefix:
-				asmcmd	=db segment_prefix
+				emit	1, segment_prefix
 			    segment_prefix_ok:
 
 				check	mod <> 11b & mode <> x86.mode
 				jno	addressing_prefix_ok
 				check	mode = 64 | (mode = 16 & x86.mode = 64)
 				jno	store_addressing_prefix
-				asmcmd	=err 'illegal addressing mode'
+				err	'illegal addressing mode'
 			    store_addressing_prefix:
-				asmcmd	=db 67h
+				emit	1, 67h
 			    addressing_prefix_ok:
 
 				compute evex, vex_mpw
@@ -562,7 +562,7 @@ if ~ defined AVX_512
 
 				check	x86.mode < 64 & evex and 00001000_01000000_11110000b
 				jno	allowed
-				asmcmd	=err 'instruction requires long mode'
+				err	'instruction requires long mode'
 			    allowed:
 
 				local	evex_displacement_size, compressed_displacement
@@ -605,21 +605,20 @@ if ~ defined AVX_512
 			    evex_required:
 				check	evex_flags and EVEX_FORBIDDEN
 				jno	evex
-				asmcmd	=err 'invalid operand'
+				err	'invalid operand'
 
 			    vex:
-				local	byte2, byte3
 				compute vex, evex and 11111011_11111111b or (evex and 1 shl 21) shr (21-10)
 				check	vex and 10000000_01111111b <> 1
 				jyes	vex_3byte
 			    vex_2byte:
-				compute byte2, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
-				asmcmd	=db 0C5h,byte2
+				emit	1, 0C5h
+				emit	1, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
 				jump	evex_done
 			    vex_3byte:
-				compute byte2, (vex and 11111111b) xor 11100000b
-				compute byte3, (vex shr 8) xor 01111000b
-				asmcmd	=db 0C4h,byte2,byte3
+				emit	1, 0C4h
+				emit	1, (vex and 11111111b) xor 11100000b
+				emit	1, (vex shr 8) xor 01111000b
 				jump	evex_done
 
 			    evex:
@@ -628,8 +627,7 @@ if ~ defined AVX_512
 				jno	evex_4byte
 				compute evex, evex or 1 shl 15
 			    evex_4byte:
-				compute evex, 62h + (evex xor 00001000_01111000_11110000b) shl 8
-				asmcmd	=dd evex
+				emit	4, 62h + (evex xor 00001000_01111000_11110000b) shl 8
 				check	mod <> 11b & mod <> 0 & evex_displacement_size > 0
 				jno	evex_done
 				compute displacement_size, evex_displacement_size
@@ -642,15 +640,12 @@ if ~ defined AVX_512
 				compute mod, 1
 			    evex_done:
 
-				local	modrm, sib
-
-				compute modrm, mod shl 6 + (reg and 111b) shl 3 + rm and 111b
-				asmcmd	=db opcode, modrm
+				asm	db opcode
+				emit	1, mod shl 6 + (reg and 111b) shl 3 + rm and 111b
 
 				check	mod <> 11b & rm = 4 & mode <> 16
 				jno	sib_ok
-				compute sib, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
-				asmcmd	=db sib
+				emit	1, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
 			    sib_ok:
 
 				check	displacement_size = 1
@@ -676,19 +671,19 @@ if ~ defined AVX_512
 				jyes	adjust_displacement_wrap
 				check	displacement >= -80000000h & displacement < 80000000h
 				jyes	displacement_ready
-				asmcmd	=err 'address value out of signed range'
+				err	'address value out of signed range'
 			      adjust_displacement_wrap:
 				compute displacement, displacement - 1 shl 64
 			      displacement_ready:
 
-				asmcmd	=dd context.=displacement
+				asm	dd displacement
 
 				jump	displacement_ok
 			    displacement_16bit:
-				asmcmd	=dw context.=displacement
+				asm	dw displacement
 				jump	displacement_ok
 			    displacement_8bit:
-				asmcmd	=db context.=displacement
+				emit	1, displacement
 			    displacement_ok:
 
 				check	imm_size = 1
@@ -702,16 +697,16 @@ if ~ defined AVX_512
 				call	x86.simm32, immediate
 				jump	immediate_ok
 			    immediate_32bit:
-				compute context.imm, +immediate
-				asmcmd	=dd context.=imm
+				compute imm, +immediate
+				asm	dd imm
 				jump	immediate_ok
 			    immediate_16bit:
-				compute context.imm, +immediate
-				asmcmd	=dw context.=imm
+				compute imm, +immediate
+				asm	dw imm
 				jump	immediate_ok
 			    immediate_8bit:
-				compute context.imm, +immediate
-				asmcmd	=db context.=imm
+				compute imm, +immediate
+				emit	1, imm
 			    immediate_ok:
 
 			end calminstruction

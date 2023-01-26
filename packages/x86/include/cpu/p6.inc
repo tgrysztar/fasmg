@@ -3,10 +3,8 @@ include 'p5.inc'
 
 iterate <instr,opcode>, sysenter,<0Fh,34h>, sysexit,<0Fh,35h>
 
-	define x86.instr? db opcode
-
 	calminstruction instr?
-		assemble x86.instr?
+		asm	db opcode
 	end calminstruction
 
 end iterate
@@ -19,12 +17,12 @@ iterate <cond,code>, o,0, no,1, c,2, b,2, nae,2, nc,3, nb,3, ae,3, z,4, e,4, nz,
 		call	x86.parse_operand@src, src
 		check	@dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
 		jyes	cmov_rm_reg
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 		exit
 	    cmov_rm_reg:
 		check	@src.size and not @dest.size
 		jno	cmov_rm_reg_ok
-		asmcmd	=err 'operand sizes do not match'
+		err	'operand sizes do not match'
 	      cmov_rm_reg_ok:
 		call	x86.select_operand_prefix@src, @dest.size
 		xcall	x86.store_instruction@src, <0Fh,40h+code>,@dest.rm
@@ -40,10 +38,10 @@ iterate <instr,opcode>, fcmovb,<0DAh,0C0h>, fcmove,<0DAh,0C8h>, fcmovbe,<0DAh,0D
 		call	x87.parse_operand@src, src
 		check	@dest.type = 'streg' & @dest.rm = 0 & @src.type = 'streg'
 		jyes	ok
-		asmcmd	=err 'invalid operand'
+		err	'invalid operand'
 		exit
 	    ok:
-		asmcmd	=db opcode + =@src.=rm
+		asm	db opcode + @src.rm
 	end calminstruction
 
 end iterate
@@ -54,12 +52,11 @@ iterate <instr,opcode,postbyte>, fucomi,0DBh,5, fucomip,0DFh,5, fcomi,0DBh,6, fc
 		call	x87.parse_operand@src, src
 		check	@src.type = 'streg'
 		jyes	ok
-		asmcmd	=err 'invalid operand'
+		err	'invalid operand'
 		exit
 	    ok:
-		local	modrm
-		compute modrm, 11b shl 6 + postbyte shl 3 + @src.rm
-		asmcmd	=db opcode, modrm
+		emit	1, opcode
+		emit	1, 11b shl 6 + postbyte shl 3 + @src.rm
 	end calminstruction
 
 end iterate

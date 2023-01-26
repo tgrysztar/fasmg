@@ -32,8 +32,8 @@ if ~ defined SSE2
 	calminstruction cmpsd? args&
 		match	, args
 		jno	sse
-		assemble x86.o32
-		assemble x86.cmpsw
+		xcall	x86.store_operand_prefix, (4)
+		emit	1, 0A7h
 		exit
 	    sse:
 		arrange args, =SSE.=cmpsd args
@@ -117,8 +117,8 @@ if ~ defined SSE2
 	calminstruction movsd? args&
 		match	, args
 		jno	sse
-		assemble x86.o32
-		assemble x86.movsw
+		xcall	x86.store_operand_prefix, (4)
+		emit	1, 0A5h
 		exit
 	    sse:
 		arrange args, =SSE.=movsd args
@@ -347,7 +347,7 @@ if ~ defined SSE2
 	    no_prefix:
 		check	size <> 8
 		jno	done
-		asm	err 'invalid operand size'
+		err	'invalid operand size'
 	    done:
 	end calminstruction
 
@@ -356,7 +356,7 @@ if ~ defined SSE2
 		call	SSE.parse_operand@src, src
 		check	@src.size and not @dest.size
 		jno	size_ok
-		asm	err 'operand sizes do not match'
+		err	'operand sizes do not match'
 	    size_ok:
 		check	@dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
 		jno	invalid_combination_of_operands
@@ -364,7 +364,7 @@ if ~ defined SSE2
 		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    invalid_combination_of_operands:
-		asm	err 'invalid combination of operands'
+		err	'invalid combination of operands'
 	end calminstruction
 
 	calminstruction MMX.bit_shift_instruction ext,dest,src
@@ -374,12 +374,12 @@ if ~ defined SSE2
 		jyes	mmreg_rm
 		check	@dest.type = 'mmreg' & @src.type = 'imm'
 		jyes	mmreg_imm
-		asm	err 'invalid combination of operands'
+		err	'invalid combination of operands'
 		exit
 	    mmreg_rm:
 		check	@src.size and not @dest.size
 		jno	mmreg_rm_ok
-		asm	err 'operand sizes do not match'
+		err	'operand sizes do not match'
 	      mmreg_rm_ok:
 		call	MMX.select_operand_prefix, @src,@dest.size
 		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
@@ -387,7 +387,7 @@ if ~ defined SSE2
 	    mmreg_imm:
 		check	@src.size and not 1
 		jno	rm_mmreg_ok
-		asm	err 'invalid operand size'
+		err	'invalid operand size'
 	      rm_mmreg_ok:
 		local	iext, irm
 		compute iext, 70h+(ext and 0Fh)

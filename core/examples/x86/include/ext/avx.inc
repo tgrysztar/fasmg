@@ -72,7 +72,7 @@ if ~ defined AVX
 				exit
 
 			    invalid_operand:
-				asm	err 'invalid operand'
+				err	'invalid operand'
 
 			    xmm_register:
 
@@ -119,16 +119,16 @@ if ~ defined AVX
 				check	segment_prefix < 64h
 				jyes	segment_prefix_ok
 			    store_segment_prefix:
-				asm	db segment_prefix
+				emit	1, segment_prefix
 			    segment_prefix_ok:
 
 				check	mod <> 11b & mode <> x86.mode
 				jno	addressing_prefix_ok
 				check	mode = 64 | (mode = 16 & x86.mode = 64)
 				jno	store_addressing_prefix
-				asm	err 'illegal addressing mode'
+				err	'illegal addressing mode'
 			    store_addressing_prefix:
-				asm	db 67h
+				emit	1, 67h
 			    addressing_prefix_ok:
 
 				compute vex, vex_mpw
@@ -153,31 +153,28 @@ if ~ defined AVX
 
 				check	x86.mode < 64 & vex and 01000000_11100000b
 				jno	allowed
-				asm	err 'instruction requires long mode'
+				err	'instruction requires long mode'
 			    allowed:
 
-				local	byte2, byte3
 				check	vex and 10000000_01111111b <> 1
 				jyes	vex_3byte
 			    vex_2byte:
-				compute byte2, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
-				asm	db 0C5h,byte2
+				compute byte2,
+				emit	1, 0C5h
+				emit	1, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
 				jump	vex_done
 			    vex_3byte:
-				compute byte2, (vex and 11111111b) xor 11100000b
-				compute byte3, (vex shr 8) xor 01111000b
-				asm	db 0C4h,byte2,byte3
+				emit	1, 0C4h
+				emit	1, (vex and 11111111b) xor 11100000b
+				emit	1, (vex shr 8) xor 01111000b
 			    vex_done:
 
-				local	modrm, sib
-
-				compute modrm, mod shl 6 + (reg and 111b) shl 3 + rm and 111b
-				asm	db opcode, modrm
+				emit	1, opcode
+				emit	1, mod shl 6 + (reg and 111b) shl 3 + rm and 111b
 
 				check	mod <> 11b & rm = 4 & mode <> 16
 				jno	sib_ok
-				compute sib, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
-				asm	db sib
+				emit	1, (bsf scale) shl 6 + (index and 111b) shl 3 + base and 111b
 			    sib_ok:
 
 				check	displacement_size = 1
@@ -205,7 +202,7 @@ if ~ defined AVX
 				jyes	adjust_displacement_wrap
 				check	displacement >= -80000000h & displacement < 80000000h
 				jyes	displacement_ready
-				asm	err 'address value out of signed range'
+				err	'address value out of signed range'
 			      adjust_displacement_wrap:
 				compute displacement, displacement - 1 shl 64
 			      displacement_ready:
@@ -217,7 +214,7 @@ if ~ defined AVX
 				asm	dw displacement
 				jump	displacement_ok
 			    displacement_8bit:
-				asm	db displacement
+				emit	1, displacement
 			    displacement_ok:
 
 				check	imm_size = 1
@@ -240,7 +237,7 @@ if ~ defined AVX
 				jump	immediate_ok
 			    immediate_8bit:
 				compute imm, +immediate
-				asm	db imm
+				emit	1, imm
 			    immediate_ok:
 
 			end calminstruction

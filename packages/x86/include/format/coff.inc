@@ -389,7 +389,7 @@ calminstruction dword? value
 	check	1 elementof (1 metadataof (value + COFF.SECTION_BASE)) relativeto COFF.relocatable
 	jyes	rel32
     plain:
-	asm	emit 4: value
+	emit	4, value
 	exit
 	local	offset, symndx, type
     addr32:
@@ -403,7 +403,7 @@ calminstruction dword? value
 	jump	add_relocation
     add_relocation:
 	compute offset, $%
-	asm	emit 4: 0 scaleof value
+	emit	4, 0 scaleof value
 	check	$% > offset
 	jno	done
 	compute offset, offset - COFF.SECTION_OFFSET
@@ -438,8 +438,7 @@ calminstruction dd? definitions&
 	jyes	next
 	exit
     reserve:
-	arrange value, =dd ?
-	assemble value
+	emit	dword
 	jump	next
     duplicate:
 	match	(value), value

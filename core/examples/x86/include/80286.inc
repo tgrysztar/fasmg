@@ -3,10 +3,8 @@ include '80186.inc'
 
 iterate <instr,opcode>, loadall,<0Fh,05h>, clts,<0Fh,06h>
 
-	define x86.instr? db opcode
-
 	calminstruction instr?
-		assemble x86.instr?
+		asm	db opcode
 	end calminstruction
 
 end iterate
@@ -20,15 +18,15 @@ calminstruction arpl? dest*,src*
 	jno	invalid_operand_size
 	check	@dest.size and not @src.size
 	jno	size_ok
-	asm	err 'operand sizes do not match'
+	err	'operand sizes do not match'
 	jump	size_ok
     invalid_operand_size:
-	asm	err 'invalid operand size'
+	err	'invalid operand size'
     size_ok:
 	xcall	x86.store_instruction@dest, (63h),@src.rm
 	exit
     invalid_combination_of_operands:
-	asm	err 'invalid combination of operands'
+	err	'invalid combination of operands'
 end calminstruction
 
 iterate <instr,ext,postbyte>, sldt,0,0, str,0,1, lldt,0,2, ltr,0,3, verr,0,4, verw,0,5, smsw,1,4, lmsw,1,6
@@ -37,11 +35,11 @@ iterate <instr,ext,postbyte>, sldt,0,0, str,0,1, lldt,0,2, ltr,0,3, verr,0,4, ve
 		call	x86.parse_operand@dest, dest
 		check	@dest.size and not 2
 		jno	size_ok
-		asm	err 'invalid operand size'
+		err	'invalid operand size'
 	    size_ok:
 		check	@dest.type = 'reg' | @dest.type = 'mem'
 		jyes	operand_ok
-		asm	err 'invalid operand'
+		err	'invalid operand'
 		exit
 	    operand_ok:
 		xcall	x86.store_instruction@dest, <0Fh,ext>,(postbyte)
@@ -55,12 +53,12 @@ iterate <instr,postbyte>, lgdt,2, lidt,3, sgdt,0, sidt,1
 		call	x86.parse_operand@dest, dest
 		check	@dest.type = 'mem'
 		jyes	operand_ok
-		asm	err 'invalid operand'
+		err	'invalid operand'
 		exit
 	    operand_ok:
 		check	@dest.size and not 5
 		jno	store_instruction
-		asm	err 'invalid operand size'
+		err	'invalid operand size'
 	    store_instruction:
 		xcall	x86.store_instruction@dest, <0Fh,1>,(postbyte)
 		exit
@@ -77,12 +75,12 @@ iterate <instr,ext>, lar,2, lsl,3
 		jno	invalid_combination_of_operands
 		check	@src.size and not 2
 		jno	size_ok
-		asm	err 'invalid operand size'
+		err	'invalid operand size'
 	    size_ok:
 		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    invalid_combination_of_operands:
-		asm	err 'invalid combination of operands'
+		err	'invalid combination of operands'
 	end calminstruction
 
 end iterate

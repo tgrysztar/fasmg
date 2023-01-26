@@ -8,10 +8,9 @@ if ~ defined i80287
 
 	purge feni?,fneni?,fdisi?,fndisi?
 
-	define x87.fsetpm? db 0DBh,0E4h
-
 	calminstruction fsetpm?
-		assemble x87.fsetpm?
+		emit	1, 0DBh
+		emit	1, 0E4h
 	end calminstruction
 
 end if

@@ -10,10 +10,8 @@ if ~ defined i80387
 
 	iterate <instr,opcode>, fprem1,<0D9h,0F5h>, fsincos,<0D9h,0FBh>, fsin,<0D9h,0FEh>, fcos,<0D9h,0FFh>, fucompp,<0DAh,0E9h>
 
-		define x87.instr? db opcode
-
 		calminstruction instr?
-			assemble x87.instr?
+			asm	db opcode
 		end calminstruction
 
 	end iterate
@@ -27,7 +25,7 @@ if ~ defined i80387
 			xcall	x86.store_instruction@src, (0DDh),(postbyte)
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -44,10 +42,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			err	'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -64,10 +62,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			err	'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -80,14 +78,14 @@ if ~ defined i80387
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			assemble x86.o32
+			xcall	x86.store_operand_prefix, (4)
 			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			err	'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -103,10 +101,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			err	'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -123,10 +121,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			err	'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -138,14 +136,14 @@ if ~ defined i80387
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			assemble x86.o32
+			xcall	x86.store_operand_prefix, (4)
 			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			err	'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -153,7 +151,7 @@ if ~ defined i80387
 	iterate op,  stenvw, stenvd, savew, saved
 		calminstruction f#op? dest*
 			assemble x87.fwait?
-			asmcmd	=fn#op? dest
+			asm	fn#op? dest
 		end calminstruction
 	end iterate
 

@@ -35,14 +35,19 @@ define x86.word? :2
 define x86.dword? :4
 
 
-macro calminstruction?.asmcmd? pattern&
-	local	cmd
-	arrange cmd, pattern
-	assemble cmd
-end macro
-
 calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
+end calminstruction
+
+calminstruction calminstruction?.asm? line&
+	local	name
+	initsym name, name.0
+	match	name.i, name
+	compute i, i+1
+	arrange name, name.i
+	publish name, line
+	arrange line, =assemble name
+	assemble line
 end calminstruction
 
 calminstruction calminstruction?.xcall? instruction*, arguments&
@@ -277,19 +282,19 @@ iterate context, @dest,@src,@src2,@aux
 			exit
 
 		  invalid_operand:
-			asmcmd	=err 'invalid operand'
+			err	'invalid operand'
 			exit
 		  invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			err	'invalid operand size'
 			exit
 		  operand_sizes_do_not_match:
-			asmcmd	=err 'operand sizes do not match'
+			err	'operand sizes do not match'
 			exit
 		  invalid_address:
-			asmcmd	=err 'invalid address'
+			err	'invalid address'
 			exit
 		  invalid_address_size:
-			asmcmd	=err 'invalid address size'
+			err	'invalid address size'
 			exit
 
 		end calminstruction
@@ -333,23 +338,21 @@ iterate context, @dest,@src,@src2,@aux
 			check	segment_prefix = 36h
 			jyes	segment_prefix_ok
 		    store_segment_prefix:
-			asmcmd	=db segment_prefix
+			emit	1, segment_prefix
 		    segment_prefix_ok:
 
-			local	modrm
-
-			compute modrm, mod shl 6 + reg shl 3 + rm
-			asmcmd	=db opcode, modrm
+			emit	1, opcode
+			emit	1, mod shl 6 + reg shl 3 + rm
 
 			check	displacement_size = 1
 			jyes	displacement_8bit
 			check	displacement_size = 2
 			jno	displacement_ok
 		    displacement_16bit:
-			asmcmd	=dw context.=displacement
+			asm	dw displacement
 			jump	displacement_ok
 		    displacement_8bit:
-			asmcmd	=db context.=displacement
+			emit	1, displacement
 		    displacement_ok:
 
 			check	imm_size = 1
@@ -358,11 +361,11 @@ iterate context, @dest,@src,@src2,@aux
 			jno	immediate_ok
 		    immediate_16bit:
 			compute imm, +immediate
-			asmcmd	=dw context.=imm
+			asm	dw imm
 			jump	immediate_ok
 		    immediate_8bit:
 			compute imm, +immediate
-			asmcmd	=db context.=imm
+			emit	1, imm
 		    immediate_ok:
 
 		end calminstruction
@@ -402,21 +405,21 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		check	@src.type = 'imm' & ( @dest.type = 'reg' | @dest.type = 'mem' )
 		jyes	rm_imm
 
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 		exit
 
 	    operand_size_not_specified:
-		asmcmd	=err 'operand size not specified'
+		err	'operand size not specified'
 		compute size, 0
 		jump	main
 
 	    operand_sizes_do_not_match:
-		asmcmd	=err 'operand sizes do not match'
+		err	'operand sizes do not match'
 		compute size, 0
 		jump	main
 
 	    invalid_operand_size:
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 		compute size, 0
 		jump	main
 
@@ -448,8 +451,8 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		exit
 
 	    al_imm:
-		compute opcode, opcode+4
-		asmcmd	=db opcode, =@src.=imm
+		emit	1, opcode+4
+		emit	1, @src.imm
 		exit
 
 	    rm_imm_word:
@@ -466,9 +469,8 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		exit
 
 	    ax_imm:
-		compute opcode, opcode+5
-		asmcmd	=db opcode
-		asmcmd	=dw =@src.=imm
+		emit	1, opcode+5
+		asm	dw @src.imm
 		exit
 
 	    rm_simm_wrap:
@@ -508,15 +510,15 @@ iterate <instr,postbyte>, not,2, neg,3, mul,4, imul,5, div,6, idiv,7
 		exit
 
 	    operand_size_not_specified:
-		asmcmd	=err 'operand size not specified'
+		err	'operand size not specified'
 		jump	main
 
 	    invalid_operand_size:
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 		jump	main
 
 	    invalid_operand:
-		asmcmd	=err 'invalid operand'
+		err	'invalid operand'
 		exit
 
 	end calminstruction
@@ -554,21 +556,21 @@ calminstruction mov? dest*,src*
 	jyes	mov_sreg_rm
 
     invalid_combination_of_operands:
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 	exit
 
     operand_size_not_specified:
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
 	compute size, 0
 	jump	main
 
     operand_sizes_do_not_match:
-	asmcmd	=err 'operand sizes do not match'
+	err	'operand sizes do not match'
 	compute size, 0
 	jump	main
 
     invalid_operand_size:
-	asmcmd	=err 'invalid operand size'
+	err	'invalid operand size'
 	compute size, 0
 	jump	main
 
@@ -597,31 +599,31 @@ calminstruction mov? dest*,src*
     mov_ax_dirmem:
 	check	@dest.segment_prefix = 0 | @dest.segment_prefix = 3Eh
 	jyes	dest_seg_ok
-	asmcmd	=db =@dest.=segment_prefix
+	emit	1, @dest.segment_prefix
       dest_seg_ok:
 	check	size < 2
 	jyes	mov_al_dirmem
-	asmcmd	=db 0A3h
-	asmcmd	=dw =@dest.=address
+	emit	1, 0A3h
+	asm	dw @dest.address
 	exit
       mov_al_dirmem:
-	asmcmd	=db 0A2h
-	asmcmd	=dw =@dest.=address
+	emit	1, 0A2h
+	asm	dw @dest.address
 	exit
 
     mov_dirmem_ax:
 	check	@src.segment_prefix = 0 | @src.segment_prefix = 3Eh
 	jyes	src_seg_ok
-	asmcmd	=db =@src.=segment_prefix
+	emit	1, @src.segment_prefix
       src_seg_ok:
 	check	size < 2
 	jyes	mov_dirmem_al
-	asmcmd	=db 0A1h
-	asmcmd	=dw =@src.=address
+	emit	1, 0A1h
+	asm	dw @src.address
 	exit
       mov_dirmem_al:
-	asmcmd	=db 0A0h
-	asmcmd	=dw =@src.=address
+	emit	1, 0A0h
+	asm	dw @src.address
 	exit
 
     mov_rm_imm:
@@ -631,12 +633,12 @@ calminstruction mov? dest*,src*
     mov_reg_imm:
 	check	size < 2
 	jyes	mov_reg_imm_8bit
-	asmcmd	=db 0B8h + =@dest.=rm
-	asmcmd	=dw =@src.=imm
+	emit	1, 0B8h + @dest.rm
+	asm	dw @src.imm
 	exit
       mov_reg_imm_8bit:
-	asmcmd	=db 0B0h + =@dest.=rm
-	asmcmd	=db =@src.=imm
+	emit	1, 0B0h + @dest.rm
+	emit	1, @src.imm
 	exit
 
     mov_mem_imm:
@@ -689,21 +691,21 @@ calminstruction test? dest*,src*
 	jyes	test_rm_imm
 
     invalid_combination_of_operands:
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 	exit
 
     operand_size_not_specified:
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
 	compute size, 0
 	jump	main
 
     operand_sizes_do_not_match:
-	asmcmd	=err 'operand sizes do not match'
+	err	'operand sizes do not match'
 	compute size, 0
 	jump	main
 
     invalid_operand_size:
-	asmcmd	=err 'invalid operand size'
+	err	'invalid operand size'
 	compute size, 0
 	jump	main
 
@@ -734,8 +736,8 @@ calminstruction test? dest*,src*
 	exit
 
       test_ax_imm:
-	asmcmd	=db 0A9h
-	asmcmd	=dw =@src.=imm
+	emit	1, 0A9h
+	asm	dw @src.imm
 	exit
 
       test_rm_imm_8bit:
@@ -744,7 +746,8 @@ calminstruction test? dest*,src*
 	xcall	x86.store_instruction@dest, (0F6h),(0),byte,@src.imm
 	exit
       test_al_imm:
-	asmcmd	=db 0A8h, =@src.=imm
+	emit	1, 0A8h
+	emit	1, @src.imm
 	exit
 
 end calminstruction
@@ -776,21 +779,21 @@ calminstruction xchg? dest*,src*
 	jyes	xchg_rm_reg
 
     invalid_combination_of_operands:
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 	exit
 
     operand_size_not_specified:
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
 	compute size, 0
 	jump	main
 
     operand_sizes_do_not_match:
-	asmcmd	=err 'operand sizes do not match'
+	err	'operand sizes do not match'
 	compute size, 0
 	jump	main
 
     invalid_operand_size:
-	asmcmd	=err 'invalid operand size'
+	err	'invalid operand size'
 	compute size, 0
 	jump	main
 
@@ -799,9 +802,7 @@ calminstruction xchg? dest*,src*
 	jno	xchg_rm_reg
 	check	size < 2
 	jyes	xchg_rm_reg_8bit
-	local	opcode
-	compute opcode, 90h + @src.rm + @dest.rm
-	asmcmd	=db opcode
+	emit	1, 90h + @src.rm + @dest.rm
 	exit
 
     xchg_reg_rm:
@@ -835,11 +836,11 @@ iterate <instr,postbyte>, inc,0 ,dec,1
 		check	@dest.size
 		jyes	main
 
-		asmcmd	=err 'operand size not specified'
+		err	'operand size not specified'
 		jump	main
 
 	    invalid_operand_size:
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 		jump	main
 
 	    main:
@@ -848,15 +849,13 @@ iterate <instr,postbyte>, inc,0 ,dec,1
 		check	@dest.type = 'mem'
 		jyes	inc_rm
 
-		asmcmd	=err 'invalid operand'
+		err	'invalid operand'
 		exit
 
 	    inc_reg:
 		check	@dest.size < 2
 		jyes	inc_rm_8bit
-		local	opcode
-		compute opcode, 40h + @dest.rm + postbyte shl 3
-		asmcmd	=db opcode
+		emit	1, 40h + @dest.rm + postbyte shl 3
 		exit
 
 	    inc_rm:
@@ -873,14 +872,12 @@ end iterate
 
 calminstruction push? src*
 
-	local	opcode
-
 	call	x86.parse_operand@src, src
 
 	check	@src.size and not 2
 	jno	main
 
-	asmcmd	=err 'invalid operand size'
+	err	'invalid operand size'
 
     main:
 	check	@src.type = 'mem'
@@ -890,7 +887,7 @@ calminstruction push? src*
 	check	@src.type = 'sreg'
 	jyes	push_sreg
 
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 
     push_mem:
@@ -898,27 +895,23 @@ calminstruction push? src*
 	exit
 
     push_reg:
-	compute opcode, 50h + @src.rm
-	asmcmd	=db opcode
+	emit	1, 50h + @src.rm
 	exit
 
     push_sreg:
-	compute opcode, 6 + @src.rm shl 3
-	asmcmd	=db opcode
+	emit	1, 6 + @src.rm shl 3
 	exit
 
 end calminstruction
 
 calminstruction pop? dest*
 
-	local	opcode
-
 	call	x86.parse_operand@dest, dest
 
 	check	@dest.size and not 2
 	jno	main
 
-	asmcmd	=err 'invalid operand size'
+	err	'invalid operand size'
 
     main:
 	check	@dest.type = 'mem'
@@ -929,7 +922,7 @@ calminstruction pop? dest*
 	jyes	pop_sreg
 
     invalid_operand:
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 
     pop_mem:
@@ -937,13 +930,11 @@ calminstruction pop? dest*
 	exit
 
     pop_reg:
-	compute opcode, 58h + @dest.rm
-	asmcmd	=db opcode
+	emit	1, 58h + @dest.rm
 	exit
 
     pop_sreg:
-	compute opcode, 7 + @dest.rm shl 3
-	asmcmd	=db opcode
+	emit	1, 7 + @dest.rm shl 3
 	exit
 
 end calminstruction
@@ -965,7 +956,8 @@ iterate <instr>, push,pop
 		match	{head}, head
 		jno	plain
 	    loop:
-		asmcmd	=instr head
+		arrange operand, =instr head
+		assemble operand
 		match	head tail, tail
 		jno	final
 		transform head, x86.compact
@@ -973,7 +965,7 @@ iterate <instr>, push,pop
 		match	{head}, head
 		jyes	loop
 	    error:
-		asmcmd	=err 'only register operands allowed in compact syntax'
+		err	'only register operands allowed in compact syntax'
 		exit
 	    final:
 		transform tail, x86.compact
@@ -981,7 +973,8 @@ iterate <instr>, push,pop
 		match	{operand}, tail
 		jno	error
 	    plain:
-		asmcmd	=instr operand
+		arrange operand, =instr operand
+		assemble operand
 
 	end calminstruction
 
@@ -994,11 +987,11 @@ iterate <instr,opcode>, ret,0C2h, retn,0C2h, retf,0CAh
 		jyes	ret_short
 		check	operand
 		jno	ret_short
-		asmcmd	=db opcode
-		asmcmd	=dw operand
+		emit	1, opcode
+		asm	dw operand
 		exit
 	    ret_short:
-		asmcmd	=db opcode + 1
+		emit	1, opcode + 1
 	end calminstruction
 
 end iterate
@@ -1010,12 +1003,12 @@ calminstruction lea? dest*,src*
 	jno	invalid_combination_of_operands
 	check	@dest.size = 2
 	jyes	ok
-	asmcmd	=err 'invalid operand size'
+	err	'invalid operand size'
     ok:
 	xcall	x86.store_instruction@src, (8Dh),@dest.rm
 	exit
     invalid_combination_of_operands:
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 end calminstruction
 
 iterate <instr,opcode>, les,0C4h, lds,0C5h
@@ -1030,10 +1023,10 @@ iterate <instr,opcode>, les,0C4h, lds,0C5h
 		xcall	x86.store_instruction@src, (opcode),@dest.rm
 		exit
 	    invalid_operand_size:
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 		exit
 	    invalid_combination_of_operands:
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 	end calminstruction
 
 end iterate
@@ -1058,7 +1051,7 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 		check	@src.type = 'imm' & ( @dest.type = 'reg' | @dest.type = 'mem' )
 		jyes	shift_rm_imm
 
-		asmcmd	=err 'invalid combination of operands'
+		err	'invalid combination of operands'
 		exit
 
 	    shift_rm_cl:
@@ -1090,10 +1083,10 @@ iterate <instr,postbyte>, rol,0, ror,1, rcl,2, rcr,3, shl,4, sal, 4, shr,5, sar,
 		exit
 
 	    operand_size_not_specified:
-		asmcmd	=err 'operand size not specified'
+		err	'operand size not specified'
 		jump	main
 	    invalid_operand_size:
-		asmcmd	=err 'invalid operand size'
+		err	'invalid operand size'
 		jump	main
 
 	end calminstruction
@@ -1112,7 +1105,7 @@ calminstruction call? dest*
 	jyes	call_direct_far
 
     invalid_operand:
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 
     call_direct_far:
@@ -1120,8 +1113,8 @@ calminstruction call? dest*
 	jyes	invalid_operand
 	check	@dest.size and not 4
 	jyes	invalid_operand
-	asmcmd	=db 9Ah
-	asmcmd	=dw =@dest.=offset,=@dest.=segment
+	emit	1, 9Ah
+	asm	dw @dest.offset,@dest.segment
 	exit
 
     call_rm:
@@ -1135,7 +1128,7 @@ calminstruction call? dest*
 	jyes	call_rm_far
 	check	@dest.jump_type = 'near'
 	jyes	call_rm_near
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
 	exit
 
       call_rm_dword:
@@ -1157,13 +1150,13 @@ calminstruction call? dest*
 	jyes	invalid_operand
 	check	@dest.imm relativeto 0 & (@dest.imm < 0 | @dest.imm >= 10000h)
 	jyes	value_out_of_range
-	asmcmd	=db 0E8h
+	emit	1, 0E8h
 	compute @dest.imm, @dest.imm-($+2)
-	asmcmd	=dw =@dest.=imm
+	asm	dw @dest.imm
 	exit
 
     value_out_of_range:
-	asmcmd	=err 'value out of range'
+	err	'value out of range'
 
 end calminstruction
 
@@ -1179,7 +1172,7 @@ calminstruction jmp? dest*
 	jyes	jmp_direct_far
 
     invalid_operand:
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 
     jmp_direct_far:
@@ -1187,8 +1180,8 @@ calminstruction jmp? dest*
 	jyes	invalid_operand
 	check	@dest.size and not 4
 	jyes	invalid_operand
-	asmcmd	=db 0EAh
-	asmcmd	=dw =@dest.=offset,=@dest.=segment
+	emit	1, 0EAh
+	asm	dw @dest.offset,@dest.segment
 	exit
 
     jmp_rm:
@@ -1202,7 +1195,7 @@ calminstruction jmp? dest*
 	jyes	jmp_rm_far
 	check	@dest.jump_type = 'near'
 	jyes	jmp_rm_near
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
 	exit
 
       jmp_rm_dword:
@@ -1231,7 +1224,7 @@ calminstruction jmp? dest*
 	check	~ $ relativeto 0 & @dest.imm relativeto 0
 	jno	jmp_optimize
 	compute @dest.imm, @dest.imm + $ - 0 scaleof $
-	asmcmd	=err 'invalid address'
+	err	'invalid address'
       jmp_optimize:
 	check	@dest.unresolved
 	jyes	jmp_imm_short
@@ -1240,26 +1233,27 @@ calminstruction jmp? dest*
 	check	(@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h
 	jyes	jmp_imm_short
       jmp_imm_near:
-	asmcmd	=db 0E9h
+	emit	1, 0E9h
 	compute @dest.imm, @dest.imm-($+2)
-	asmcmd	=dw =@dest.=imm
+	asm	dw @dest.imm
 	exit
       jmp_imm_short_verify:
 	check	(@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h
 	jno	relative_jump_out_of_range
       jmp_imm_short:
-	asmcmd	=db 0EBh
+	emit	1, 0EBh
 	compute @dest.imm, (@dest.imm-($+1)) and 0FFh
-	asmcmd	=db =@dest.=imm
+	emit	1, @dest.imm
 	exit
 
     relative_jump_out_of_range:
-	asmcmd	=db ?, ?
-	asmcmd	=err 'relative jump out of range'
+	emit	1
+	emit	1
+	err	'relative jump out of range'
 	exit
 
     value_out_of_range:
-	asmcmd	=err 'value out of range'
+	err	'value out of range'
 
 end calminstruction
 
@@ -1294,28 +1288,31 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 		check	x86.jumps & ~ @dest.jump_type
 		jyes	trampoline
 
-		asmcmd	=db ?,?
-		asmcmd	=err 'relative jump out of range'
+		emit	1
+		emit	1
+		err	'relative jump out of range'
 		exit
 
 	    in_range:
 		compute @dest.imm, (@dest.imm-($+2)) and 0FFh
-		asmcmd	=db opcode,=@dest.=imm
+		emit	1, opcode
+		emit	1, @dest.imm
 		exit
 
 	    trampoline:
-		asmcmd	=db opcode =xor 1,3
-		asmcmd	=db 0E9h
+		emit	1, opcode xor 1
+		emit	1, 3
+		emit	1, 0E9h
 		compute @dest.imm, @dest.imm-($+2)
-		asmcmd	=dw =@dest.=imm
+		asm	dw @dest.imm
 		exit
 
 	    invalid_operand:
-		asmcmd	=err 'invalid operand'
+		err	'invalid operand'
 		exit
 
 	    value_out_of_range:
-		asmcmd	=err 'value out of range'
+		err	'value out of range'
 
 	end calminstruction
 end iterate
@@ -1329,22 +1326,22 @@ iterate <instr,opcode>, loopnz,0E0h, loopne,0E0h, loopz,0E1h, loope,0E1h, loop,0
 		check	@dest.type = 'imm' & ( @dest.jump_type = 'short' | ~ @dest.jump_type )
 		jno	invalid_operand
 
-		asmcmd	=db opcode
+		emit	1, opcode
 
 		check	@dest.imm-($+1) < 80h & @dest.imm-($+1) >= -80h
 		jyes	relative_offset_ok
 		check	(@dest.imm-($+2)) and 0FFFFh < 80h | (@dest.imm-($+2)) and 0FFFFh >= 0FF80h
 		jyes	relative_offset_ok
-		asmcmd	=db ?
-		asmcmd	=err 'relative jump out of range'
+		emit	1
+		err	'relative jump out of range'
 		exit
 	    relative_offset_ok:
 		compute @dest.imm, (@dest.imm-($+1)) and 0FFh
-		asmcmd	=db =@dest.=imm
+		emit	1, @dest.imm
 		exit
 
 	    invalid_operand:
-		asmcmd	=err 'invalid operand'
+		err	'invalid operand'
 		exit
 
 	end calminstruction
@@ -1357,35 +1354,34 @@ iterate <instr,opcode>, daa,27h, das,2Fh, aaa,37h, aas,3Fh, nop,90h, cbw,98h, cw
 			movsb,0A4h, cmpsb,0A6h, stosb,0AAh, lodsb,0ACh, scasb,0AEh, xlatb,0D7h, \
 			movsw,0A5h, cmpsw,0A7h, stosw,0ABh, lodsw,0ADh, scasw,0AFh
 
-	define x86.instr? db opcode
-
 	calminstruction instr?
-		assemble x86.instr?
+		emit	1, opcode
 	end calminstruction
 
 end iterate
 
 iterate <prefix,opcode>, lock,0F0h, repnz,0F2h, repne,0F2h, rep,0F3h, repz,0F3h, repe,0F3h
 
-	define x86.prefix? db opcode
-
 	calminstruction prefix? instr&
-		assemble x86.prefix?
+		emit	1, opcode
 		assemble instr
 	end calminstruction
 
 end iterate
 
 calminstruction int? number*
-	asmcmd	=db 0CDh,number
+	emit	1, 0CDh
+	emit	1, number
 end calminstruction
 
 calminstruction aam? number:10
-	asmcmd	=db 0D4h,number
+	emit	1, 0D4h
+	emit	1, number
 end calminstruction
 
 calminstruction aad? number:10
-	asmcmd	=db 0D5h,number
+	emit	1, 0D5h
+	emit	1, number
 end calminstruction
 
 calminstruction movs? dest*,src*
@@ -1402,7 +1398,7 @@ calminstruction movs? dest*,src*
 	jno	invalid_combination_of_operands
 	check	@src.segment_prefix = 0 | @src.segment_prefix = 3Eh
 	jyes	segment_prefix_ok
-	asmcmd	=db =@src.=segment_prefix
+	emit	1, @src.segment_prefix
     segment_prefix_ok:
 	check	size = 2
 	jyes	movs_word
@@ -1412,15 +1408,15 @@ calminstruction movs? dest*,src*
 	assemble x86.movsw
 	exit
     operand_size_not_specified:
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
 	compute size, 0
 	jump	size_ok
     operand_sizes_do_not_match:
-	asmcmd	=err 'operand sizes do not match'
+	err	'operand sizes do not match'
 	compute size, 0
 	jump	size_ok
     invalid_combination_of_operands:
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 	exit
 end calminstruction
 
@@ -1438,7 +1434,7 @@ calminstruction cmps? src*,dest*
 	jno	invalid_combination_of_operands
 	check	@src.segment_prefix = 0 | @src.segment_prefix = 3Eh
 	jyes	segment_prefix_ok
-	asmcmd	=db =@src.=segment_prefix
+	emit	1, @src.segment_prefix
     segment_prefix_ok:
 	check	size = 2
 	jyes	cmps_word
@@ -1448,15 +1444,15 @@ calminstruction cmps? src*,dest*
 	assemble x86.cmpsw
 	exit
     operand_size_not_specified:
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
 	compute size, 0
 	jump	size_ok
     operand_sizes_do_not_match:
-	asmcmd	=err 'operand sizes do not match'
+	err	'operand sizes do not match'
 	compute size, 0
 	jump	size_ok
     invalid_combination_of_operands:
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 	exit
 end calminstruction
 
@@ -1464,7 +1460,7 @@ calminstruction stos? dest*
 	call	x86.parse_operand@dest, dest
 	check	@dest.size
 	jyes	size_ok
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
     size_ok:
 	check	@dest.type = 'mem' & @dest.mod = 0 & @dest.rm = 5 & ( @dest.segment_prefix = 0 | @dest.segment_prefix = 26h )
 	jno	invalid_operand
@@ -1476,7 +1472,7 @@ calminstruction stos? dest*
 	assemble x86.stosw
 	exit
     invalid_operand:
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 end calminstruction
 
@@ -1484,13 +1480,13 @@ calminstruction lods? src*
 	call	x86.parse_operand@src, src
 	check	@src.size
 	jyes	size_ok
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
     size_ok:
 	check	@src.type = 'mem' & @src.mod = 0 & @src.rm = 4
 	jno	invalid_operand
 	check	@src.segment_prefix = 0 | @src.segment_prefix = 3Eh
 	jyes	segment_prefix_ok
-	asmcmd	=db =@src.=segment_prefix
+	emit	1, @src.segment_prefix
     segment_prefix_ok:
 	check	@src.size = 2
 	jyes	lods_word
@@ -1500,7 +1496,7 @@ calminstruction lods? src*
 	assemble x86.lodsw
 	exit
     invalid_operand:
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 end calminstruction
 
@@ -1508,7 +1504,7 @@ calminstruction scas? dest*
 	call	x86.parse_operand@dest, dest
 	check	@dest.size
 	jyes	size_ok
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
     size_ok:
 	check	@dest.type = 'mem' & @dest.mod = 0 & @dest.rm = 5 & ( @dest.segment_prefix = 0 | @dest.segment_prefix = 26h )
 	jno	invalid_operand
@@ -1520,7 +1516,7 @@ calminstruction scas? dest*
 	assemble x86.scasw
 	exit
     invalid_operand:
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 end calminstruction
 
@@ -1528,18 +1524,18 @@ calminstruction xlat? src*
 	call	x86.parse_operand@src, src
 	check	@src.size > 1
 	jno	size_ok
-	asmcmd	=err 'invalid operand size'
+	err	'invalid operand size'
     size_ok:
 	check	@src.type = 'mem' & @src.mod = 0 & @src.rm = 7
 	jno	invalid_operand
 	check	@src.segment_prefix = 0 | @src.segment_prefix = 3Eh
 	jyes	segment_prefix_ok
-	asmcmd	=db =@src.=segment_prefix
+	emit	1, @src.segment_prefix
     segment_prefix_ok:
 	assemble x86.xlatb
 	exit
     invalid_operand:
-	asmcmd	=err 'invalid operand'
+	err	'invalid operand'
 	exit
 end calminstruction
 
@@ -1548,29 +1544,31 @@ calminstruction in? dest*,src*
 	call	x86.parse_operand@src, src
 	check	@dest.size
 	jyes	size_ok
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
     size_ok:
 	check	@src.type = 'reg' & @src.size = 2 & @src.rm = 2 & @dest.type = 'reg' & @dest.rm = 0
 	jyes	in_ax_dx
 	check	@src.type = 'imm' & @dest.type = 'reg' & @dest.rm = 0
 	jyes	in_ax_imm
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 	exit
     in_ax_dx:
 	check	@dest.size = 2
 	jno	in_al_dx
-	asmcmd	=db 0EDh
+	emit	1, 0EDh
 	exit
     in_al_dx:
-	asmcmd	=db 0ECh
+	emit	1, 0ECh
 	exit
     in_ax_imm:
 	check	@dest.size = 2
 	jno	in_al_imm
-	asmcmd	=db 0E5h,=@src.=imm
+	emit	1, 0E5h
+	emit	1, @src.imm
 	exit
     in_al_imm:
-	asmcmd	=db 0E4h,=@src.=imm
+	emit	1, 0E4h
+	emit	1, @src.imm
 	exit
 end calminstruction
 
@@ -1579,28 +1577,30 @@ calminstruction out? dest*,src*
 	call	x86.parse_operand@src, src
 	check	@src.size
 	jyes	size_ok
-	asmcmd	=err 'operand size not specified'
+	err	'operand size not specified'
     size_ok:
 	check	@dest.type = 'reg' & @dest.size = 2 & @dest.rm = 2 & @src.type = 'reg' & @src.rm = 0
 	jyes	out_dx_ax
 	check	@dest.type = 'imm' & @src.type = 'reg' & @src.rm = 0
 	jyes	out_imm_ax
-	asmcmd	=err 'invalid combination of operands'
+	err	'invalid combination of operands'
 	exit
     out_dx_ax:
 	check	@src.size = 2
 	jno	out_dx_al
-	asmcmd	=db 0EFh
+	emit	1, 0EFh
 	exit
     out_dx_al:
-	asmcmd	=db 0EEh
+	emit	1, 0EEh
 	exit
     out_imm_ax:
 	check	@src.size = 2
 	jno	out_imm_al
-	asmcmd	=db 0E7h,=@dest.=imm
+	emit	1, 0E7h
+	emit	1, @dest.imm
 	exit
     out_imm_al:
-	asmcmd	=db 0E6h,=@dest.=imm
+	emit	1, 0E6h
+	emit	1, @dest.imm
 	exit
 end calminstruction

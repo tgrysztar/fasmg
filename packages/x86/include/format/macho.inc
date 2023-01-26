@@ -533,7 +533,7 @@ macro MachO.segment declaration
 				if OFFSET >= $%%
 					store S_ZEROFILL at MachO:MachO.segment#s#_section#%.flags
 					store 0 at MachO:MachO.segment#s#_section#%.size
-				else
+				else if OFFSET
 					FILL = NEXT
 				end if
 			end repeat
@@ -1026,47 +1026,61 @@ else
 		MachO.NSYMS = MachO.NSYMS + 1
 	end macro
 
-	macro dword? value
-		local v, o
-		v = value
-		if ~ v relativeto 0 & v relativeto 1 elementof v & (1 elementof (1 metadataof v) eq MachO.section | 1 elementof (1 metadataof v) eq MachO.symbol)
-			MachO.reloc =: $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof v)) shl 32 + 2 shl 57 + GENERIC_RELOC_VANILLA shl 60
-			if 1 elementof (1 metadataof v) eq MachO.symbol
-				MachO.reloc = MachO.reloc + 1 shl 59
-			end if
-			o = $%
-			emit dword: 0 scaleof (1 metadataof v) + 0 scaleof v
-			if $% > o
-				MachO.NRELOC = MachO.NRELOC + 1
-			else
-				restore MachO.reloc
-			end if
-		else if ~ v relativeto 0 & (v + $) relativeto 1 elementof (v + $) & (1 elementof (1 metadataof (v + $)) eq MachO.section | 1 elementof (1 metadataof (v + $)) eq MachO.symbol)
-			if MachO.CPUTYPE = CPU_TYPE_X86_64
-				if 1 elementof (1 metadataof (v + $)) eq MachO.symbol
-					v = v + $ + 4
-				else
-					v = v + 0 scaleof (1 metadataof v) - 0 scaleof (1 metadataof $)
-				end if
-				MachO.reloc =: $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof (v + $))) shl 32 + 1 shl 56 + 2 shl 57 + X86_64_RELOC_SIGNED_4 shl 60
-			else
-				v = v + 0 scaleof (1 metadataof v) - 0 scaleof (1 metadataof $)
-				MachO.reloc =: $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof (v + $))) shl 32 + 1 shl 56 + 2 shl 57 + GENERIC_RELOC_VANILLA shl 60
-			end if
-			if 1 elementof (1 metadataof (v + $)) eq MachO.symbol
-				MachO.reloc = MachO.reloc + 1 shl 59
-			end if
-			o = $%
-			emit dword: 0 scaleof v
-			if $% > o
-				MachO.NRELOC = MachO.NRELOC + 1
-			else
-				restore MachO.reloc
-			end if
-		else
-			emit dword: v
-		end if
-	end macro
+	MachO.reloc.stack equ MachO.reloc
+
+	calminstruction dword? v*
+		compute v, v
+		check	~ v relativeto 0 & v relativeto 1 elementof v & (1 elementof (1 metadataof v) eq MachO.section | 1 elementof (1 metadataof v) eq MachO.symbol)
+		jyes	dir
+		check	~ v relativeto 0 & (v + $) relativeto 1 elementof (v + $) & (1 elementof (1 metadataof (v + $)) eq MachO.section | 1 elementof (1 metadataof (v + $)) eq MachO.symbol)
+		jyes	rel
+		emit	4, v
+		exit
+
+		local	r, o
+	    dir:
+		compute r, $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof v)) shl 32 + 2 shl 57 + GENERIC_RELOC_VANILLA shl 60
+		check	1 elementof (1 metadataof v) eq MachO.symbol
+		jno	dir_ready
+		compute r, r + 1 shl 59
+	      dir_ready:
+		compute o, $%
+		emit	4, 0 scaleof (1 metadataof v) + 0 scaleof v
+		check	$% > o
+		jyes	record
+		exit
+
+	    rel:
+		check	MachO.CPUTYPE = CPU_TYPE_X86_64
+		jyes	rel_x64
+		compute v, v + 0 scaleof (1 metadataof v) - 0 scaleof (1 metadataof $)
+		compute r, $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof (v + $))) shl 32 + 1 shl 56 + 2 shl 57 + GENERIC_RELOC_VANILLA shl 60
+		jump	rel_prepared
+	    rel_x64:
+		check	1 elementof (1 metadataof (v + $)) eq MachO.symbol
+		jyes	rel_x64_symbol
+		compute v, v + 0 scaleof (1 metadataof v) - 0 scaleof (1 metadataof $)
+		jump	rel_x64_prepare
+	      rel_x64_symbol:
+		compute v, v + $ + 4
+	      rel_x64_prepare:
+		compute r, $% - MachO.SECTION_OFFSET + (1 scaleof (1 metadataof (v + $))) shl 32 + 1 shl 56 + 2 shl 57 + X86_64_RELOC_SIGNED_4 shl 60
+	    rel_prepared:
+		check	1 elementof (1 metadataof (v + $)) eq MachO.symbol
+		jno	rel_ready
+		compute r, r + 1 shl 59
+	      rel_ready:
+		compute o, $%
+		emit	4, 0 scaleof v
+		check	$% > o
+		jyes	record
+		exit
+
+	    record:
+		publish :MachO.reloc.stack, r
+		compute MachO.NRELOC, MachO.NRELOC + 1
+
+	end calminstruction
 
 	postpone
 	if MachO.NSYMS
@@ -1150,8 +1164,7 @@ else
 		jyes	next
 		exit
 	    reserve:
-		arrange value, =dd ?
-		assemble value
+		emit	dword
 		jump	next
 	    duplicate:
 		match	(value), value

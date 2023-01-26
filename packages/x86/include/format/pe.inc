@@ -500,6 +500,7 @@ macro section?
 			SECTION_CHARACTERISTICS = SECTION_CHARACTERISTICS or IMAGE_SCN_CNT_UNINITIALIZED_DATA
 			store SECTION_CHARACTERISTICS at PE:SectionTable.Characteristics+SECTION_INDEX*SectionTable.ENTRY_LENGTH
 		end if
+
 		if LEGACY_HEADERS
 			if SECTION_CHARACTERISTICS and IMAGE_SCN_CNT_CODE & RAW_DATA_SIZE > 0
 				load CODE_SIZE from PE:OptionalHeader.SizeOfCode
@@ -938,13 +939,13 @@ end macro
 
 if defined PE.Fixups
 
-	calminstruction dword? value
+	calminstruction dword? value*
 		compute value, value
 		check	value relativeto 0 | ~ value relativeto PE.RELOCATION
 		jyes	plain
 		local	offset
 		compute offset, $%
-		asm	emit 4: value - PE.RELOCATION
+		emit	4, value - PE.RELOCATION
 		check	$% > offset
 		jno	done
 		asm	store $-4-PE.IMAGE_BASE:4 at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
@@ -953,16 +954,16 @@ if defined PE.Fixups
 	    done:
 		exit
 	    plain:
-		asm	emit 4: value
+		emit	4, value
 	end calminstruction
 
-	calminstruction qword? value
+	calminstruction qword? value*
 		compute value, value
 		check	value relativeto 0 | ~ value relativeto PE.RELOCATION
 		jyes	plain
 		local	offset
 		compute offset, $%
-		asm	emit 8: value - PE.RELOCATION
+		emit	8, value - PE.RELOCATION
 		check	$% > offset
 		jno	done
 		asm	store $-8-PE.IMAGE_BASE:4 at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
@@ -971,7 +972,7 @@ if defined PE.Fixups
 	    done:
 		exit
 	    plain:
-		asm	emit 8: value
+		emit	8, value
 	end calminstruction
 
 	iterate <dd,dword>, dd,dword, dq,qword
@@ -998,8 +999,7 @@ if defined PE.Fixups
 			jyes	next
 			exit
 		    reserve:
-			arrange value, =dd ?
-			assemble value
+			emit	dword
 			jump	next
 		    duplicate:
 			match	(value), value

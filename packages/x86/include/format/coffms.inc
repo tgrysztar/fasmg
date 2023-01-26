@@ -549,7 +549,7 @@ if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 		check	1 elementof (1 metadataof (value + COFF.SECTION_BASE)) relativeto COFF.relocatable
 		jyes	rel32
 	    plain:
-		asm	emit 4: value
+		emit	4, value
 		exit
 		local	offset, symndx, type
 	    dir32:
@@ -568,7 +568,7 @@ if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 		jump	add_relocation
 	    add_relocation:
 		compute offset, $%
-		asm	emit 4: 0 scaleof value
+		emit	4, 0 scaleof value
 		check	$% > offset
 		jno	done
 		compute offset, offset - COFF.SECTION_OFFSET
@@ -588,7 +588,7 @@ if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 		check	~ value relativeto 0 & (value + COFF.IMAGE_BASE) relativeto 1 elementof (value + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (value + COFF.IMAGE_BASE)) relativeto COFF.relocatable
 		jyes	dir32nb
 	    plain:
-		asm	emit 8: value
+		emit	8, value
 		exit
 		local	offset, symndx, type
 	    dir32:
@@ -602,7 +602,7 @@ if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
 		jump	add_relocation
 	    add_relocation:
 		compute offset, $%
-		asm	emit 8: 0 scaleof value
+		emit	8, 0 scaleof value
 		check	$% > offset
 		jno	done
 		compute offset, offset - COFF.SECTION_OFFSET
@@ -628,7 +628,7 @@ else if COFF.MACHINE = IMAGE_FILE_MACHINE_AMD64
 		check	1 elementof (1 metadataof (value + COFF.SECTION_BASE)) relativeto COFF.relocatable
 		jyes	rel32
 	    plain:
-		asm	emit 4: value
+		emit	4, value
 		exit
 		local	offset, symndx, type
 	    addr32:
@@ -647,7 +647,7 @@ else if COFF.MACHINE = IMAGE_FILE_MACHINE_AMD64
 		jump	add_relocation
 	    add_relocation:
 		compute offset, $%
-		asm	emit 4: 0 scaleof value
+		emit	4, 0 scaleof value
 		check	$% > offset
 		jno	done
 		compute offset, offset - COFF.SECTION_OFFSET
@@ -667,7 +667,7 @@ else if COFF.MACHINE = IMAGE_FILE_MACHINE_AMD64
 		check	~ value relativeto 0 & (value + COFF.IMAGE_BASE) relativeto 1 elementof (value + COFF.IMAGE_BASE) & 1 elementof (1 metadataof (value + COFF.IMAGE_BASE)) relativeto COFF.relocatable
 		jyes	addr64nb
 	    plain:
-		asm	emit 8: value
+		emit	8, value
 		exit
 		local	offset, symndx, type
 	    addr64:
@@ -681,7 +681,7 @@ else if COFF.MACHINE = IMAGE_FILE_MACHINE_AMD64
 		jump	add_relocation
 	    add_relocation:
 		compute offset, $%
-		asm	emit 8: 0 scaleof value
+		emit	8, 0 scaleof value
 		check	$% > offset
 		jno	done
 		compute offset, offset - COFF.SECTION_OFFSET
@@ -720,8 +720,7 @@ iterate <dd,dword>, dd,dword, dq,qword
 		jyes	next
 		exit
 	    reserve:
-		arrange value, =dd ?
-		assemble value
+		emit	dword
 		jump	next
 	    duplicate:
 		match	(value), value

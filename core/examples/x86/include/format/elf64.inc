@@ -499,12 +499,12 @@ calminstruction dword? value
 	check	1 elementof (1 metadataof (value + ELF.SECTION_BASE)) relativeto PLT
 	jyes	r_plt32
     plain:
-	asm	emit 4: value
+	emit	4, value
 	exit
 	local	offset, addend, info
     r_32:
 	compute offset, $%
-	asm	emit 4: ?
+	emit	4
 	check	$% > offset
 	jno	done
 	compute offset, offset - ELF.SECTION_OFFSET
@@ -513,7 +513,7 @@ calminstruction dword? value
 	jump	add_relocation
     r_pc32:
 	compute offset, $%
-	asm	emit 4: ?
+	emit	4
 	check	$% > offset
 	jno	done
 	compute offset, offset - ELF.SECTION_OFFSET
@@ -522,7 +522,7 @@ calminstruction dword? value
 	jump	add_relocation
     r_plt32:
 	compute offset, $%
-	asm	emit 4: ?
+	emit	4
 	check	$% > offset
 	jno	done
 	compute offset, offset - ELF.SECTION_OFFSET
@@ -544,12 +544,12 @@ calminstruction qword? value
 	check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto ELF.relocatable
 	jyes	r_64
     plain:
-	asm	emit 8: value
+	emit	8, value
 	exit
 	local	offset, addend, info
     r_64:
 	compute offset, $%
-	asm	emit 8: ?
+	emit	8
 	check	$% > offset
 	jno	done
 	compute offset, offset - ELF.SECTION_OFFSET
@@ -589,8 +589,7 @@ iterate <dd,dword>, dd,dword, dq,qword
 		jyes	next
 		exit
 	    reserve:
-		arrange value, =dd ?
-		assemble value
+		emit	dword
 		jump	next
 	    duplicate:
 		match	(value), value
