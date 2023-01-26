@@ -63,13 +63,13 @@ if ~ defined SSE
 		jno	invalid_combination_of_operands
 		check	@dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16)
 		jno	size_ok
-		asmcmd	=err 'invalid operand size'
+		asm	err 'invalid operand size'
 	    size_ok:
 		compute @src.opcode_prefix, pre
 		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm
 		exit
 	    invalid_combination_of_operands:
-		asmcmd	=err 'invalid combination of operands'
+		asm	err 'invalid combination of operands'
 	end calminstruction
 
 	calminstruction SSE.basic_instruction_imm8 pre,ext,msize,dest,src,aux
@@ -80,13 +80,13 @@ if ~ defined SSE
 		jno	invalid_combination_of_operands
 		check	@dest.size <> 16 | (@src.type = 'mem' & @src.size and not msize) | (@src.type = 'mmreg' & @src.size <> 16) | @aux.size and not 1
 		jno	size_ok
-		asmcmd	=err 'invalid operand size'
+		asm	err 'invalid operand size'
 	    size_ok:
 		compute @src.opcode_prefix, pre
 		xcall	x86.store_instruction@src, <0Fh,ext>,@dest.rm,byte,@aux.imm
 		exit
 	    invalid_combination_of_operands:
-		asmcmd	=err 'invalid combination of operands'
+		asm	err 'invalid combination of operands'
 	end calminstruction
 
 	iterate <instr,ext>, sqrt,51h, rsqrt,52h, rcp,53h, add,58h, mul,59h, sub,5Ch, min,5Dh, div,5Eh, max,5Fh

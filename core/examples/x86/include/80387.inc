@@ -27,7 +27,7 @@ if ~ defined i80387
 			xcall	x86.store_instruction@src, (0DDh),(postbyte)
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			asm	err 'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -44,10 +44,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			asm	err 'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			asm	err 'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -64,10 +64,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			asm	err 'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			asm	err 'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -84,10 +84,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			asm	err 'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			asm	err 'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -103,10 +103,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			asm	err 'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			asm	err 'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -123,10 +123,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			asm	err 'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			asm	err 'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -142,10 +142,10 @@ if ~ defined i80387
 			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
-			asmcmd	=err 'invalid operand size'
+			asm	err 'invalid operand size'
 			exit
 		    invalid_operand:
-			asmcmd	=err 'invalid operand'
+			asm	err 'invalid operand'
 		end calminstruction
 
 	end iterate
@@ -153,7 +153,7 @@ if ~ defined i80387
 	iterate op,  stenvw, stenvd, savew, saved
 		calminstruction f#op? dest*
 			assemble x87.fwait?
-			asmcmd	=fn#op? dest
+			asm	fn#op? dest
 		end calminstruction
 	end iterate
 

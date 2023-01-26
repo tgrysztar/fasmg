@@ -26,12 +26,12 @@ calminstruction cmpxchg8b? dest*
 	call	x86.parse_operand@dest, dest
 	check	@dest.type = 'mem'
 	jyes	operand_ok
-	asmcmd	=err 'invalid operand'
+	asm	err 'invalid operand'
 	exit
     operand_ok:
 	check	@dest.size and not 8
 	jno	size_ok
-	asmcmd	=err 'invalid operand size'
+	asm	err 'invalid operand size'
     size_ok:
 	xcall	x86.store_instruction@dest, <0Fh,0C7h>,(1)
 end calminstruction

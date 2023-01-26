@@ -888,7 +888,7 @@ parse_expression:
     identify_operator:
 	cmp	[ecx+ValueDefinition.type],VALTYPE_NATIVE_COMMAND
 	jne	inspect_expression_symbol
-	test	[ecx+ValueDefinition.flags],VAL_UNARY
+	test	[ecx+ValueDefinition.attribute],OPERATOR_UNARY
 	setnz	al
 	xor	al,[operator_argument_expected]
 	jz	store_expression_operator
@@ -942,14 +942,14 @@ parse_expression:
     store_expression_operator:
 	mov	edx,[ecx+ValueDefinition.value]
 	mov	cl,[ecx+ValueDefinition.attribute]
+	mov	ch,cl
+	and	cl,OPERATOR_PRECEDENCE_MASK
 	mov	ebx,[operator_stack_position]
 	cmp	[operator_argument_expected],0
 	jne	push_operator
     establish_operator_precedence:
 	cmp	ebx,[operator_stack]
 	je	push_operator
-	mov	ch,cl
-	and	cl,OPERATOR_PRECEDENCE_MASK
 	cmp	cl,[ebx-8]
 	ja	push_operator
 	jb	store_pending_operator

@@ -165,13 +165,13 @@ if ~ defined AVX2
 				exit
 
 			  invalid_operand:
-				asmcmd	=err 'invalid operand'
+				asm	err 'invalid operand'
 				exit
 			  invalid_address:
-				asmcmd	=err 'invalid address'
+				asm	err 'invalid address'
 				exit
 			  invalid_address_size:
-				asmcmd	=err 'invalid address size'
+				asm	err 'invalid address size'
 				exit
 
 			end calminstruction
