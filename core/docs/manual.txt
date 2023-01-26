@@ -2353,11 +2353,11 @@ namespace of the "show" instruction. This allows the "display" command to access
 the "text" even though it is local to the CALM instruction and therefore normally
 visible only in the scope of the definition of "show". This is similar to the use
 of "define" to form symbolic links.
-  The "call" command allows to directly execute a CALM instruction. Its first
-argument must provide an identifier of an instruction-class symbol, and at the
-execution time this symbol must be defined as CALM (it is not possible to call
-a macroinstruction or a built-in instruction this way). The execution then
-proceeds directly to the entry point of that instruction, and only returns
+  The "call" command allows to directly execute another CALM instruction. Its
+first argument must provide an identifier of an instruction-class symbol, and
+at the execution time this symbol must be defined as CALM (it is not possible
+to call a macroinstruction or a built-in instruction this way). The execution
+then proceeds directly to the entry point of that instruction, and only returns
 after the called instruction finishes.
 
         define Msg display 'Hi'
@@ -2410,3 +2410,17 @@ is used.
         end calminstruction
 
         demo
+
+  The "err" command signalizes an error, analogously to its namesake in
+base language. It takes a single argument, specifying a custom message to
+present. This argument is a pre-compiled expression, like second argument
+to "compute", and is expected to evaluate to string value.
+  The "display" command presents a string of bytes as a message in
+the standard output, just like the regular directive with the same name.
+The single argument should be an expression giving either a string or
+a numeric value of a single byte.
+  The "emit" command generates data of length specified by the first argument
+and the value specified by the second. Both arguments are treated as
+pre-compiled expressions. The second argument is optional, if it is omitted,
+the data of specified length is generated as uninitialized. When the second
+argument is a string, it must fit within the specified length.

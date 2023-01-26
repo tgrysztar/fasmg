@@ -10,15 +10,19 @@ EXPR_STRING = 22h
 EXPR_FLOAT = 2Eh
 
 EXPR_SYMBOL_VALUE = 10h
-EXPR_AREA_ADDRESS = 11h
 EXPR_OPERATOR = 20h
 EXPR_SYMBOL = 40h
+
+EXPR_AREA_ADDRESS = 11h
+EXPR_POLYNOMIAL = 31h
 
 EXPR_MISSING_ARGUMENT = 29h
 EXPR_MISSING_PARENTHESIS = 28h
 
 EXPRF_VALUE_IN_WORKSPACE = 100h
 EXPRF_CALM_LITERAL = 200h
+
+EXPRF_OPERATOR_UNARY = 1000h
 
 convert_number:
 ; in:
@@ -573,7 +577,7 @@ get_constant_value:
     ;  edi - list of ExpressionTerm elements as returned by get_expression_value
     ; out:
     ;  same as get_constant_value
-    ; preserves: edi
+    ; preserves: esi, edi
 	call	forbid_variable_terms
 	call	get_term_value
 	mov	eax,[edi+ExpressionTerm.attributes]
@@ -646,7 +650,7 @@ convert_terms_to_numeric_value:
     ;  edx - Workspace
     ;  edi - list of ExpressionTerm elements as returned by get_expression_value
     ; out:
-    ;  esi - value in VALTYPE_NUMERIC format (same [edx+Workspace.memory_start])
+    ;  esi - value in VALTYPE_NUMERIC format (same as [edx+Workspace.memory_start])
     ;  ecx = length of value
     ; preserves: edx
 	mov	ebx,[edx+Workspace.memory_start]
@@ -957,14 +961,18 @@ parse_expression:
 	jnz	push_operator
     store_pending_operator:
 	sub	ebx,8
-	mov	eax,EXPR_OPERATOR
+	xor	eax,eax
+	test	byte [ebx+1],OPERATOR_UNARY
+	setnz	al
+	shl	eax,bsf EXPRF_OPERATOR_UNARY
+	mov	al,EXPR_OPERATOR
 	stosd
 	mov	eax,[ebx+4]
 	stosd
 	jmp	establish_operator_precedence
     push_operator:
 	call	reserve_operator_stack
-	mov	[ebx],cl
+	mov	[ebx],ecx
 	mov	[ebx+4],edx
 	add	ebx,8
 	mov	[operator_stack_position],ebx
@@ -1077,7 +1085,11 @@ parse_expression:
 	cmp	ebx,[operator_stack]
 	je	remaining_operators_stored
 	sub	ebx,8
-	mov	eax,EXPR_OPERATOR
+	xor	eax,eax
+	test	byte [ebx+1],OPERATOR_UNARY
+	setnz	al
+	shl	eax,bsf EXPRF_OPERATOR_UNARY
+	mov	al,EXPR_OPERATOR
 	stosd
 	mov	eax,[ebx+4]
 	stosd
@@ -1118,6 +1130,8 @@ calculate_parsed_expression:
 	je	push_symbol_current_value
 	cmp	al,EXPR_AREA_ADDRESS
 	je	push_area_address
+	cmp	al,EXPR_POLYNOMIAL
+	je	push_polynomial_literal
 	test	eax,eax
 	jnz	structural_error
        ; clc
@@ -1150,6 +1164,18 @@ calculate_parsed_expression:
 	add	edi,2*sizeof.ExpressionTerm
 	mov	[expression_end],esi
 	jmp	calculation_loop
+    push_polynomial_literal:
+    ; occurring only in reduced CALM expressions
+	mov	ebx,eax
+	lodsd
+	mov	[expression_end],esi
+	test	ebx,EXPRF_CALM_LITERAL
+	jz	polynomial_value_ready
+	add	eax,[calm_literals]
+      polynomial_value_ready:
+	xor	esi,esi
+	mov	ebx,eax
+	jmp	push_polynomial
     push_symbol_current_value:
     ; occurring only in CALM expressions, entire expression workspace should be free to use
 	lodsd
@@ -1227,6 +1253,7 @@ calculate_parsed_expression:
 	mov	ebx,[edx+ValueDefinition.value]
 	mov	eax,ebx
 	add	eax,[edx+ValueDefinition.value_length]
+      push_polynomial:
 	push	eax edi
 	mov	edx,calculation_workspace
 	mov	ecx,2*sizeof.ExpressionTerm
@@ -1265,7 +1292,7 @@ calculate_parsed_expression:
 	add	ebx,4
 	pop	edx ecx
 	cmp	ebx,ecx
-	jne	symbol_metadata_ok
+	jb	symbol_metadata_ok
 	xor	ebx,ebx
       symbol_metadata_ok:
 	mov	[edx+ExpressionTerm.metadata],ebx
@@ -1576,8 +1603,14 @@ calculate_parsed_expression:
 	je	skip_dword
 	cmp	al,EXPR_FLOAT
 	je	skip_dword
+	cmp	al,EXPR_SYMBOL
+	je	skip_dword
 	cmp	al,EXPR_SYMBOL_VALUE
 	je	skip_two_dwords
+	cmp	al,EXPR_AREA_ADDRESS
+	je	skip_dword
+	cmp	al,EXPR_POLYNOMIAL
+	je	skip_dword
 	test	eax,eax
 	jnz	invalid_expression
 	inc	eax

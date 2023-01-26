@@ -4726,13 +4726,24 @@ store_value:
 display_data:
 	call	get_constant_value
 	cmp	al,30h
-	je	display_byte
+	je	display_character_data
 	cmp	al,22h
 	jne	invalid_argument
+	call	display_string_data
+    display_next_value:
+	call	get_constituent_value
+	jc	assembly_line
+	cmp	al,','
+	jne	invalid_argument
+	jmp	display_data
+    display_character_data:
+	call	display_single_byte_data
+	jmp	display_next_value
+    display_string_data:
 	test	[trace_mode],TRACE_DISPLAY
 	jnz	bypass_display_buffer
 	cmp	[next_pass_needed],0
-	jne	display_next_value
+	jne	display_ok
 	mov	ecx,[edx]
 	call	reserve_display_buffer
 	mov	ebx,esi
@@ -4740,45 +4751,43 @@ display_data:
 	lodsd
 	mov	ecx,eax
 	rep	movsb
+      string_displayed:
 	mov	esi,ebx
-    display_next_value:
-	call	get_constituent_value
-	jc	assembly_line
-	cmp	al,','
-	jne	invalid_argument
-	jmp	display_data
-    bypass_display_buffer:
+      display_ok:
+	retn
+      bypass_display_buffer:
 	mov	ebx,esi
 	mov	esi,edx
 	lodsd
 	mov	ecx,eax
-	jecxz	display_next_bypassing_value
+	jecxz	string_displayed
 	call	display_string
-      display_next_bypassing_value:
-	mov	esi,ebx
-	jmp	display_next_value
-    display_byte:
+	jmp	string_displayed
+    display_single_byte_data:
 	test	[trace_mode],TRACE_DISPLAY
 	jnz	byte_bypassing_display_buffer
 	cmp	[next_pass_needed],0
-	jne	display_next_value
+	jne	display_ok
 	mov	ecx,1
 	call	reserve_display_buffer
 	mov	ecx,1
 	call	fit_value
-	jc	value_out_of_range
-	jmp	display_next_value
-    byte_bypassing_display_buffer:
+	jc	byte_out_of_range
+	retn
+      byte_bypassing_display_buffer:
 	mov	edi,displayed_byte
 	mov	ecx,1
 	call	fit_value
-	jc	value_out_of_range
+	jc	byte_out_of_range
 	mov	ebx,esi
 	mov	esi,edi
 	mov	ecx,1
 	call	display_string
-	mov	esi,ebx
-	jmp	display_next_value
+	jmp	string_displayed
+       byte_out_of_range:
+	mov	edx,_value_out_of_range
+	call	register_error
+	retn
     reserve_display_buffer:
 	mov	edi,[display_data_length]
 	add	ecx,edi
@@ -4794,7 +4803,7 @@ display_data:
 	add	edi,eax
 	mov	[display_buffer],eax
 	mov	[display_buffer_length],ecx
-    display_buffer_reserve_ok:
+      display_buffer_reserve_ok:
 	retn
 
 format_directive:

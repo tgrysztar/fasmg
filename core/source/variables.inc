@@ -164,6 +164,7 @@ variables:
     division_temporary_terms dd ?
     mantissa_tail dd ?
     predicted_shift dd ?
+    subexpression_end dd ?
 
     condition_stack dd ?
     condition_stack_base dd ?

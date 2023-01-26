@@ -563,6 +563,8 @@ check_if_defined_earlier:
 	je	check_expression_element
 	cmp	al,EXPR_OPERATOR
 	je	check_expression_element
+	cmp	al,EXPR_POLYNOMIAL
+	je	check_expression_element
     checked_expression_invalid:
 	jmp	invalid_logical_value
     check_expression_end:

@@ -933,6 +933,9 @@ alm_compute:
 	stosd
 	mov	eax,ebx
 	stosd
+	call	compile_expression
+	jmp	instruction_assembled
+    compile_expression:
 	xor	eax,eax
 	stosd
 	mov	[calm_code_cursor],edi
@@ -956,11 +959,92 @@ alm_compute:
 	xchg	edi,[calm_code_cursor]
 	sub	ecx,edi
 	mov	[edi-4],ecx
-	jmp	instruction_assembled
-    no_computable_expression:
+	retn
+      no_computable_expression:
 	sub	[calm_code_cursor],8+8
-	jmp	assembly_line
+	retn
     convert_parsed_expression:
+	xor	ebx,ebx
+	xor	ecx,ecx
+	xor	dl,dl
+	mov	[subexpression_end],esi
+      scan_reducible_subexpression:
+	mov	eax,[esi+ebx]
+	test	eax,eax
+	jz	end_subexpression
+	cmp	al,EXPR_OPERATOR
+	je	scan_operator
+	cmp	al,EXPR_SYMBOL_VALUE
+	je	scan_parsed_symbol
+	cmp	al,EXPR_NUMBER
+	je	scan_parsed_value
+	cmp	al,EXPR_STRING
+	je	scan_parsed_value
+	cmp	al,EXPR_FLOAT
+	je	scan_parsed_value
+	jmp	end_subexpression
+      scan_parsed_value:
+	add	ebx,8
+	inc	ecx
+	jmp	scan_reducible_subexpression
+      scan_parsed_symbol:
+	mov	eax,[esi+ebx+4]
+	test	eax,eax
+	jz	end_subexpression
+	test	[eax+SymbolTree_Leaf.flags],SYM_CONSTANT
+	jz	end_subexpression
+	mov	eax,[esi+ebx+8]
+	test	eax,eax
+	jz	end_subexpression
+	cmp	[eax+ValueDefinition.type],VALTYPE_SYMBOLIC
+	je	end_subexpression
+	add	ebx,12
+	inc	ecx
+	jmp	scan_reducible_subexpression
+      scan_operator:
+	test	eax,EXPRF_OPERATOR_UNARY
+	setz	al
+	movzx	eax,al
+	cmp	ecx,eax
+	jbe	end_subexpression
+	sub	ecx,eax
+	add	ebx,8
+	or	dl,1
+	jmp	scan_reducible_subexpression
+      end_subexpression:
+	add	ebx,esi
+	mov	[subexpression_end],ebx
+	test	dl,dl
+	jz	convert_irreducible_expression
+	cmp	ecx,1
+	jne	convert_irreducible_expression
+	push	edi
+	xor	eax,eax
+	xchg	eax,[ebx]
+	push	eax
+	mov	edi,[calculation_workspace.memory_start]
+	call	calculate_parsed_expression
+	mov	esi,[subexpression_end]
+	pop	dword [esi]
+	call	pop_terms
+	mov	ebx,edi
+	pop	edi
+	jc	convert_irreducible_expression
+	cmp	[ebx+sizeof.ExpressionTerm+ExpressionTerm.attributes],0
+	jne	embed_numeric_value
+	mov	eax,[ebx+ExpressionTerm.attributes]
+	mov	ebx,[ebx+ExpressionTerm.value]
+	jmp	copy_expression_literal
+      embed_numeric_value:
+	push	edi
+	mov	edi,ebx
+	call	convert_terms_to_numeric_value
+	pop	edi
+	mov	ebx,esi
+	mov	esi,[subexpression_end]
+	mov	eax,EXPR_POLYNOMIAL + EXPRF_CALM_LITERAL
+	jmp	parsed_value_length_ok
+      convert_irreducible_expression:
 	lodsd
 	test	eax,eax
 	jz	parsed_expression_converted
@@ -978,9 +1062,10 @@ alm_compute:
 	je	expression_missing_parenthesis
 	jmp	invalid_expression
       copy_parsed_value:
-	or	eax,EXPRF_CALM_LITERAL
 	mov	ebx,[esi]
 	add	esi,4
+      copy_expression_literal:
+	or	eax,EXPRF_CALM_LITERAL
 	test	eax,EXPRF_VALUE_IN_WORKSPACE
 	jnz	parsed_value_in_workspace
 	test	ebx,ebx
@@ -1014,8 +1099,11 @@ alm_compute:
 	mov	[calm_literals_cursor],edi
 	mov	esi,ebx
 	pop	edi
+      parsed_item_converted:
+	cmp	esi,[subexpression_end]
+	jbe	convert_irreducible_expression
 	jmp	convert_parsed_expression
-    copy_parsed_symbol:
+      copy_parsed_symbol:
 	mov	al,EXPR_SYMBOL
 	stosd
 	lodsd
@@ -1023,12 +1111,12 @@ alm_compute:
 	jz	invalid_expression
 	stosd
 	add	esi,4
-	jmp	convert_parsed_expression
-    copy_parsed_operator:
+	jmp	parsed_item_converted
+      copy_parsed_operator:
 	stosd
 	movsd
-	jmp	convert_parsed_expression
-    parsed_expression_converted:
+	jmp	parsed_item_converted
+      parsed_expression_converted:
 	stosd
 	clc
 	retn
@@ -1088,10 +1176,13 @@ alm_check:
 	mov	[calm_code_cursor],edi
 	mov	eax,[comparator]
 	stosd
+	mov	eax,[expression_end]
       convert_argument_sequences:
+	push	eax
 	call	convert_parsed_expression
+	pop	eax
 	jc	condition_malformed
-	cmp	esi,[expression_end]
+	cmp	esi,eax
 	jb	convert_argument_sequences
 	mov	ecx,edi
 	xchg	edi,[calm_code_cursor]
@@ -1320,6 +1411,49 @@ alm_take:
 	mov	eax,ebx
 	stosd
 	mov	[calm_code_cursor],edi
+	jmp	instruction_assembled
+
+alm_err:
+	mov	[value],calm_err
+	jmp	assemble_alm_operation_on_expression
+alm_display:
+	mov	[value],calm_display
+    assemble_alm_operation_on_expression:
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jz	unexpected_instruction
+	mov	edi,[calm_code_cursor]
+	mov	edx,calm_code_buffer
+	mov	ecx,8+4
+	call	reserve_workspace
+	mov	eax,[calm_line_number]
+	stosd
+	mov	eax,[value]
+	stosd
+	call	compile_expression
+	jmp	instruction_assembled
+
+alm_emit:
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jz	unexpected_instruction
+	mov	edi,[calm_code_cursor]
+	mov	edx,calm_code_buffer
+	mov	ecx,8+4
+	call	reserve_workspace
+	mov	eax,[calm_line_number]
+	stosd
+	mov	eax,calm_emit
+	stosd
+	call	compile_expression
+	mov	edi,[calm_code_cursor]
+	mov	edx,calm_code_buffer
+	mov	ecx,4
+	call	reserve_workspace
+	call	peek_at_constituent_value
+	jc	alm_call_arguments_ready
+	cmp	al,','
+	jne	alm_call_arguments_ready
+	and	[current_constituent],0
+	call	compile_expression
 	jmp	instruction_assembled
 
 alm_call:
@@ -2529,6 +2663,130 @@ calm_take:
 	xor	edx,edx
 	call	remove_value_definition
 	setnc	[calm_result]
+	jmp	calm_execution_unit
+
+calm_display:
+	lodsd
+	add	eax,esi
+	push	eax
+	mov	edi,[calculation_workspace.memory_start]
+	and	[value_position],0
+	call	calculate_parsed_expression
+	pop	esi
+	call	pop_terms
+	jc	calm_execution_unit
+	call	get_calculated_constant_value
+	cmp	al,EXPR_STRING
+	je	calm_display_string
+	cmp	al,EXPR_NUMBER
+	je	calm_display_character
+    calm_invalid_argument:
+	mov	edx,_invalid_argument
+	call	register_error
+	jmp	calm_execution_unit
+    calm_display_string:
+	call	display_string_data
+	jmp	calm_execution_unit
+    calm_display_character:
+	call	display_single_byte_data
+	jmp	calm_execution_unit
+
+calm_err:
+	lodsd
+	add	eax,esi
+	push	eax
+	mov	edi,[calculation_workspace.memory_start]
+	and	[value_position],0
+	call	calculate_parsed_expression
+	pop	esi
+	call	pop_terms
+	jc	calm_execution_unit
+	call	get_calculated_constant_value
+	cmp	al,EXPR_STRING
+	jne	calm_invalid_argument
+	call	register_volatile_error
+	test	edx,edx
+	jz	calm_execution_unit
+	or	[edx+Error.flags],ERR_CUSTOM
+	jmp	calm_execution_unit
+
+calm_emit:
+	lodsd
+	add	eax,esi
+	push	eax
+	mov	edi,[calculation_workspace.memory_start]
+	and	[value_position],0
+	call	calculate_parsed_expression
+	pop	esi
+	call	pop_terms
+	jc	calm_data_unit_default
+	call	get_calculated_constant_value
+	cmp	al,EXPR_NUMBER
+	jne	calm_invalid_data_unit
+	mov	ecx,4
+	mov	edi,data_unit_length
+	call	fit_value
+	jc	calm_invalid_data_unit
+	jns	calm_emit_data
+    calm_invalid_data_unit:
+	mov	edx,_invalid_argument
+	call	register_error
+    calm_data_unit_default:
+	mov	[data_unit_length],1
+    calm_emit_data:
+	lodsd
+	test	eax,eax
+	jz	calm_reserve_data
+	add	eax,esi
+	push	eax
+	mov	edi,[calculation_workspace.memory_start]
+	and	[value_position],0
+	call	calculate_parsed_expression
+	pop	esi
+	call	pop_terms
+	jc	calm_execution_unit
+	push	edi
+	mov	ecx,[data_unit_length]
+	call	initialize_output
+	xchg	edi,[esp]
+	call	get_calculated_constant_value
+	pop	edi
+	cmp	al,EXPR_FLOAT
+	je	calm_emit_float
+	cmp	al,EXPR_STRING
+	je	calm_emit_string
+	cmp	al,EXPR_NUMBER
+	jne	calm_invalid_argument
+	mov	ecx,[data_unit_length]
+	call	fit_value
+	jnc	calm_execution_unit
+    calm_emit_out_of_range:
+	mov	edx,_value_out_of_range
+	call	register_error
+	jmp	calm_execution_unit
+    calm_emit_string:
+	mov	eax,[data_unit_length]
+	mov	ecx,[edx]
+	sub	eax,ecx
+	jc	calm_emit_out_of_range
+	xchg	esi,edx
+	add	esi,4
+	rep	movsb
+	mov	ecx,eax
+	xor	al,al
+	rep	stosb
+	mov	esi,edx
+	jmp	calm_execution_unit
+    calm_emit_float:
+	push	esi
+	mov	esi,edx
+	mov	ecx,[data_unit_length]
+	call	fit_float
+	pop	esi
+	jmp	calm_execution_unit
+    calm_reserve_data:
+	mov	ecx,[data_unit_length]
+	call	uninitialized_output
 	jmp	calm_execution_unit
 
 calm_call:
