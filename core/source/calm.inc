@@ -2803,6 +2803,9 @@ calm_call:
 	jne	calm_call_invalid
 	call	create_source_entry
 	jc	calm_call_exceeded_stack_limit
+	xor	eax,eax
+	xchg	eax,[calm_instruction_number]
+	mov	[ebx-sizeof.SourceEntry+SourceEntry.line_number],eax
 	mov	eax,[parameter_namespace]
 	mov	[ebx+SourceEntry.local_namespace],eax
 	mov	ecx,[instruction_branch]
@@ -2895,8 +2898,6 @@ calm_call:
 	jnz	skip_excess_arguments
      call_arguments_ok:
 	pop	ebx
-	mov	eax,[calm_instruction_number]
-	mov	[ebx-sizeof.SourceEntry+SourceEntry.line_number],eax
 	mov	eax,[ebx-sizeof.SourceEntry+SourceEntry.text]
 	mov	ecx,[eax+ValueDefinition.value]
 	sub	edi,ecx
