@@ -1133,8 +1133,7 @@ else
 	calminstruction align? boundary,value:?
 		check	$ relativeto 0 | MachO.SECTION_ALIGN mod (boundary) = 0
 		jyes	allowed
-		arrange value, =err 'section not aligned enough'
-		assemble value
+		err	'section not aligned enough'
 		exit
 	    allowed:
 		compute boundary, (boundary-1)-(0 scaleof $+boundary-1) mod boundary
@@ -1154,8 +1153,7 @@ else
 		jyes	duplicate
 		match	?, value
 		jyes	reserve
-		arrange value, =dword value
-		assemble value
+		call	dword, value
 	    next:
 		match	, definitions
 		jno	start

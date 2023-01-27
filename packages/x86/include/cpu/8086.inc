@@ -40,7 +40,7 @@ calminstruction calminstruction?.initsym? var*, val&
 end calminstruction
 
 calminstruction calminstruction?.asm? line&
-	local	name
+	local	name, i
 	initsym name, name.0
 	match	name.i, name
 	compute i, i+1

@@ -110,30 +110,19 @@ macro segment? definition
     org 0
 end macro
 
-calminstruction calminstruction?.init? var*, val:0
-	compute val, val
-	publish var, val
-end calminstruction
-
 calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
 end calminstruction
 
-calminstruction calminstruction?.unique? name
-	local counter, buffer
-	init counter
-	compute counter, counter + 1
-	arrange buffer, name#counter
-	publish name, buffer
-end calminstruction
-
 calminstruction calminstruction?.asm? line&
-	local tmp, ln, buffer
-	initsym tmp, unique ln
-	assemble tmp
-	publish ln, line
-	arrange buffer, =assemble ln
-	assemble buffer
+	local	name, i
+	initsym name, name.0
+	match	name.i, name
+	compute i, i+1
+	arrange name, name.i
+	publish name, line
+	arrange line, =assemble name
+	assemble line
 end calminstruction
 
 iterate <dw,word>, dw,word, dd,dword
@@ -144,7 +133,7 @@ iterate <dw,word>, dw,word, dd,dword
 		jno	plain
 		local	offset
 		compute offset, $%
-		asm	emit word: value - MZ.segment
+		emit	word, value - MZ.segment
 		check	$% > offset
 		jno	done
 		compute offset, offset - MZ.HEADER_LENGTH
@@ -154,7 +143,7 @@ iterate <dw,word>, dw,word, dd,dword
 	    done:
 		exit
 	    plain:
-		asm	emit word: value
+		emit	word, value
 	end calminstruction
 
 	calminstruction dw? definitions&
@@ -169,8 +158,7 @@ iterate <dw,word>, dw,word, dd,dword
 		jyes	duplicate
 		match	?, value
 		jyes	reserve
-		arrange value, =word value
-		assemble value
+		call	word, value
 	    next:
 		match	, definitions
 		jno	start
@@ -179,8 +167,7 @@ iterate <dw,word>, dw,word, dd,dword
 		jyes	next
 		exit
 	    reserve:
-		arrange value, =dw ?
-		assemble value
+		emit	word
 		jump	next
 	    duplicate:
 		match	(value), value

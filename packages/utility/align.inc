@@ -49,8 +49,7 @@ calminstruction align?.assume? address*, alignment*
     absolute:
 	check address mod alignment = 0
 	jyes ok
-	arrange symbol, =err 'false assumption about absolute address'
-	assemble symbol
+	err 'false assumption about absolute address'
     ok:
 end calminstruction
 
@@ -61,8 +60,7 @@ calminstruction align? alignment*, filler:rb #
 	compute alignment, alignment
 	check alignment >= 0
 	jyes alignment_ok
-	arrange symbol, =err 'invalid alignment value'
-	assemble symbol
+	err 'invalid alignment value'
 	exit
     alignment_ok:
 	compute address, $
@@ -83,8 +81,7 @@ calminstruction align? alignment*, filler:rb #
 	check symbol > 0 & symbol mod alignment = 0
 	jyes align
     fail:
-	arrange symbol, =err 'variable portion of the address is not aligned enough'
-	assemble symbol
+	err 'variable portion of the address is not aligned enough'
 	exit
     align:
 	compute alignment, (alignment-1) - (address-offset+alignment-1) mod alignment

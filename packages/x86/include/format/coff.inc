@@ -275,8 +275,7 @@ end macro
 calminstruction align? boundary,value:?
 	check	COFF.SECTION_ALIGN mod (boundary) = 0
 	jyes	allowed
-	arrange value, =err 'section not aligned enough'
-	assemble value
+	err	'section not aligned enough'
 	exit
     allowed:
 	compute boundary, (boundary-1)-($-COFF.SECTION_BASE+boundary-1) mod boundary
@@ -428,8 +427,7 @@ calminstruction dd? definitions&
 	jyes	duplicate
 	match	?, value
 	jyes	reserve
-	arrange value, =dword value
-	assemble value
+	call	dword, value
     next:
 	match	, definitions
 	jno	start

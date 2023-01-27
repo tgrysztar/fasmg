@@ -159,7 +159,6 @@ if ~ defined AVX
 				check	vex and 10000000_01111111b <> 1
 				jyes	vex_3byte
 			    vex_2byte:
-				compute byte2,
 				emit	1, 0C5h
 				emit	1, ((vex and 10000000b) or ((vex shr 8) and 1111111b)) xor 11111000b
 				jump	vex_done

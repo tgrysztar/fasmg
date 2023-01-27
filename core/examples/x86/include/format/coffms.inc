@@ -415,8 +415,7 @@ end macro
 calminstruction align? boundary,value:?
 	check	COFF.SECTION_ALIGN mod (boundary) = 0
 	jyes	allowed
-	arrange value, =err 'section not aligned enough'
-	assemble value
+	err	'section not aligned enough'
 	exit
     allowed:
 	compute boundary, (boundary-1)-($-COFF.SECTION_BASE+boundary-1) mod boundary
@@ -510,30 +509,19 @@ end macro
 element COFF.IMAGE_BASE
 RVA? equ -COFF.IMAGE_BASE+
 
-calminstruction calminstruction?.init? var*, val:0
-	compute val, val
-	publish var, val
-end calminstruction
-
 calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
 end calminstruction
 
-calminstruction calminstruction?.unique? name
-	local counter, buffer
-	init counter
-	compute counter, counter + 1
-	arrange buffer, name#counter
-	publish name, buffer
-end calminstruction
-
 calminstruction calminstruction?.asm? line&
-	local tmp, ln, buffer
-	initsym tmp, unique ln
-	assemble tmp
-	publish ln, line
-	arrange buffer, =assemble ln
-	assemble buffer
+	local	name, i
+	initsym name, name.0
+	match	name.i, name
+	compute i, i+1
+	arrange name, name.i
+	publish name, line
+	arrange line, =assemble name
+	assemble line
 end calminstruction
 
 if COFF.MACHINE = IMAGE_FILE_MACHINE_I386
@@ -710,8 +698,7 @@ iterate <dd,dword>, dd,dword, dq,qword
 		jyes	duplicate
 		match	?, value
 		jyes	reserve
-		arrange value, =dword value
-		assemble value
+		call	dword, value
 	    next:
 		match	, definitions
 		jno	start
