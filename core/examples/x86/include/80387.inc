@@ -150,7 +150,7 @@ if ~ defined i80387
 
 	iterate op,  stenvw, stenvd, savew, saved
 		calminstruction f#op? dest*
-			assemble x87.fwait?
+			asm	fwait?
 			asm	fn#op? dest
 		end calminstruction
 	end iterate

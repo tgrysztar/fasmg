@@ -2620,8 +2620,7 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 		exit
 
 	    relative_jump_out_of_range:
-		emit	1
-		emit	1
+		emit	2
 		err	'relative jump out of range'
 		exit
 

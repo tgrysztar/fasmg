@@ -73,18 +73,16 @@ if ~ defined i8087
 				fneni,<0DBh,0E0h>, fndisi,<0DBh,0E1h>, fnclex,<0DBh,0E2h>, fninit,<0DBh,0E3h>, \
 				fcompp,<0DEh,0D9h>
 
-		define x87.instr? db opcode
-
 		calminstruction instr?
-			assemble x87.instr?
+			asm	db opcode
 		end calminstruction
 
 	end iterate
 
 	iterate op,  eni, disi, clex, init
 		calminstruction f#op?
-			assemble x87.fwait?
-			assemble x87.fn#op?
+			asm	fwait?
+			asm	fn#op?
 		end calminstruction
 	end iterate
 
@@ -469,8 +467,6 @@ if ~ defined i8087
 
 	end iterate
 
-	define x87.fnstsw_ax? db 0DFh,0E0h
-
 	calminstruction fnstsw? dest*
 		call	x86.parse_operand@dest, dest
 		check	@dest.size and not 2
@@ -479,7 +475,8 @@ if ~ defined i8087
 		jyes	mem
 		check	@dest.type = 'reg' & @dest.rm = 0
 		jno	invalid_operand
-		assemble x87.fnstsw_ax
+		emit	1, 0DFh
+		emit	1, 0E0h
 		exit
 	    mem:
 		xcall	x86.store_instruction@dest, (0DDh),(7)
@@ -550,7 +547,7 @@ if ~ defined i8087
 
 	iterate op,  stsw, stcw, stenv, save
 		calminstruction f#op? dest*
-			assemble x87.fwait?
+			asm	fwait?
 			asm	fn#op? dest
 		end calminstruction
 	end iterate

@@ -76,7 +76,6 @@ calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
 end calminstruction
 
-
 calminstruction calminstruction?.asm? line&
 	local	name, i
 	initsym name, name.0
@@ -2082,8 +2081,7 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 		exit
 
 	    relative_jump_out_of_range:
-		emit	1
-		emit	1
+		emit	2
 		err	'relative jump out of range'
 		exit
 

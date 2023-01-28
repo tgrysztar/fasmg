@@ -1247,8 +1247,7 @@ calminstruction jmp? dest*
 	exit
 
     relative_jump_out_of_range:
-	emit	1
-	emit	1
+	emit	2
 	err	'relative jump out of range'
 	exit
 
