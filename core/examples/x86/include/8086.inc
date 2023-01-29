@@ -1401,10 +1401,10 @@ calminstruction movs? dest*,src*
     segment_prefix_ok:
 	check	size = 2
 	jyes	movs_word
-	assemble x86.movsb
+	emit	1, 0A4h
 	exit
     movs_word:
-	assemble x86.movsw
+	emit	1, 0A5h
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -1437,10 +1437,10 @@ calminstruction cmps? src*,dest*
     segment_prefix_ok:
 	check	size = 2
 	jyes	cmps_word
-	assemble x86.cmpsb
+	emit	1, 0A6h
 	exit
     cmps_word:
-	assemble x86.cmpsw
+	emit	1, 0A7h
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -1465,10 +1465,10 @@ calminstruction stos? dest*
 	jno	invalid_operand
 	check	@dest.size = 2
 	jyes	stos_word
-	assemble x86.stosb
+	emit	1, 0AAh
 	exit
     stos_word:
-	assemble x86.stosw
+	emit	1, 0ABh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -1489,10 +1489,10 @@ calminstruction lods? src*
     segment_prefix_ok:
 	check	@src.size = 2
 	jyes	lods_word
-	assemble x86.lodsb
+	emit	1, 0ACh
 	exit
     lods_word:
-	assemble x86.lodsw
+	emit	1, 0ADh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -1509,10 +1509,10 @@ calminstruction scas? dest*
 	jno	invalid_operand
 	check	@dest.size = 2
 	jyes	scas_word
-	assemble x86.scasb
+	emit	1, 0AEh
 	exit
     scas_word:
-	assemble x86.scasw
+	emit	1, 0AFh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -1531,7 +1531,7 @@ calminstruction xlat? src*
 	jyes	segment_prefix_ok
 	emit	1, @src.segment_prefix
     segment_prefix_ok:
-	assemble x86.xlatb
+	emit	1, 0D7h
 	exit
     invalid_operand:
 	err	'invalid operand'

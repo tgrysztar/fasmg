@@ -2225,11 +2225,11 @@ calminstruction movs? dest*,src*
     address_prefix_ok:
 	check	size > 1
 	jyes	movs_word
-	assemble x86.movsb
+	emit	1, 0A4h
 	exit
     movs_word:
 	call	x86.store_operand_prefix, size
-	assemble x86.movsw
+	emit	1, 0A5h
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -2266,11 +2266,11 @@ calminstruction cmps? src*,dest*
     address_prefix_ok:
 	check	size > 1
 	jyes	cmps_word
-	assemble x86.cmpsb
+	emit	1, 0A6h
 	exit
     cmps_word:
 	call	x86.store_operand_prefix, size
-	assemble x86.cmpsw
+	emit	1, 0A7h
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -2299,11 +2299,11 @@ calminstruction stos? dest*
     address_prefix_ok:
 	check	@dest.size > 1
 	jyes	stos_word
-	assemble x86.stosb
+	emit	1, 0AAh
 	exit
     stos_word:
 	call	x86.store_operand_prefix, @dest.size
-	assemble x86.stosw
+	emit	1, 0ABh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -2328,11 +2328,11 @@ calminstruction lods? src*
     address_prefix_ok:
 	check	@src.size > 1
 	jyes	lods_word
-	assemble x86.lodsb
+	emit	1, 0ACh
 	exit
     lods_word:
 	call	x86.store_operand_prefix, @src.size
-	assemble x86.lodsw
+	emit	1, 0ADh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -2353,11 +2353,11 @@ calminstruction scas? dest*
     address_prefix_ok:
 	check	@dest.size > 1
 	jyes	scas_word
-	assemble x86.scasb
+	emit	1, 0AEh
 	exit
     scas_word:
 	call	x86.store_operand_prefix, @dest.size
-	assemble x86.scasw
+	emit	1, 0AFh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -2380,11 +2380,11 @@ calminstruction ins? dest*,src*
     address_prefix_ok:
 	check	@dest.size > 1
 	jyes	ins_word
-	assemble x86.insb
+	emit	1, 6Ch
 	exit
     ins_word:
 	call	x86.store_operand_prefix, @dest.size
-	assemble x86.insw
+	emit	1, 6Dh
 	exit
     invalid_combination_of_operands:
 	err	'invalid combination of operands'
@@ -2410,11 +2410,11 @@ calminstruction outs? dest*,src*
     address_prefix_ok:
 	check	@src.size > 1
 	jyes	outs_word
-	assemble x86.outsb
+	emit	1, 6Eh
 	exit
     outs_word:
 	call	x86.store_operand_prefix, @src.size
-	assemble x86.outsw
+	emit	1, 6Fh
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -2445,7 +2445,7 @@ calminstruction xlat? src*
 	jyes	address_prefix_ok
 	emit	1, 67h
     address_prefix_ok:
-	assemble x86.xlatb
+	emit	1, 0D7h
 	exit
     invalid_operand:
 	err	'invalid operand'

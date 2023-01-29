@@ -891,28 +891,28 @@ calminstruction x86.store_operand_prefix size*, reg:0
 end calminstruction
 
 calminstruction x86.simm32 immediate*
-	compute x86.imm, +immediate
-	check	x86.imm eqtype 0.0
+	compute immediate, +immediate
+	check	immediate eqtype 0.0
 	jno	check_value
 	asm	virtual at 0
-	asm	emit 8: x86.imm
-	asm	load x86.imm:8 from 0
+	asm	emit 8: immediate
+	asm	load immediate:8 from 0
 	asm	end virtual
-	compute x86.imm, +x86.imm
+	compute immediate, +immediate
       check_value:
-	check	x86.imm relativeto 0
+	check	immediate relativeto 0
 	jyes	check_range
-	asm	dd x86.imm
+	asm	dd immediate
 	exit
       check_range:
-	check	x86.imm - 1 shl 64 >= -80000000h & x86.imm < 1 shl 64
+	check	immediate - 1 shl 64 >= -80000000h & immediate < 1 shl 64
 	jyes	wrap
-	check	x86.imm >= 80000000h | x86.imm < -80000000h
+	check	immediate >= 80000000h | immediate < -80000000h
 	jyes	out_of_range
-	emit	4, x86.imm
+	emit	4, immediate
 	exit
       wrap:
-	emit	4, x86.imm - 1 shl 64
+	emit	4, immediate - 1 shl 64
 	exit
       out_of_range:
 	err	'immediate value out of signed range'
@@ -2870,11 +2870,11 @@ calminstruction movs? dest*,src*
     address_prefix_ok:
 	check	size > 1
 	jyes	movs_word
-	assemble x86.movsb
+	emit	1, 0A4h
 	exit
     movs_word:
 	call	x86.store_operand_prefix, size
-	assemble x86.movsw
+	emit	1, 0A5h
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -2911,11 +2911,11 @@ calminstruction cmps? src*,dest*
     address_prefix_ok:
 	check	size > 1
 	jyes	cmps_word
-	assemble x86.cmpsb
+	emit	1, 0A6h
 	exit
     cmps_word:
 	call	x86.store_operand_prefix, size
-	assemble x86.cmpsw
+	emit	1, 0A7h
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -2944,11 +2944,11 @@ calminstruction stos? dest*
     address_prefix_ok:
 	check	@dest.size > 1
 	jyes	stos_word
-	assemble x86.stosb
+	emit	1, 0AAh
 	exit
     stos_word:
 	call	x86.store_operand_prefix, @dest.size
-	assemble x86.stosw
+	emit	1, 0ABh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -2973,11 +2973,11 @@ calminstruction lods? src*
     address_prefix_ok:
 	check	@src.size > 1
 	jyes	lods_word
-	assemble x86.lodsb
+	emit	1, 0ACh
 	exit
     lods_word:
 	call	x86.store_operand_prefix, @src.size
-	assemble x86.lodsw
+	emit	1, 0ADh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -2998,11 +2998,11 @@ calminstruction scas? dest*
     address_prefix_ok:
 	check	@dest.size > 1
 	jyes	scas_word
-	assemble x86.scasb
+	emit	1, 0AEh
 	exit
     scas_word:
 	call	x86.store_operand_prefix, @dest.size
-	assemble x86.scasw
+	emit	1, 0AFh
 	exit
     invalid_operand:
 	err	'invalid operand'
@@ -3025,11 +3025,11 @@ calminstruction ins? dest*,src*
     address_prefix_ok:
 	check	@dest.size > 1
 	jyes	ins_word
-	assemble x86.insb
+	emit	1, 6Ch
 	exit
     ins_word:
 	call	x86.store_operand_prefix, @dest.size
-	assemble x86.insw
+	emit	1, 6Dh
 	exit
     invalid_combination_of_operands:
 	err	'invalid combination of operands'
@@ -3055,11 +3055,11 @@ calminstruction outs? dest*,src*
     address_prefix_ok:
 	check	@src.size > 1
 	jyes	outs_word
-	assemble x86.outsb
+	emit	1, 6Eh
 	exit
     outs_word:
 	call	x86.store_operand_prefix, @src.size
-	assemble x86.outsw
+	emit	1, 6Fh
 	exit
     operand_size_not_specified:
 	err	'operand size not specified'
@@ -3090,7 +3090,7 @@ calminstruction xlat? src*
 	jyes	address_prefix_ok
 	emit	1, 67h
     address_prefix_ok:
-	assemble x86.xlatb
+	emit	1, 0D7h
 	exit
     invalid_operand:
 	err	'invalid operand'
