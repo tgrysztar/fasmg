@@ -58,7 +58,7 @@ if ~ defined i80387
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			assemble x86.o16
+			xcall	x86.store_operand_prefix, (2)
 			xcall	x86.store_instruction@dest, (0D9h),(postbyte)
 			exit
 		    invalid_operand_size:
@@ -117,7 +117,7 @@ if ~ defined i80387
 			jyes	invalid_operand_size
 			check	@dest.type = 'mem'
 			jno	invalid_operand
-			assemble x86.o16
+			xcall	x86.store_operand_prefix, (2)
 			xcall	x86.store_instruction@dest, (0DDh),(postbyte)
 			exit
 		    invalid_operand_size:
