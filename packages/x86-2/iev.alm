@@ -1,0 +1,82 @@
+
+; Instruction Encoding Verifier for fasmg
+
+	retaincomments
+
+	calminstruction calminstruction?.initsym? var*, val&
+		publish var, val
+	end calminstruction
+
+	calminstruction calminstruction?.asm? line&
+		local	name, i
+		initsym name, name.0
+		match	name.i, name
+		compute i, i+1
+		arrange name, name.i
+		publish name, line
+		arrange line, =assemble name
+		assemble line
+	end calminstruction
+
+	calminstruction hex_nibble digit*, command: display
+		compute digit, 0FFh and '0123456789ABCDEF' shr (digit*8)
+		arrange command, command digit
+		assemble command
+	end calminstruction
+
+	calminstruction hex_dump data*, command: display
+		local	digit, i
+		compute i, 0
+	    loop:
+		local	digit
+		compute digit, (data shr (i*8+4)) and 0Fh
+		call	hex_nibble, digit, command
+		compute digit, (data shr (i*8)) and 0Fh
+		call	hex_nibble, digit, command
+		compute i, i + 1
+		check	lengthof data > i
+		jno	done
+		local	separator
+		arrange separator, command ' '
+		assemble separator
+		jump	loop
+	    done:
+	end calminstruction
+
+	calminstruction ? line&
+		local comment, i, chunk
+		local data, reference
+
+		match ;comment, line
+		jyes done
+
+		compute i, $
+		match line;comment, line
+		assemble line
+		jno done
+
+		asm load data:$-i from :i
+
+		arrange reference, =0x
+		compute i, 0
+	    extract:
+		match chunk comment?, comment
+		jno completed
+		compute i, i + 1
+		arrange reference, reference#chunk
+		jump extract
+	    completed:
+		compute reference, reference bswap i
+
+		check data eq reference
+		jyes done
+
+		stringify line
+		asm display 'Discrepancy:',13,10,9, line, 13,10, 'Assembled: '
+		call hex_dump, data
+		asm display 13,10, 'Reference: '
+		call hex_dump, reference
+		asm display 13,10
+
+	    done:
+	end calminstruction
