@@ -158,6 +158,9 @@ assembly_init:
 	mov	[eax+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
 	or	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
 	mov	[other_interceptor_symbol],eax
+	mov	ecx,sizeof.SymbolTree_Leaf
+	call	create_tree_element
+	mov	[void_symbol],eax
 
 	mov	ecx,400
 	call	malloc_growable

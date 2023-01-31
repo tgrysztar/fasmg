@@ -62,6 +62,7 @@ variables:
     prior_uninitialized_length dq ?
     virtual_area dd ?
     auxiliary_output_areas dd ?
+    void_symbol dd ?
 
     base_path dd ?
     output_extension dd ?

@@ -13,7 +13,6 @@ EXPR_SYMBOL_VALUE = 10h
 EXPR_OPERATOR = 20h
 EXPR_SYMBOL = 40h
 
-EXPR_AREA_ADDRESS = 11h
 EXPR_POLYNOMIAL = 31h
 
 EXPR_MISSING_ARGUMENT = 29h
@@ -738,6 +737,7 @@ get_area_value:
 ; out:
 ;  cf set if expression does not yield a valid and accessible VALTYPE_AREA value
 ;  when cf = 0:
+;   ebx - SymbolTree_Leaf
 ;   edx - ValueDefinition
 ; preserves: esi
 	cmp	byte [edi],EXPR_SYMBOL_VALUE
@@ -1128,8 +1128,6 @@ calculate_parsed_expression:
 	je	push_symbol_value
 	cmp	al,EXPR_SYMBOL
 	je	push_symbol_current_value
-	cmp	al,EXPR_AREA_ADDRESS
-	je	push_area_address
 	cmp	al,EXPR_POLYNOMIAL
 	je	push_polynomial_literal
 	test	eax,eax
@@ -1367,14 +1365,10 @@ calculate_parsed_expression:
 	mov	[edi+2*sizeof.ExpressionTerm+ExpressionTerm.attributes],eax
 	add	edi,3*sizeof.ExpressionTerm
 	jmp	calculation_loop
-    push_area_address:
-	lodsd
-	mov	[expression_end],esi
-	jmp	area_address_value
     base_address_value:
-	mov	eax,[current_area]
+	mov	edx,[current_area]
     area_address_value:
-	mov	ebx,[eax+ValueDefinition.value]
+	mov	ebx,[edx+ValueDefinition.value]
 	add	ebx,sizeof.AreaHeader
     push_numeric_value:
 	mov	edx,calculation_workspace
@@ -1607,8 +1601,6 @@ calculate_parsed_expression:
 	je	skip_dword
 	cmp	al,EXPR_SYMBOL_VALUE
 	je	skip_two_dwords
-	cmp	al,EXPR_AREA_ADDRESS
-	je	skip_dword
 	cmp	al,EXPR_POLYNOMIAL
 	je	skip_dword
 	test	eax,eax
@@ -2461,10 +2453,6 @@ extract_element:
       no_such_term:
 	stc
 	retn
-    replace_with_area_metadata:
-	mov	edx,area_metadata
-	mov	eax,EXPR_STRING
-	jmp	replace_with_simple_constant
     replace_with_constant_unit:
 	mov	edx,singular_value
 	jmp	replace_with_simple_number
@@ -2499,6 +2487,7 @@ extract_metadata_reverse:
 extract_metadata:
 	call	get_indexed_term
 	jc	replace_with_zero
+    extract_term_metadata:
 	mov	ebx,[ebx+ExpressionTerm.metadata]
 	test	ebx,ebx
 	jz	replace_with_zero
@@ -2508,7 +2497,7 @@ extract_metadata:
 	test	edx,edx
 	jz	replace_with_zero
 	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
-	je	replace_with_area_metadata
+	je	area_address_value
 	cmp	[edx+ValueDefinition.type],VALTYPE_ELEMENT
 	jne	replace_with_zero
 	mov	ecx,[edx+ValueDefinition.value_length]
@@ -2521,6 +2510,11 @@ extract_size:
 	test	ebx,ebx
 	jz	replace_with_zero
 	jmp	push_numeric_value
+extract_first_term_metadata:
+	call	pop_terms
+	lea	ebx,[edi+sizeof.ExpressionTerm]
+	mov	ecx,1
+	jmp	extract_term_metadata
 
 get_term_value:
 ; in: edi - ExpressionTerm

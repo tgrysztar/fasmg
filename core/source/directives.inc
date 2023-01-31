@@ -4324,7 +4324,9 @@ load_value:
 	je	load_from_output_offset
 	mov	eax,[current_area]
 	mov	[data_area],eax
-	and	[data_area_symbol],0
+	mov	ecx,[void_symbol]
+	mov	[ecx+SymbolTree_Leaf.definition],eax
+	mov	[data_area_symbol],ecx
 	and	[leave_opening_parentheses],0
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
@@ -4337,6 +4339,7 @@ load_value:
 	call	get_area_value
 	jc	invalid_area
 	mov	[data_area],edx
+	mov	[data_area_symbol],ebx
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
     source_address_parsed:
@@ -4391,10 +4394,11 @@ load_value:
 	rep	stosb
 	cmp	[value_length],0
 	je	value_loaded
-	xor	ebx,ebx
+	mov	eax,[void_symbol]
+	mov	ebx,eax
 	xchg	ebx,[data_area_symbol]
-	test	ebx,ebx
-	jz	data_out_of_area
+	cmp	ebx,eax
+	je	data_out_of_area
 	mov	edx,[ebx+SymbolTree_Leaf.retired_definition]
 	test	edx,edx
 	jz	area_with_no_history
@@ -4536,6 +4540,9 @@ store_value:
 	je	store_at_output_offset
 	mov	eax,[current_area]
 	mov	[data_area],eax
+	mov	ecx,[void_symbol]
+	mov	[ecx+SymbolTree_Leaf.definition],eax
+	mov	[data_area_symbol],ecx
 	and	[leave_opening_parentheses],0
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
@@ -4551,6 +4558,7 @@ store_value:
 	cmp	[edx+ValueDefinition.pass],ecx
 	jne	invalid_area
 	mov	[data_area],edx
+	mov	[data_area_symbol],ebx
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
     destination_address_parsed:
@@ -4625,9 +4633,15 @@ store_value:
 	mov	ebx,edi
 	mov	edi,[expression_workspace.memory_start]
 	mov	esi,edi
-	mov	eax,EXPR_AREA_ADDRESS
+	mov	eax,EXPR_SYMBOL_VALUE
+	stosd
+	mov	eax,[data_area_symbol]
 	stosd
 	mov	eax,[data_area]
+	stosd
+	mov	eax,EXPR_OPERATOR
+	stosd
+	mov	eax,extract_first_term_metadata
 	stosd
 	mov	eax,EXPR_OPERATOR
 	stosd

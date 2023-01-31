@@ -638,6 +638,3 @@ singular_value dd 1
 
 subtraction_operator dd EXPR_OPERATOR,calculate_sub
 		     dd 0
-
-area_metadata dd 2
-	      db '::'
