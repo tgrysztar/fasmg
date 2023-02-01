@@ -256,6 +256,151 @@ trim_output:
 	mov	[current_output_area_entry],edi
 	retn
 
+load_from_area:
+; in:
+;  [value_length] = length of data to load
+;  edi - buffer for loaded data
+;  edx - ValueDefinition with VALTYPE_AREA
+;  [data_area_symbol] - SymbolTree_Leaf linked to the same ValueDefinition with update_value_link (required only for predicted loads, can be null)
+;  [data_offset] = offset within the area
+; out:
+;  cf set when data could not be loaded
+;  when cf = 0, buffer filled with loaded data
+; preserves: esi
+	mov	eax,[edx+ValueDefinition.value]
+	mov	ecx,[edx+ValueDefinition.pass]
+	cmp	ecx,[current_pass]
+	je	area_ok
+	test	[eax+AreaHeader.flags],AREA_VARIABLE
+	jnz	source_area_inaccessible
+      area_ok:
+	mov	ebx,[data_offset]
+	add	ebx,[eax+AreaHeader.base_address_length]
+	jc	area_offset_unavailable
+	add	ebx,sizeof.AreaHeader
+	jc	area_offset_unavailable
+	mov	ecx,[edx+ValueDefinition.value_length]
+	sub	ecx,ebx
+	jbe	load_out_of_initialized_data
+	call	prepare_load_length
+	jc	area_offset_unavailable
+	xchg	esi,ebx
+	add	esi,eax
+	rep	movsb
+	mov	esi,ebx
+	cmp	[value_length],0
+	je	load_ok
+	mov	ecx,[eax+AreaHeader.uninitialized_length]
+	jmp	load_uninitialized_data
+      load_out_of_initialized_data:
+	add	ecx,[eax+AreaHeader.uninitialized_length]
+	jc	load_uninitialized_data
+	xor	ecx,ecx
+      load_uninitialized_data:
+	call	prepare_load_length
+	jc	area_offset_unavailable
+	xor	al,al
+	rep	stosb
+	cmp	[value_length],0
+	je	load_ok
+	xor	ebx,ebx
+	xchg	ebx,[data_area_symbol]
+	test	ebx,ebx
+	jz	area_offset_unavailable
+	mov	edx,[ebx+SymbolTree_Leaf.retired_definition]
+	test	edx,edx
+	jz	area_with_no_history
+	mov	ecx,[current_pass]
+	sub	ecx,[edx+ValueDefinition.pass]
+	cmp	ecx,1
+	ja	area_with_no_history
+	or	[ebx+SymbolTree_Leaf.flags],SYM_LINK_PREDICTED
+	mov	eax,[edx+ValueDefinition.value]
+	jmp	load_from_area
+    prepare_load_length:
+	cmp	ecx,[value_length]
+	jbe	value_length_ok
+	mov	ecx,[value_length]
+      value_length_ok:
+	add	[data_offset],ecx
+	jc	load_length_ready
+	sub	[value_length],ecx
+      load_length_ready:
+	retn
+    source_area_inaccessible:
+	mov	edx,_invalid_area
+	jmp	load_failed
+    area_with_no_history:
+	or	[next_pass_needed],1
+    area_offset_unavailable:
+	mov	edx,_address_out_of_range
+    load_failed:
+	call	register_error
+	stc
+	retn
+    load_ok:
+	clc
+	retn
+
+prepare_area_to_write:
+; in:
+;  [data_area] - ValueDefinition with VALTYPE_AREA
+;  [data_offset] = offset within the area
+;  [value_length] = length of data to be written
+; out:
+;  cf set when writing specified length is not possible
+;  when cf = 0:
+;   edi - buffer for specified number of bytes directly within the area
+	mov	edx,[data_area]
+	mov	eax,[edx+ValueDefinition.value]
+	or	[eax+AreaHeader.flags],AREA_VARIABLE
+	mov	ebx,[data_offset]
+	xor	ecx,ecx
+	add	ebx,[eax+AreaHeader.base_address_length]
+	adc	ecx,0
+	add	ebx,sizeof.AreaHeader
+	adc	ecx,0
+	add	ebx,[value_length]
+	adc	ecx,0
+	jnz	write_outside_initialized_area
+	cmp	ebx,[edx+ValueDefinition.value_length]
+	ja	write_outside_initialized_area
+	lea	edi,[eax+ebx]
+	mov	ecx,[value_length]
+	sub	edi,ecx
+	retn
+    area_to_write_not_accessible:
+	stc
+	retn
+    write_outside_initialized_area:
+	sub	ebx,[edx+ValueDefinition.value_length]
+	sbb	ecx,0
+	jnz	write_outside_boundaries
+	sub	[eax+AreaHeader.uninitialized_length],ebx
+	jnc	extend_area
+	add	[eax+AreaHeader.uninitialized_length],ebx
+    write_outside_boundaries:
+	push	edx
+	mov	edx,_address_out_of_range
+	call	register_error
+	pop	edx
+	test	ecx,ecx
+	jnz	area_to_write_not_accessible
+	test	[eax+AreaHeader.flags],AREA_VIRTUAL
+	jz	area_to_write_not_accessible
+	test	[edx+ValueDefinition.flags],VAL_IN_USE
+	jnz	area_to_write_not_accessible
+	and	[eax+AreaHeader.uninitialized_length],0
+    extend_virtual_area:
+	call	expand_value
+	jmp	prepare_area_to_write
+    extend_area:
+	test	[eax+AreaHeader.flags],AREA_VIRTUAL
+	jnz	extend_virtual_area
+	call	expand_value
+	call	update_output_offsets
+	jmp	prepare_area_to_write
+
 find_output_area:
 ; in:
 ;  [file_offset] = offset within the output

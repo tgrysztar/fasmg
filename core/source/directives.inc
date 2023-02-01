@@ -1158,6 +1158,10 @@ virtual_block:
 	or	[edx+ValueDefinition.flags],VAL_IN_USE
 	mov	[current_area],edx
 	jmp	instruction_assembled
+    invalid_area:
+	mov	edx,_invalid_area
+	call	register_error
+	jmp	assembly_line
 
 end_virtual_block:
 	mov	dl,DBLOCK_VIRTUAL
@@ -4282,7 +4286,7 @@ load_value:
 	mov	[label_leaf],ebx
 	mov	[size_specified],0
 	call	peek_at_constituent_value
-	jc	invalid_load_syntax
+	jc	load_syntax_error
 	cmp	al,':'
 	je	size_after_separator
 	cmp	al,1Ah
@@ -4292,7 +4296,7 @@ load_value:
 	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_PREPOSITION
 	jne	get_load_size
 	cmp	[edx+ValueDefinition.value],PREPOSITION_FROM
-	jne	invalid_load_syntax
+	jne	load_syntax_error
 	and	[current_constituent],0
 	jmp	get_source_address
     size_after_separator:
@@ -4300,7 +4304,7 @@ load_value:
     get_load_size:
 	call	get_numeric_constant_value
 	test	edx,edx
-	jz	invalid_load_syntax
+	jz	load_syntax_error
 	or	[size_specified],1
 	mov	edi,value_length
 	mov	ecx,4
@@ -4308,15 +4312,15 @@ load_value:
 	jc	value_out_of_range
 	js	value_out_of_range
 	call	get_constituent_value
-	jc	invalid_load_syntax
+	jc	load_syntax_error
 	cmp	al,1Ah
-	jne	invalid_load_syntax
+	jne	load_syntax_error
 	test	edx,edx
-	jz	invalid_load_syntax
+	jz	load_syntax_error
 	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_PREPOSITION
-	jne	invalid_load_syntax
+	jne	load_syntax_error
 	cmp	[edx+ValueDefinition.value],PREPOSITION_FROM
-	jne	invalid_load_syntax
+	jne	load_syntax_error
     get_source_address:
 	call	peek_at_constituent_value
 	jc	invalid_argument
@@ -4324,9 +4328,7 @@ load_value:
 	je	load_from_output_offset
 	mov	eax,[current_area]
 	mov	[data_area],eax
-	mov	ecx,[void_symbol]
-	mov	[ecx+SymbolTree_Leaf.definition],eax
-	mov	[data_area_symbol],ecx
+	and	[data_area_symbol],0
 	and	[leave_opening_parentheses],0
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
@@ -4350,84 +4352,15 @@ load_value:
 	call	fit_value
 	jc	data_out_of_area
 	js	data_out_of_area
-	mov	edi,[assembly_workspace.memory_start]
+	mov	edx,assembly_workspace
+	mov	edi,[edx+Workspace.memory_start]
 	mov	eax,[value_length]
 	stosd
 	mov	ecx,eax
-	mov	edx,assembly_workspace
 	call	reserve_workspace
 	mov	edx,[data_area]
-    load_from_area:
-	mov	eax,[edx+ValueDefinition.value]
-	mov	ecx,[edx+ValueDefinition.pass]
-	cmp	ecx,[current_pass]
-	je	area_ok
-	test	[eax+AreaHeader.flags],AREA_VARIABLE
-	jnz	source_area_inaccessible
-      area_ok:
-	mov	ebx,[data_offset]
-	add	ebx,[eax+AreaHeader.base_address_length]
-	jc	data_out_of_area
-	add	ebx,sizeof.AreaHeader
-	jc	data_out_of_area
-	mov	ecx,[edx+ValueDefinition.value_length]
-	sub	ecx,ebx
-	jbe	load_out_of_initialized_data
-	call	prepare_load_length
-	jc	data_out_of_area
-	xchg	esi,ebx
-	add	esi,eax
-	rep	movsb
-	mov	esi,ebx
-	cmp	[value_length],0
-	je	value_loaded
-	mov	ecx,[eax+AreaHeader.uninitialized_length]
-	jmp	load_uninitialized_data
-      load_out_of_initialized_data:
-	add	ecx,[eax+AreaHeader.uninitialized_length]
-	jc	load_uninitialized_data
-	xor	ecx,ecx
-      load_uninitialized_data:
-	call	prepare_load_length
-	jc	data_out_of_area
-	xor	al,al
-	rep	stosb
-	cmp	[value_length],0
-	je	value_loaded
-	mov	eax,[void_symbol]
-	mov	ebx,eax
-	xchg	ebx,[data_area_symbol]
-	cmp	ebx,eax
-	je	data_out_of_area
-	mov	edx,[ebx+SymbolTree_Leaf.retired_definition]
-	test	edx,edx
-	jz	area_with_no_history
-	mov	ecx,[current_pass]
-	sub	ecx,[edx+ValueDefinition.pass]
-	cmp	ecx,1
-	ja	area_with_no_history
-	or	[ebx+SymbolTree_Leaf.flags],SYM_LINK_PREDICTED
-	mov	eax,[edx+ValueDefinition.value]
-	jmp	load_from_area
-    invalid_source_area:
-	call	parse_expression
-    source_area_inaccessible:
-	mov	edx,_invalid_area
-	call	register_error
-	jmp	loaded_no_value
-    area_with_no_history:
-	or	[next_pass_needed],1
-    data_out_of_area:
-	mov	edx,_address_out_of_range
-	call	register_error
-	jmp	loaded_no_value
-    invalid_load_syntax:
-	mov	edx,_invalid_argument
-	call	register_error
-    loaded_no_value:
-	mov	edi,[assembly_workspace.memory_start]
-	xor	eax,eax
-	stosd
+	call	load_from_area
+	jc	loaded_no_value
     value_loaded:
 	mov	ebx,[label_leaf]
 	call	update_value_definition
@@ -4441,15 +4374,88 @@ load_value:
 	call	assign_value
 	pop	esi
 	jmp	instruction_assembled
-    prepare_load_length:
-	cmp	ecx,[value_length]
-	jbe	value_length_ok
-	mov	ecx,[value_length]
-      value_length_ok:
-	add	[data_offset],ecx
-	jc	load_length_ready
-	sub	[value_length],ecx
-      load_length_ready:
+    load_syntax_error:
+	mov	edx,_invalid_argument
+	jmp	error_while_loading
+    data_out_of_area:
+	mov	edx,_address_out_of_range
+    error_while_loading:
+	call	register_error
+    loaded_no_value:
+	mov	edi,[assembly_workspace.memory_start]
+	xor	eax,eax
+	stosd
+	jmp	value_loaded
+   calculate_relative_address:
+	push	esi
+	mov	esi,[expression_workspace.memory_start]
+	mov	edi,[calculation_workspace.memory_start]
+	call	calculate_parsed_expression
+	jc	invalid_relative_address
+	mov	ebx,edi
+	mov	edi,[expression_workspace.memory_start]
+	mov	esi,edi
+	mov	eax,EXPR_SYMBOL_VALUE
+	stosd
+	mov	edx,[data_area]
+	mov	eax,[data_area_symbol]
+	test	eax,eax
+	jnz	data_area_symbol_ok
+	mov	eax,[void_symbol]
+	mov	[eax+SymbolTree_Leaf.definition],edx
+      data_area_symbol_ok:
+	stosd
+	mov	eax,edx
+	stosd
+	mov	eax,EXPR_OPERATOR
+	stosd
+	mov	eax,extract_first_term_metadata
+	stosd
+	mov	eax,EXPR_OPERATOR
+	stosd
+	mov	eax,calculate_sub
+	stosd
+	xor	eax,eax
+	stosd
+	mov	edi,ebx
+	call	calculate_parsed_expression
+	jc	invalid_relative_address
+	call	pop_terms
+	jc	invalid_relative_address
+	cmp	[size_specified],0
+	jne	addressed_length_ok
+	and	[value_length],0
+	mov	edx,[edi+ExpressionTerm.metadata]
+	test	edx,edx
+	jz	addressed_length_ok
+	mov	esi,edi
+	mov	ecx,4
+	mov	edi,value_length
+	call	fit_value
+	jc	invalid_relative_address
+	js	invalid_relative_address
+	mov	ecx,[edx]
+	cmp	dword [edx+4+ecx],0
+	jne	invalid_relative_address
+	mov	edi,esi
+      addressed_length_ok:
+	pop	esi
+	mov	eax,edi
+      check_for_uncanceled_terms:
+	add	eax,sizeof.ExpressionTerm
+	cmp	[eax+ExpressionTerm.attributes],0
+	je	relative_address_ok
+	cmp	[eax+ExpressionTerm.metadata],0
+	je	check_for_uncanceled_terms
+	mov	edx,_address_out_of_range
+	call	register_error
+      relative_address_ok:
+	call	get_term_value
+	clc
+	retn
+      invalid_relative_address:
+	pop	esi
+	stc
 	retn
     load_from_output_offset:
 	call	read_output_offset
@@ -4466,6 +4472,35 @@ load_value:
 	cmp	[value_length],0
 	jne	data_out_of_area
 	jmp	value_loaded
+    read_output_offset:
+	and	[current_constituent],0
+	call	get_numeric_constant_value
+	test	edx,edx
+	jz	output_offset_out_of_range
+	push	edi
+	mov	edi,file_offset
+	mov	ecx,8
+	call	fit_value
+	pop	edi
+	jc	output_offset_out_of_range
+	js	output_offset_out_of_range
+	cmp	[size_specified],0
+	jne	output_offset_ok
+	and	[value_length],0
+	mov	edx,[edi+ExpressionTerm.metadata]
+	test	edx,edx
+	jz	output_offset_ok
+	mov	ecx,4
+	mov	edi,value_length
+	call	fit_value
+	jc	output_offset_out_of_range
+	js	output_offset_out_of_range
+      output_offset_ok:
+	clc
+	retn
+      output_offset_out_of_range:
+	stc
+	retn
 
 store_value:
 	mov	[size_specified],0
@@ -4540,9 +4575,7 @@ store_value:
 	je	store_at_output_offset
 	mov	eax,[current_area]
 	mov	[data_area],eax
-	mov	ecx,[void_symbol]
-	mov	[ecx+SymbolTree_Leaf.definition],eax
-	mov	[data_area_symbol],ecx
+	and	[data_area_symbol],0
 	and	[leave_opening_parentheses],0
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
@@ -4569,155 +4602,15 @@ store_value:
 	call	fit_value
 	jc	store_out_of_area
 	js	store_out_of_area
-    prepare_store:
-	mov	edx,[data_area]
-	mov	eax,[edx+ValueDefinition.value]
-	or	[eax+AreaHeader.flags],AREA_VARIABLE
-	mov	ebx,[data_offset]
-	xor	ecx,ecx
-	add	ebx,[eax+AreaHeader.base_address_length]
-	adc	ecx,0
-	add	ebx,sizeof.AreaHeader
-	adc	ecx,0
-	add	ebx,[value_length]
-	adc	ecx,0
-	jnz	store_outside_initialized_area
-	cmp	ebx,[edx+ValueDefinition.value_length]
-	ja	store_outside_initialized_area
-	lea	edi,[eax+ebx]
-	mov	ecx,[value_length]
-	sub	edi,ecx
+	call	prepare_area_to_write
 	call	get_kept_value
 	call	fit_value
 	jc	value_out_of_range
 	jmp	instruction_assembled
-    store_outside_initialized_area:
-	sub	ebx,[edx+ValueDefinition.value_length]
-	sbb	ecx,0
-	jnz	store_out_of_area
-	sub	[eax+AreaHeader.uninitialized_length],ebx
-	jnc	extend_area
-	add	[eax+AreaHeader.uninitialized_length],ebx
-	test	[eax+AreaHeader.flags],AREA_VIRTUAL
-	jz	store_out_of_area
-	test	[edx+ValueDefinition.flags],VAL_IN_USE
-	jnz	store_out_of_area
-	and	[eax+AreaHeader.uninitialized_length],0
-	push	edx
-	mov	edx,_address_out_of_range
-	call	register_error
-	pop	edx
-    extend_virtual_area:
-	call	expand_value
-	jmp	prepare_store
-    extend_area:
-	test	[eax+AreaHeader.flags],AREA_VIRTUAL
-	jnz	extend_virtual_area
-	call	expand_value
-	call	update_output_offsets
-	jmp	prepare_store
     store_out_of_area:
 	mov	edx,_address_out_of_range
 	call	register_error
 	jmp	instruction_assembled
-    invalid_area:
-	mov	edx,_invalid_area
-	call	register_error
-	jmp	assembly_line
-    calculate_relative_address:
-	push	esi
-	mov	esi,[expression_workspace.memory_start]
-	mov	edi,[calculation_workspace.memory_start]
-	call	calculate_parsed_expression
-	jc	invalid_relative_address
-	mov	ebx,edi
-	mov	edi,[expression_workspace.memory_start]
-	mov	esi,edi
-	mov	eax,EXPR_SYMBOL_VALUE
-	stosd
-	mov	eax,[data_area_symbol]
-	stosd
-	mov	eax,[data_area]
-	stosd
-	mov	eax,EXPR_OPERATOR
-	stosd
-	mov	eax,extract_first_term_metadata
-	stosd
-	mov	eax,EXPR_OPERATOR
-	stosd
-	mov	eax,calculate_sub
-	stosd
-	xor	eax,eax
-	stosd
-	mov	edi,ebx
-	call	calculate_parsed_expression
-	jc	invalid_relative_address
-	call	pop_terms
-	jc	invalid_relative_address
-	cmp	[size_specified],0
-	jne	addressed_length_ok
-	and	[value_length],0
-	mov	edx,[edi+ExpressionTerm.metadata]
-	test	edx,edx
-	jz	addressed_length_ok
-	mov	esi,edi
-	mov	ecx,4
-	mov	edi,value_length
-	call	fit_value
-	jc	invalid_relative_address
-	js	invalid_relative_address
-	mov	ecx,[edx]
-	cmp	dword [edx+4+ecx],0
-	jne	invalid_relative_address
-	mov	edi,esi
-      addressed_length_ok:
-	pop	esi
-	mov	eax,edi
-      check_for_uncanceled_terms:
-	add	eax,sizeof.ExpressionTerm
-	cmp	[eax+ExpressionTerm.attributes],0
-	je	relative_address_ok
-	cmp	[eax+ExpressionTerm.metadata],0
-	je	check_for_uncanceled_terms
-	mov	edx,_address_out_of_range
-	call	register_error
-      relative_address_ok:
-	call	get_term_value
-	clc
-	retn
-      invalid_relative_address:
-	pop	esi
-	stc
-	retn
-    read_output_offset:
-	and	[current_constituent],0
-	call	get_numeric_constant_value
-	test	edx,edx
-	jz	output_offset_out_of_range
-	push	edi
-	mov	edi,file_offset
-	mov	ecx,8
-	call	fit_value
-	pop	edi
-	jc	output_offset_out_of_range
-	js	output_offset_out_of_range
-	cmp	[size_specified],0
-	jne	output_offset_ok
-	and	[value_length],0
-	mov	edx,[edi+ExpressionTerm.metadata]
-	test	edx,edx
-	jz	output_offset_ok
-	mov	ecx,4
-	mov	edi,value_length
-	call	fit_value
-	jc	output_offset_out_of_range
-	js	output_offset_out_of_range
-      output_offset_ok:
-	clc
-	retn
-      output_offset_out_of_range:
-	stc
-	retn
     store_at_output_offset:
 	call	read_output_offset
 	jc	value_out_of_range
@@ -4753,72 +4646,6 @@ display_data:
     display_character_data:
 	call	display_single_byte_data
 	jmp	display_next_value
-    display_string_data:
-	test	[trace_mode],TRACE_DISPLAY
-	jnz	bypass_display_buffer
-	cmp	[next_pass_needed],0
-	jne	display_ok
-	mov	ecx,[edx]
-	call	reserve_display_buffer
-	mov	ebx,esi
-	mov	esi,edx
-	lodsd
-	mov	ecx,eax
-	rep	movsb
-      string_displayed:
-	mov	esi,ebx
-      display_ok:
-	retn
-      bypass_display_buffer:
-	mov	ebx,esi
-	mov	esi,edx
-	lodsd
-	mov	ecx,eax
-	jecxz	string_displayed
-	call	display_string
-	jmp	string_displayed
-    display_single_byte_data:
-	test	[trace_mode],TRACE_DISPLAY
-	jnz	byte_bypassing_display_buffer
-	cmp	[next_pass_needed],0
-	jne	display_ok
-	mov	ecx,1
-	call	reserve_display_buffer
-	mov	ecx,1
-	call	fit_value
-	jc	byte_out_of_range
-	retn
-      byte_bypassing_display_buffer:
-	mov	edi,displayed_byte
-	mov	ecx,1
-	call	fit_value
-	jc	byte_out_of_range
-	mov	ebx,esi
-	mov	esi,edi
-	mov	ecx,1
-	call	display_string
-	jmp	string_displayed
-       byte_out_of_range:
-	mov	edx,_value_out_of_range
-	call	register_error
-	retn
-    reserve_display_buffer:
-	mov	edi,[display_data_length]
-	add	ecx,edi
-	add	edi,[display_buffer]
-	mov	[display_data_length],ecx
-	cmp	ecx,[display_buffer_length]
-	jbe	display_buffer_reserve_ok
-	mov	eax,[display_buffer]
-	sub	edi,eax
-	push	edx
-	call	grow_stack
-	pop	edx
-	add	edi,eax
-	mov	[display_buffer],eax
-	mov	[display_buffer_length],ecx
-      display_buffer_reserve_ok:
-	retn
 
 format_directive:
 	mov	edx,[ebx+SymbolTree_Leaf.branch]

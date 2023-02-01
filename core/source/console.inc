@@ -1,4 +1,78 @@
 
+display_string_data:
+; in:
+;  edx - 32-bit length followed by string data
+; preserves: esi
+	test	[trace_mode],TRACE_DISPLAY
+	jnz	bypass_display_buffer
+	cmp	[next_pass_needed],0
+	jne	display_ok
+	mov	ecx,[edx]
+	call	reserve_display_buffer
+	mov	ebx,esi
+	mov	esi,edx
+	lodsd
+	mov	ecx,eax
+	rep	movsb
+    string_displayed:
+	mov	esi,ebx
+    display_ok:
+	retn
+    bypass_display_buffer:
+	mov	ebx,esi
+	mov	esi,edx
+	lodsd
+	mov	ecx,eax
+	jecxz	string_displayed
+	call	display_string
+	jmp	string_displayed
+    reserve_display_buffer:
+	mov	edi,[display_data_length]
+	add	ecx,edi
+	add	edi,[display_buffer]
+	mov	[display_data_length],ecx
+	cmp	ecx,[display_buffer_length]
+	jbe	display_buffer_reserve_ok
+	mov	eax,[display_buffer]
+	sub	edi,eax
+	push	edx
+	call	grow_stack
+	pop	edx
+	add	edi,eax
+	mov	[display_buffer],eax
+	mov	[display_buffer_length],ecx
+      display_buffer_reserve_ok:
+	retn
+
+display_single_byte_data:
+; in:
+;  edx - 32-bit length followed by numeric data
+; preserves: esi
+	test	[trace_mode],TRACE_DISPLAY
+	jnz	byte_bypassing_display_buffer
+	cmp	[next_pass_needed],0
+	jne	display_ok
+	mov	ecx,1
+	call	reserve_display_buffer
+	mov	ecx,1
+	call	fit_value
+	jc	byte_out_of_range
+	retn
+    byte_bypassing_display_buffer:
+	mov	edi,displayed_byte
+	mov	ecx,1
+	call	fit_value
+	jc	byte_out_of_range
+	mov	ebx,esi
+	mov	esi,edi
+	mov	ecx,1
+	call	display_string
+	jmp	string_displayed
+     byte_out_of_range:
+	mov	edx,_value_out_of_range
+	call	register_error
+	retn
+
 show_display_data:
 	test	[trace_mode],TRACE_DISPLAY
 	jnz	display_line_feed
