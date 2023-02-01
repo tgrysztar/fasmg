@@ -135,31 +135,23 @@ assembly_init:
 	call	create_tree_element
 	mov	[root_namespace],eax
 
-	mov	ecx,sizeof.SymbolTree_Root + sizeof.SymbolTree_Node
-	call	create_tree_element
-	or	[eax+SymbolTree_Root.flags],NAMESPACE_UNATTACHED
-	mov	[alm_namespace],eax
-
 	call	create_parameter_namespace
 	mov	[root_parameter_namespace],eax
 
-	mov	ecx,sizeof.SymbolTree_Leaf
+	mov	ecx,4*sizeof.SymbolTree_Leaf
 	call	create_tree_element
 	mov	[eax+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
-	or	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
+	mov	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
 	mov	[interceptor_symbol],eax
-	mov	ecx,sizeof.SymbolTree_Leaf
-	call	create_tree_element
+	add	eax,sizeof.SymbolTree_Leaf
 	mov	[eax+SymbolTree_Leaf.class],SYMCLASS_STRUCTURE
-	or	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
+	mov	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
 	mov	[label_interceptor_symbol],eax
-	mov	ecx,sizeof.SymbolTree_Leaf
-	call	create_tree_element
+	add	eax,sizeof.SymbolTree_Leaf
 	mov	[eax+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
-	or	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
+	mov	[eax+SymbolTree_Leaf.flags],SYM_VARIABLE
 	mov	[other_interceptor_symbol],eax
-	mov	ecx,sizeof.SymbolTree_Leaf
-	call	create_tree_element
+	add	eax,sizeof.SymbolTree_Leaf
 	mov	[void_symbol],eax
 
 	mov	ecx,400
