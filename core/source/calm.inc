@@ -2849,6 +2849,10 @@ calm_call:
 	mov	esi,[eax+ValueDefinition.value]
 	mov	ecx,[eax+ValueDefinition.value_length]
 	mov	al,[eax+ValueDefinition.type]
+	cmp	al,VALTYPE_ELEMENT
+	je	assign_element
+	cmp	al,VALTYPE_AREA
+	je	assign_element
       assign_call_argument:
 	test	edx,edx
 	jz	call_argument_assigned
@@ -2882,6 +2886,23 @@ calm_call:
 	mov	edx,_invalid_argument
 	call	register_error
 	pop	edx
+	jmp	assign_call_argument
+     assign_element:
+	mov	ecx,[edi-4]
+	mov	edi,[assembly_workspace.memory_start]
+	mov	esi,edi
+	xor	eax,eax
+	stosd
+	mov	eax,ecx
+	stosd
+	xor	eax,eax
+	inc	eax
+	stosd
+	stosb
+	dec	eax
+	stosd
+	mov	ecx,17
+	mov	al,VALTYPE_NUMERIC
 	jmp	assign_call_argument
      call_arguments_ready:
 	add	esi,4
