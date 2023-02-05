@@ -351,6 +351,7 @@ prepare_area_to_write:
 ;  cf set when writing specified length is not possible
 ;  when cf = 0:
 ;   edi - buffer for specified number of bytes directly within the area
+; preserves: esi
 	mov	edx,[data_area]
 	mov	eax,[edx+ValueDefinition.value]
 	or	[eax+AreaHeader.flags],AREA_VARIABLE

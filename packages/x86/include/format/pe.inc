@@ -393,7 +393,7 @@ namespace PE
 				      db (NUMBER_OF_SECTIONS-1)*SectionTable.ENTRY_LENGTH dup 0
 
 	HeadersEnd:
-	define CheckSumBlocks PE,0,HeadersEnd
+	define CheckSumBlocks PE,HeadersEnd
 
 	SECTION_INDEX = 0
 	RELOCATION_INDEX = 0
@@ -477,11 +477,10 @@ macro section?
 			end data
 		end repeat
 
-		local AREA,DATA_START,DATA_END
+		local AREA,DATA_LENGTH
 		AREA::
-		DATA_START = $$
-		DATA_END = $-($%-$%%)
-		CheckSumBlocks reequ CheckSumBlocks,AREA,DATA_START,DATA_END
+		DATA_LENGTH = $-$$-($%-$%%)
+		CheckSumBlocks reequ CheckSumBlocks,AREA,DATA_LENGTH
 
 		SECTION_SIZE = $ - SECTION_BASE
 		store SECTION_SIZE at PE:SectionTable.VirtualSize+SECTION_INDEX*SectionTable.ENTRY_LENGTH
@@ -1037,28 +1036,28 @@ postpone ?
 		CHECKSUM = 0
 
 		calminstruction CheckSum
-			local	AREA, DATA_START, DATA_END, POS, H
+			local	AREA, DATA_LENGTH, POS, H
 		    get_block:
-			match	AREA=,DATA_START=,DATA_END=,CheckSumBlocks, CheckSumBlocks
+			match	AREA=,DATA_LENGTH=,CheckSumBlocks, CheckSumBlocks
 			jyes	block_ready
-			match	AREA=,DATA_START=,DATA_END, CheckSumBlocks
+			match	AREA=,DATA_LENGTH, CheckSumBlocks
 			jyes	last_block
 			exit
 		    last_block:
 			arrange CheckSumBlocks,
 		    block_ready:
-			compute POS, DATA_START
+			compute POS, 0
 		    process_block:
-			check	POS + 2 <= DATA_END
+			check	POS + 2 <= DATA_LENGTH
 			jno	finish_block
-			asm	load H:2 from AREA:POS
+			load	H, AREA:POS, 2
 			compute CHECKSUM, CHECKSUM + H
 			compute POS, POS + 2
 			jump	process_block
 		    finish_block:
-			check	POS + 1 = DATA_END
+			check	POS + 1 = DATA_LENGTH
 			jno	reduce_checksum
-			asm	load H:1 from AREA:POS
+			load	H, AREA:POS, 1
 			compute CHECKSUM, CHECKSUM + H
 		    reduce_checksum:
 			check	CHECKSUM shr 16

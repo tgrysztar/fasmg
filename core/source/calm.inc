@@ -934,6 +934,8 @@ alm_compute:
 	mov	eax,ebx
 	stosd
 	call	compile_expression
+	jnc	instruction_assembled
+	sub	[calm_code_cursor],8+8
 	jmp	instruction_assembled
     compile_expression:
 	xor	eax,eax
@@ -948,6 +950,7 @@ alm_compute:
 	mov	esi,[expression_workspace.memory_start]
 	mov	ecx,edi
 	sub	ecx,esi
+	add	ecx,4
 	mov	edi,[calm_code_cursor]
 	mov	edx,calm_code_buffer
 	call	reserve_workspace
@@ -959,9 +962,9 @@ alm_compute:
 	xchg	edi,[calm_code_cursor]
 	sub	ecx,edi
 	mov	[edi-4],ecx
+      ; clc
 	retn
       no_computable_expression:
-	sub	[calm_code_cursor],8+8
 	retn
     convert_parsed_expression:
 	xor	ebx,ebx
@@ -1272,11 +1275,12 @@ alm_check:
 	jmp	instruction_assembled
     condition_malformed:
 	and	[use_raw_values],0
-	mov	edi,[calm_rollback_offset]
-	add	edi,[calm_code_buffer.memory_start]
-	mov	[calm_code_cursor],edi
 	mov	edx,_invalid_expression
+    alm_abort:
 	call	register_error
+	mov	eax,[calm_rollback_offset]
+	add	eax,[calm_code_buffer.memory_start]
+	mov	[calm_code_cursor],eax
 	jmp	assembly_line
 
 alm_publish:
@@ -1445,14 +1449,113 @@ alm_emit:
 	stosd
 	call	compile_expression
 	mov	edi,[calm_code_cursor]
-	mov	edx,calm_code_buffer
-	mov	ecx,4
-	call	reserve_workspace
 	call	peek_at_constituent_value
 	jc	alm_call_arguments_ready
 	cmp	al,','
 	jne	alm_call_arguments_ready
 	and	[current_constituent],0
+	call	compile_expression
+	jmp	instruction_assembled
+
+alm_load:
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jz	unexpected_instruction
+	and	[symbol_definition],0
+	mov	dl,SYMCLASS_EXPRESSION
+	call	identify_symbol
+	jc	invalid_identifier
+	test	ebx,ebx
+	jz	invalid_identifier
+	mov	edi,[calm_code_cursor]
+	mov	edx,calm_code_buffer
+	mov	eax,edi
+	sub	eax,[edx+Workspace.memory_start]
+	mov	[calm_rollback_offset],eax
+	mov	ecx,12+4
+	call	reserve_workspace
+	mov	eax,[calm_line_number]
+	stosd
+	mov	eax,calm_load
+	stosd
+	mov	eax,ebx
+	stosd
+	call	move_to_next_symbol
+	jc	alm_missing_argument
+	cmp	al,','
+	jne	alm_malformed_argument
+	inc	esi
+	call	move_to_next_symbol
+	call	compile_expression
+	push	ecx
+	call	get_constituent_value
+	pop	ecx
+	jc	alm_missing_argument
+	cmp	al,':'
+	je	alm_load_offset
+	cmp	al,','
+	jne	alm_malformed_argument
+	mov	edi,[calm_rollback_offset]
+	add	edi,[calm_code_buffer.memory_start]
+	mov	dword [edi+4],calm_load_from_output
+	jmp	alm_load_length
+    alm_load_offset:
+	mov	edi,[calm_code_cursor]
+	call	compile_expression
+	call	get_constituent_value
+	jc	alm_missing_argument
+	cmp	al,','
+	jne	alm_malformed_argument
+    alm_load_length:
+	mov	edi,[calm_code_cursor]
+	call	compile_expression
+	jmp	instruction_assembled
+    alm_missing_argument:
+	mov	edx,_missing_argument
+	jmp	alm_abort
+    alm_malformed_argument:
+	mov	edx,_invalid_argument
+	jmp	alm_abort
+
+alm_store:
+	test	[assembly_mode],AMODE_CALM_DEFINITION
+	jz	unexpected_instruction
+	mov	edi,[calm_code_cursor]
+	mov	edx,calm_code_buffer
+	mov	eax,edi
+	sub	eax,[edx+Workspace.memory_start]
+	mov	[calm_rollback_offset],eax
+	mov	ecx,8+4
+	call	reserve_workspace
+	mov	eax,[calm_line_number]
+	stosd
+	mov	eax,calm_store
+	stosd
+	call	compile_expression
+	call	get_constituent_value
+	jc	alm_missing_argument
+	cmp	al,':'
+	je	alm_store_offset
+	cmp	al,','
+	jne	alm_malformed_argument
+	mov	edi,[calm_rollback_offset]
+	add	edi,[calm_code_buffer.memory_start]
+	mov	dword [edi+4],calm_store_in_output
+	jmp	alm_store_length
+    alm_store_offset:
+	mov	edi,[calm_code_cursor]
+	call	compile_expression
+	call	get_constituent_value
+	jc	alm_missing_argument
+	cmp	al,','
+	jne	alm_malformed_argument
+    alm_store_length:
+	mov	edi,[calm_code_cursor]
+	call	compile_expression
+	call	get_constituent_value
+	jc	alm_missing_argument
+	cmp	al,','
+	jne	alm_malformed_argument
+	mov	edi,[calm_code_cursor]
 	call	compile_expression
 	jmp	instruction_assembled
 
@@ -2666,16 +2769,8 @@ calm_take:
 	jmp	calm_execution_unit
 
 calm_display:
-	lodsd
-	add	eax,esi
-	push	eax
-	mov	edi,[calculation_workspace.memory_start]
-	and	[value_position],0
-	call	calculate_parsed_expression
-	pop	esi
-	call	pop_terms
+	call	compute_calm_constant
 	jc	calm_execution_unit
-	call	get_calculated_constant_value
 	cmp	al,EXPR_STRING
 	je	calm_display_string
 	cmp	al,EXPR_NUMBER
@@ -2692,16 +2787,8 @@ calm_display:
 	jmp	calm_execution_unit
 
 calm_err:
-	lodsd
-	add	eax,esi
-	push	eax
-	mov	edi,[calculation_workspace.memory_start]
-	and	[value_position],0
-	call	calculate_parsed_expression
-	pop	esi
-	call	pop_terms
+	call	compute_calm_constant
 	jc	calm_execution_unit
-	call	get_calculated_constant_value
 	cmp	al,EXPR_STRING
 	jne	calm_invalid_argument
 	call	register_volatile_error
@@ -2711,27 +2798,18 @@ calm_err:
 	jmp	calm_execution_unit
 
 calm_emit:
-	lodsd
-	add	eax,esi
-	push	eax
-	mov	edi,[calculation_workspace.memory_start]
-	and	[value_position],0
-	call	calculate_parsed_expression
-	pop	esi
-	call	pop_terms
-	jc	calm_data_unit_default
-	call	get_calculated_constant_value
+	call	compute_calm_constant
+	jc	calm_invalid_data_unit
 	cmp	al,EXPR_NUMBER
 	jne	calm_invalid_data_unit
-	mov	ecx,4
 	mov	edi,data_unit_length
+	mov	ecx,4
 	call	fit_value
 	jc	calm_invalid_data_unit
 	jns	calm_emit_data
     calm_invalid_data_unit:
 	mov	edx,_invalid_argument
 	call	register_error
-    calm_data_unit_default:
 	mov	[data_unit_length],1
     calm_emit_data:
 	lodsd
@@ -2788,6 +2866,263 @@ calm_emit:
 	mov	ecx,[data_unit_length]
 	call	uninitialized_output
 	jmp	calm_execution_unit
+    compute_calm_constant:
+	lodsd
+	test	eax,eax
+	jz	calm_constant_invalid
+	add	eax,esi
+	push	eax
+	mov	edi,[calculation_workspace.memory_start]
+	and	[value_position],0
+	call	calculate_parsed_expression
+	pop	esi
+	call	pop_terms
+	jc	calm_constant_invalid
+	call	get_calculated_constant_value
+	clc
+	retn
+      calm_constant_invalid:
+	stc
+	retn
+
+calm_load:
+	lodsd
+	mov	[label_leaf],eax
+	lodsd
+	add	eax,esi
+	push	eax
+	mov	edi,esi
+	and	[value_position],0
+	call	get_area_value
+	pop	esi
+	jc	calm_load_area_invalid
+	mov	[data_area_symbol],ebx
+	mov	[data_area],edx
+	call	compute_calm_constant
+	jc	calm_load_offset_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_load_offset_invalid
+	mov	edi,data_offset
+	mov	ecx,4
+	call	fit_value
+	jc	calm_load_offset_invalid
+	js	calm_load_offset_invalid
+	call	compute_calm_constant
+	jc	calm_load_length_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_load_length_invalid
+	mov	edi,value_length
+	mov	ecx,4
+	call	fit_value
+	jc	calm_load_length_invalid
+	js	calm_load_length_invalid
+	mov	ebx,[label_leaf]
+	call	update_value_definition
+	test	edx,edx
+	jz	calm_execution_unit
+	mov	ecx,[value_length]
+	add	ecx,4
+	mov	[value_type],VALTYPE_STRING
+	push	edx esi
+	xor	esi,esi
+	call	assign_value
+	mov	edi,[edx+ValueDefinition.value]
+	mov	eax,[value_length]
+	mov	ecx,eax
+	stosd
+	mov	edx,[data_area]
+	call	load_from_area
+	pop	esi edx
+	jnc	calm_execution_unit
+	mov	[edx+ValueDefinition.value_length],4
+	mov	edi,[edx+ValueDefinition.value]
+	and	dword [edi],0
+	jmp	calm_execution_unit
+    calm_load_area_invalid:
+	lodsd
+	add	esi,eax
+    calm_load_offset_invalid:
+	lodsd
+	add	esi,eax
+    calm_load_length_invalid:
+	jmp	calm_invalid_argument
+calm_load_from_output:
+	lodsd
+	mov	[label_leaf],eax
+	call	compute_calm_constant
+	jc	calm_load_offset_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_load_offset_invalid
+	mov	edi,file_offset
+	mov	ecx,8
+	call	fit_value
+	jc	calm_load_offset_invalid
+	js	calm_load_offset_invalid
+	call	compute_calm_constant
+	jc	calm_load_length_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_load_length_invalid
+	mov	edi,value_length
+	mov	ecx,4
+	call	fit_value
+	jc	calm_load_length_invalid
+	js	calm_load_length_invalid
+	mov	ebx,[label_leaf]
+	call	update_value_definition
+	test	edx,edx
+	jz	calm_execution_unit
+	mov	ecx,[value_length]
+	add	ecx,4
+	mov	[value_type],VALTYPE_STRING
+	push	esi
+	xor	esi,esi
+	call	assign_value
+	mov	edi,[edx+ValueDefinition.value]
+	mov	eax,[value_length]
+	mov	ecx,eax
+	stosd
+	push	edx
+	call	read_from_output
+	pop	edx esi
+	mov	ecx,[value_length]
+	test	ecx,ecx
+	jz	calm_execution_unit
+	sub	[edx+ValueDefinition.value_length],ecx
+	mov	edi,[edx+ValueDefinition.value]
+	sub	[edi],ecx
+    calm_address_out_of_range:
+	mov	edx,_address_out_of_range
+	call	register_error
+	jmp	calm_execution_unit
+
+calm_store:
+	lodsd
+	add	eax,esi
+	push	eax
+	mov	edi,esi
+	and	[value_position],0
+	call	get_area_value
+	pop	esi
+	jc	calm_load_area_invalid
+	mov	[data_area_symbol],ebx
+	mov	[data_area],edx
+	call	compute_calm_constant
+	jc	calm_store_offset_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_store_offset_invalid
+	mov	edi,data_offset
+	mov	ecx,4
+	call	fit_value
+	jc	calm_store_offset_invalid
+	js	calm_store_offset_invalid
+	call	compute_calm_constant
+	jc	calm_store_length_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_store_length_invalid
+	mov	edi,value_length
+	mov	ecx,4
+	call	fit_value
+	jc	calm_store_length_invalid
+	js	calm_store_length_invalid
+	call	prepare_area_to_write
+	jc	calm_store_not_possible
+	push	edi
+	call	compute_calm_constant
+	pop	edi
+	jc	calm_store_value_invalid
+	mov	ecx,[value_length]
+	cmp	al,EXPR_STRING
+	je	calm_store_string
+	cmp	al,EXPR_NUMBER
+	jne	calm_store_value_invalid
+	call	fit_value
+	jc	calm_emit_out_of_range
+	jmp	calm_execution_unit
+    calm_store_string:
+	mov	eax,ecx
+	mov	ecx,[edx]
+	sub	eax,ecx
+	jc	calm_emit_out_of_range
+	push	esi
+	lea	esi,[edx+4]
+	rep	movsb
+	xchg	ecx,eax
+	rep	stosb
+	pop	esi
+	jmp	calm_execution_unit
+    calm_store_offset_invalid:
+	lodsd
+	add	esi,eax
+    calm_store_length_invalid:
+	lodsd
+	add	esi,eax
+    calm_store_value_invalid:
+	jmp	calm_invalid_argument
+    calm_store_not_possible:
+	lodsd
+	add	esi,eax
+	jmp	calm_execution_unit
+calm_store_in_output:
+	call	compute_calm_constant
+	jc	calm_store_offset_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_store_offset_invalid
+	mov	edi,file_offset
+	mov	ecx,8
+	call	fit_value
+	jc	calm_store_offset_invalid
+	js	calm_store_offset_invalid
+	call	compute_calm_constant
+	jc	calm_store_length_invalid
+	cmp	al,EXPR_NUMBER
+	jne	calm_store_length_invalid
+	mov	edi,value_length
+	mov	ecx,4
+	call	fit_value
+	jc	calm_store_length_invalid
+	js	calm_store_length_invalid
+	call	compute_calm_constant
+	mov	ecx,[value_length]
+	cmp	al,EXPR_STRING
+	je	try_exact_store
+	cmp	al,EXPR_NUMBER
+	jne	calm_store_value_invalid
+    try_exact_store:
+	cmp	ecx,[edx]
+	jne	indirect_store
+	push	esi
+	lea	esi,[edx+4]
+	jmp	calm_rewrite_output
+    indirect_store:
+	push	eax ecx edx
+	mov	edx,assembly_workspace
+	mov	edi,[edx+Workspace.memory_start]
+	call	reserve_workspace
+	pop	edx ecx eax
+	cmp	al,EXPR_STRING
+	je	calm_store_string_in_output
+	call	fit_value
+	jc	calm_emit_out_of_range
+	push	esi
+    calm_store_finish:
+	mov	esi,[assembly_workspace.memory_start]
+    calm_rewrite_output:
+	call	rewrite_output
+	pop	esi
+	cmp	[value_length],0
+	jne	calm_address_out_of_range
+	jmp	calm_execution_unit
+    calm_store_string_in_output:
+	mov	eax,ecx
+	mov	ecx,[edx]
+	sub	eax,ecx
+	jc	calm_emit_out_of_range
+	push	esi
+	lea	esi,[edx+4]
+	rep	movsb
+	xchg	ecx,eax
+	rep	stosb
+	jmp	calm_store_finish
 
 calm_call:
 	lodsd

@@ -740,19 +740,29 @@ get_area_value:
 ;   ebx - SymbolTree_Leaf
 ;   edx - ValueDefinition
 ; preserves: esi
-	cmp	byte [edi],EXPR_SYMBOL_VALUE
+	mov	al,[edi]
+	cmp	al,EXPR_SYMBOL
+	je	check_for_plain_symbol
+	cmp	al,EXPR_SYMBOL_VALUE
 	jne	no_plain_area_symbol
 	cmp	dword [edi+3*4],0
 	jne	no_plain_area_symbol
 	mov	edx,[edi+2*4]
 	test	edx,edx
 	jz	no_plain_area_symbol
+      check_area_symbol:
 	cmp	[edx+ValueDefinition.type],VALTYPE_AREA
 	jne	no_plain_area_symbol
 	mov	ebx,[edi+4]
 	call	mark_symbol_as_used
 	clc
 	retn
+      check_for_plain_symbol:
+	cmp	dword [edi+2*4],0
+	jne	no_plain_area_symbol
+	mov	ebx,[edi+4]
+	call	get_available_value
+	jnc	check_area_symbol
       no_plain_area_symbol:
 	push	esi
 	mov	esi,edi

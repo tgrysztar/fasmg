@@ -1149,7 +1149,9 @@ assign_value:
 ;  ecx = length of value
 ;  [value_type] = VALTYPE_#
 ; preserves: ebx, edx
-; note: with VALTYPE_PLAIN ecx must be zero and esi should contain the value directly
+; notes:
+;  with VALTYPE_PLAIN ecx must be zero and esi should contain the value directly
+;  if esi is null, requested length is allocated but not filled
 	and	[edx+ValueDefinition.flags],0
 	mov	eax,[current_pass]
 	sub	eax,[edx+ValueDefinition.pass]
@@ -1188,6 +1190,8 @@ assign_value:
 	mov	[edx+ValueDefinition.type],al
 	cmp	al,VALTYPE_PLAIN
 	je	write_plain_value
+	test	esi,esi
+	jz	value_written
 	mov	ecx,[edx+ValueDefinition.value_length]
 	rep	movsb
     value_written:
@@ -1211,6 +1215,8 @@ assign_value:
 	cmp	[edx+ValueDefinition.type],al
 	jne	rewrite_value
 	jecxz	value_written
+	test	esi,esi
+	jz	rewrite_value
 	cmp	al,VALTYPE_SYMBOLIC
 	je	update_symbolic_value
 	cmp	al,VALTYPE_PLAIN
