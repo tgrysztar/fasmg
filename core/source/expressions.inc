@@ -1669,17 +1669,8 @@ calculate_to_number:
 
 calculate_to_string:
 	call	pop_terms
-	mov	al,EXPR_STRING
-	xchg	al,byte [edi+ExpressionTerm.attributes]
-	cmp	al,EXPR_FLOAT
-	jne	single_term_result
-	mov	edx,_invalid_value
-	call	register_error
-	mov	[edi+ExpressionTerm.value],zero_value
-	mov	[edi+ExpressionTerm.attributes],EXPR_STRING
-	and	[edi+sizeof.ExpressionTerm+ExpressionTerm.attributes],0
-	add	edi,2*sizeof.ExpressionTerm
-	jmp	calculation_loop
+	call	get_string_term_value
+	jmp	single_term_result
 
 calculate_to_float:
 	call	pop_terms
@@ -2382,6 +2373,49 @@ calculate_bswap:
 	call	pop_terms
 	jmp	single_term_result
 
+calculate_bappend:
+	call	pop_terms
+	mov	[source_term],edi
+	call	pop_terms
+	mov	[destination_term],edi
+	call	get_string_term_value
+	mov	ecx,[edx]
+	mov	edi,[source_term]
+	call	get_string_term_value
+	add	ecx,[edx]
+	add	ecx,4
+	mov	edi,[value_position]
+	mov	edx,value_workspace
+	add	edi,[edx+Workspace.memory_start]
+	call	reserve_workspace
+	push	edi
+	mov	edi,[destination_term]
+	call	get_term_value
+	mov	[edi+ExpressionTerm.attributes],EXPR_STRING + EXPRF_VALUE_IN_WORKSPACE
+	mov	eax,[value_position]
+	mov	[edi+ExpressionTerm.value],eax
+	pop	edi
+	mov	esi,edx
+	mov	ecx,[esi]
+	movsd
+	rep	movsb
+	push	edi
+	mov	edi,[source_term]
+	call	get_term_value
+	pop	edi
+	mov	esi,edx
+	lodsd
+	mov	ecx,eax
+	rep	movsb
+	mov	edx,[value_workspace.memory_start]
+	sub	edi,edx
+	xchg	[value_position],edi
+	add	edi,edx
+	add	[edi],eax
+	mov	esi,[source_term]
+	mov	edi,[destination_term]
+	jmp	finish_calculation_on_single_terms
+
 count_bytes:
 	call	pop_terms
 	call	get_string_term_value
@@ -2604,17 +2638,18 @@ get_numeric_term_value:
 get_string_term_value:
 ; in: edi - ExpressionTerm
 ; out: edx - 32-bit length followed by string data
-; preserves: ebx, esi, edi
+; preserves: ebx, ecx, esi, edi
 	mov	eax,[edi+ExpressionTerm.attributes]
 	cmp	al,EXPR_STRING
 	je	string_value_available
-	mov	edx,_invalid_value
-	call	register_error
-	mov	[edi+ExpressionTerm.attributes],EXPR_STRING
+	mov	byte [edi+ExpressionTerm.attributes],EXPR_STRING
 	cmp	al,EXPR_NUMBER
 	je	string_value_available
+	mov	edx,_invalid_value
+	call	register_error
 	mov	edx,zero_value
 	mov	[edi+ExpressionTerm.value],edx
+	mov	[edi+ExpressionTerm.attributes],EXPR_STRING
 	retn
       string_value_available:
 	mov	edx,[edi+ExpressionTerm.value]

@@ -461,9 +461,12 @@ used. This operator has the lowest possible precedence, so when it precedes
 an expression, all of it is evaluated prior to the conversion. When conversion
 in the opposite direction is needed, simple unary "+" is enough to make a string
 become a number.
-  The length of a string may be obtained with the "lengthof" unary operator. This
-operator can only be applied to a string and it is one of the operators with the
-highest precedence.
+  The length of a string may be obtained with the "lengthof" unary operator,
+one of the operators with the highest precedence.
+  The "bappend" operator appends a sequence of bytes of a string given by the
+second argument to the sequence of bytes given by the first one. If either of
+the arguments is a number, it becomes implicitly converted into a string. This
+operator has the same precedence as binary bitwise operations.
   When a symbol defined with the "element" command is used in an expression the
 result may be a linear polynomial in a variable represented by the symbol.
 Only simple arithmetic operations are allowed on the terms of a polynomial,
