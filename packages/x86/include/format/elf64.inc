@@ -195,6 +195,8 @@ namespace ELF
 		R_32 = R_X86_64_32S
 		R_PC32 = R_X86_64_PC32
 		R_PLT32 = R_X86_64_PLT32
+		R_GOT32 = R_X86_64_GOT32
+		R_GOTPCREL = R_X86_64_GOTPCREL
 	end if
 
 	Header:
@@ -426,26 +428,31 @@ end macro
 
 macro extrn? declaration*
 	namespace ELF
-		local sym,psym
+		local sym,gsym,psym
 		element sym : relocatable * (-1) + SYMBOL_INDEX
+		element gsym : GOT + SYMBOL_INDEX
 		element psym : PLT + SYMBOL_INDEX
 		match str =as? name:size, declaration
 			label name:size at sym
+			label GOT.name at gsym
 			label PLT.name at psym
 			SYMBOL_NAME = string str
 			SYMBOL_SIZE = size
 		else match name:size, declaration
 			label name:size at sym
+			label GOT.name at gsym
 			label PLT.name at psym
 			SYMBOL_NAME = `name
 			SYMBOL_SIZE = size
 		else match str =as? name, declaration
 			label name at sym
+			label GOT.name at gsym
 			label PLT.name at psym
 			SYMBOL_NAME = string str
 			SYMBOL_SIZE = 0
 		else
 			label declaration at sym
+			label GOT.declaration at gsym
 			label PLT.declaration at psym
 			SYMBOL_NAME = `declaration
 			SYMBOL_SIZE = 0
@@ -459,44 +466,38 @@ macro extrn? declaration*
 	end namespace
 end macro
 
+element GOT?
 element PLT?
-
-calminstruction calminstruction?.init? var*, val:0
-	compute val, val
-	publish var, val
-end calminstruction
 
 calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
 end calminstruction
 
-calminstruction calminstruction?.unique? name
-	local counter, buffer
-	init counter
-	compute counter, counter + 1
-	arrange buffer, name#counter
-	publish name, buffer
-end calminstruction
-
 calminstruction calminstruction?.asm? line&
-	local tmp, ln, buffer
-	initsym tmp, unique ln
-	assemble tmp
-	publish ln, line
-	arrange buffer, =assemble ln
-	assemble buffer
+	local	name, i
+	initsym name, name.0
+	match	name.i, name
+	compute i, i+1
+	arrange name, name.i
+	publish name, line
+	arrange line, =assemble name
+	assemble line
 end calminstruction
 
 calminstruction dword? value
 	compute value, value
 	check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto ELF.relocatable
 	jyes	r_32
+	check	~ value relativeto 0 & value relativeto 1 elementof value & 1 elementof (1 metadataof value) relativeto GOT
+	jyes	r_got32
 	check	~ value relativeto 0 & (value + ELF.SECTION_BASE) relativeto 1 elementof (value + ELF.SECTION_BASE)
 	jno	plain
 	check	1 elementof (1 metadataof (value + ELF.SECTION_BASE)) relativeto ELF.relocatable
 	jyes	r_pc32
 	check	1 elementof (1 metadataof (value + ELF.SECTION_BASE)) relativeto PLT
 	jyes	r_plt32
+	check	1 elementof (1 metadataof (value + ELF.SECTION_BASE)) relativeto GOT
+	jyes	r_gotpcrel
     plain:
 	emit	4, value
 	exit
@@ -516,7 +517,7 @@ calminstruction dword? value
 	check	$% > offset
 	jno	done
 	compute offset, offset - ELF.SECTION_OFFSET
-	compute addend, 0 scaleof (value + ELF.SECTION_BASE + offset)
+	compute addend,value + ELF.SECTION_BASE + offset  - 1 elementof value
 	compute info, ELF.R_PC32 + (0 scaleof (1 metadataof value)) shl 32
 	jump	add_relocation
     r_plt32:
@@ -525,8 +526,26 @@ calminstruction dword? value
 	check	$% > offset
 	jno	done
 	compute offset, offset - ELF.SECTION_OFFSET
-	compute addend, 0 scaleof (value + ELF.SECTION_BASE + offset)
+	compute addend, value + ELF.SECTION_BASE + offset - 1 elementof value
 	compute info, ELF.R_PLT32 + (0 scaleof (1 metadataof value)) shl 32
+	jump	add_relocation
+    r_gotpcrel:
+	compute offset, $%
+	emit	4
+	check	$% > offset
+	jno	done
+	compute offset, offset - ELF.SECTION_OFFSET
+	compute addend, value + ELF.SECTION_BASE + offset - 1 elementof value
+	compute info, ELF.R_GOTPCREL + (0 scaleof (1 metadataof value)) shl 32
+	jump	add_relocation
+    r_got32:
+	compute offset, $%
+	emit	4
+	check	$% > offset
+	jno	done
+	compute offset, offset - ELF.SECTION_OFFSET
+	compute addend, 0 scaleof value
+	compute info, ELF.R_GOT32 + (0 scaleof (1 metadataof value)) shl 32
 	jump	add_relocation
     add_relocation:
 	local	Rela
