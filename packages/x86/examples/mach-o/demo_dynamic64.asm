@@ -1,11 +1,7 @@
 
-include 'cpu/x64.inc'
-use64
+include 'format/format.inc'
 
-MachO.Settings.ProcessorType equ CPU_TYPE_X86_64
-MachO.Settings.BaseAddress = 0x1000000
-
-include 'format/macho.inc'
+format MachO64 executable
 
 interpreter '/usr/lib/dyld'
 uses '/usr/lib/libSystem.B.dylib' (1.0.0, 1226.10.1)

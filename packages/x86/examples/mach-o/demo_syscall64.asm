@@ -1,11 +1,8 @@
 
-include 'cpu/x64.inc'
-use64
 
-MachO.Settings.ProcessorType equ CPU_TYPE_X86_64
-MachO.Settings.BaseAddress = 0x100000000
+include 'format/format.inc'
 
-include 'format/macho.inc'
+format MachO64 executable
 
 segment '__TEXT' readable executable
 

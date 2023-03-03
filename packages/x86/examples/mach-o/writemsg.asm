@@ -1,9 +1,7 @@
 
-include 'cpu/80386.inc'
-use32
+include 'format/format.inc'
 
-MachO.Settings.FileType equ MH_OBJECT
-include 'format/macho.inc'
+format MachO
 
 public writemsg
 

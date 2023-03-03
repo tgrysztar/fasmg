@@ -1,11 +1,8 @@
 
-include 'cpu/x64.inc'
-use64
 
-MachO.Settings.FileType equ MH_OBJECT
-MachO.Settings.ProcessorType equ CPU_TYPE_X86_64
-MachO.Settings.ProcessorSubtype equ CPU_SUBTYPE_X86_64_ALL
-include 'format/macho.inc'
+include 'format/format.inc'
+
+format MachO64
 
 section '__TEXT':'__text'
 

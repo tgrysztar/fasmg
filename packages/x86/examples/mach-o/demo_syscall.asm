@@ -1,10 +1,7 @@
 
-include 'cpu/80386.inc'
-use32
+include 'format/format.inc'
 
-MachO.Settings.BaseAddress = 0x1000
-
-include 'format/macho.inc'
+format MachO executable
 
 segment '__TEXT' readable executable
 
