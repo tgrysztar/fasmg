@@ -1239,7 +1239,7 @@ calculate_parsed_expression:
 	cmp	al,VALTYPE_ELEMENT
 	je	push_element
 	cmp	al,VALTYPE_AREA
-	je	push_element
+	je	push_area
 	cmp	al,VALTYPE_STRING
 	je	push_string
 	cmp	al,VALTYPE_FLOAT
@@ -1297,10 +1297,10 @@ calculate_parsed_expression:
 	mov	[edi+ExpressionTerm.value],ebx
 	jmp	push_numeric_terms
       numeric_terms_pushed:
-	add	ebx,4
 	pop	edx ecx
+	sub	ecx,8
 	cmp	ebx,ecx
-	jb	symbol_metadata_ok
+	jbe	symbol_metadata_ok
 	xor	ebx,ebx
       symbol_metadata_ok:
 	mov	[edx+ExpressionTerm.metadata],ebx
@@ -1360,19 +1360,23 @@ calculate_parsed_expression:
     push_float:
 	mov	al,EXPR_FLOAT
 	jmp	push_value
+    push_area:
+	mov	esi,edx
+	jmp	push_variable_term
     push_element:
+	xor	esi,esi
+    push_variable_term:
 	mov	edx,calculation_workspace
 	mov	ecx,3*sizeof.ExpressionTerm
 	call	reserve_workspace
 	mov	eax,EXPR_NUMBER
 	mov	[edi+ExpressionTerm.attributes],eax
+	mov	[edi+ExpressionTerm.metadata],esi
 	mov	[edi+sizeof.ExpressionTerm+ExpressionTerm.attributes],eax
 	mov	[edi+ExpressionTerm.value],zero_value
 	mov	[edi+sizeof.ExpressionTerm+ExpressionTerm.value],singular_value
 	mov	[edi+sizeof.ExpressionTerm+ExpressionTerm.metadata],ebx
-	xor	eax,eax
-	mov	[edi+ExpressionTerm.metadata],eax
-	mov	[edi+2*sizeof.ExpressionTerm+ExpressionTerm.attributes],eax
+	and	[edi+2*sizeof.ExpressionTerm+ExpressionTerm.attributes],0
 	add	edi,3*sizeof.ExpressionTerm
 	jmp	calculation_loop
     base_address_value:
@@ -2536,7 +2540,7 @@ extract_metadata:
 	test	ebx,ebx
 	jz	replace_with_zero
 	test	ecx,ecx
-	jz	push_numeric_value
+	jz	extract_label_metadata
 	mov	edx,[ebx+SymbolTree_Leaf.definition]
 	test	edx,edx
 	jz	replace_with_zero
@@ -2547,13 +2551,26 @@ extract_metadata:
 	mov	ecx,[edx+ValueDefinition.value_length]
 	jecxz	replace_with_zero
 	jmp	push_numeric_symbol
-
 extract_size:
 	call	pop_terms
 	mov	ebx,[edi+ExpressionTerm.metadata]
 	test	ebx,ebx
 	jz	replace_with_zero
+    extract_label_metadata:
+	cmp	dword [ebx],0
+	jne	extract_area_size
+	add	ebx,4
 	jmp	push_numeric_value
+    extract_area_size:
+	call	prepare_to_push_computed_value
+	xor	edx,edx
+	mov	eax,[ebx+ValueDefinition.value_length]
+	mov	edi,[ebx+ValueDefinition.value]
+	sub	eax,sizeof.AreaHeader
+	sub	eax,[edi+AreaHeader.base_address_length]
+	add	eax,[edi+AreaHeader.uninitialized_length]
+	adc	edx,0
+	jmp	push_output_position
 extract_first_term_metadata:
 	call	pop_terms
 	lea	ebx,[edi+sizeof.ExpressionTerm]

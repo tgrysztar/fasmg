@@ -4428,6 +4428,9 @@ load_value:
 	mov	edx,[edi+ExpressionTerm.metadata]
 	test	edx,edx
 	jz	addressed_length_ok
+	cmp	dword [edx],0
+	jne	addressed_length_ok
+	add	edx,4
 	mov	esi,edi
 	mov	ecx,4
 	mov	edi,value_length
@@ -4490,6 +4493,9 @@ load_value:
 	mov	edx,[edi+ExpressionTerm.metadata]
 	test	edx,edx
 	jz	output_offset_ok
+	cmp	dword [edx],0
+	jne	output_offset_ok
+	add	edx,4
 	mov	ecx,4
 	mov	edi,value_length
 	call	fit_value
