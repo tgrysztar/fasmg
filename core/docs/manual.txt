@@ -1898,6 +1898,8 @@ present in the original "virtual" block.
 
   If an area label is used in an expression, it forms a variable term of a
 linear polynomial. The metadata of such term is the base address of the area.
+The metadata of an area label itself, accessible with "sizeof" operator,
+is equal to the current length of data within the area.
   There is an additional variant of "load" and "store" directives that allows
 to read and modify already generated data in the output file given simply
 an offset within that output. This variant is recognized when the "at" or
