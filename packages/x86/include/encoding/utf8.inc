@@ -2,7 +2,7 @@
 ; UTF-8
 
 macro WCHAR arg
-  local current,__input,char,wide
+  local current,__input,char,wide,count
   if arg eqtype ''
     virtual at 0
       __input::
