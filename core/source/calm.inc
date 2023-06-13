@@ -3003,7 +3003,7 @@ calm_store:
 	and	[value_position],0
 	call	get_area_value
 	pop	esi
-	jc	calm_load_area_invalid
+	jc	calm_store_area_invalid
 	mov	[data_area_symbol],ebx
 	mov	[data_area],edx
 	call	compute_calm_constant
@@ -3050,6 +3050,9 @@ calm_store:
 	rep	stosb
 	pop	esi
 	jmp	calm_execution_unit
+    calm_store_area_invalid:
+	lodsd
+	add	esi,eax
     calm_store_offset_invalid:
 	lodsd
 	add	esi,eax

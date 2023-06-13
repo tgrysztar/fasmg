@@ -1,1 +1,1 @@
-VERSION equ "k0v2"
+VERSION equ "k30n"

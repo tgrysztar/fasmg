@@ -47,7 +47,7 @@ macro bextr? dest*,src*,src2*
 	end if
 end macro
 
-iterate <instr,opcode,postbyte>, blsi,0F3h,3, blmsk,0F3h,2, blsr,0F3h,1
+iterate <instr,opcode,postbyte>, blsi,0F3h,3, blsmsk,0F3h,2, blsr,0F3h,1
 
 	macro instr? dest*,src*
 		x86.parse_operand@dest dest
