@@ -5,6 +5,8 @@ define x86 x86
 define x87 x87
 define MMX MMX
 define SSE SSE
+define AVX AVX
+define AVX_512 AVX_512
 
 calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
@@ -94,10 +96,10 @@ macro ? line&
 					c3 check x86.item = value
 					c3 jno unsatisfied
 				else match |, operator
-					c1 compute x86.item, x86.item or value
-					c2 check x86.item and value
+					c1 compute x86.item, x86.item or 1 shl value
+					c2 check x86.item and 1 shl value
 					c2 jno unsatisfied
-					c3 check x86.item and value
+					c3 check x86.item and 1 shl value
 					c3 jno unsatisfied
 				else
 					err 'unknown syntax (',`association,')'
@@ -155,15 +157,59 @@ end macro
 	80287: fpu = 3
 	80387: fpu = 4
 
-	MMX: simd = 1
-	SSE: simd = 2
-	SSE2: simd = 3
-	SSE3: simd = 4
-	SSSE3: simd = 5
-	SSE4.1: simd = 6
-	SSE4.2: simd = 7
+	MMX: simd = 5
+	SSE: simd = 10
+	SSE2: simd = 20
+	SSE3: simd = 30
+	SSSE3: simd = 31
+	SSE4.1: simd = 41
+	SSE4.2: simd = 42
+	AVX: simd = 50
+	AVX2: simd = 51
+	AVX512F: simd = 60
 
-	3DNow: ext | 8
+	PCLMULQDQ: ext | 1
+	MONITOR: ext | 3
+	VMX: ext | 5
+	SMX: ext | 6
+	FMA: ext | 12
+	CMPXCHG16B: ext | 13
+	MOVBE: ext | 22
+	POPCNT: ext | 23
+	AESNI: ext | 25
+	XSAVE: ext | 26
+	F16C: ext | 29
+	RDRAND: ext | 30
+	FSGSBASE: ext | 32 + 0
+	BMI1: ext | 32 + 3
+	HLE: ext | 32 + 4
+	BMI2: ext | 32 + 8
+	RTM: ext | 32 + 11
+	MPX: ext | 32 + 14
+	AVX512DQ: ext | 32 + 17
+	RDSEED: ext | 32 + 18
+	ADX: ext | 32 + 19
+	AVX512_IFMA: ext | 32 + 21
+	AVX512PF: ext | 32 + 26
+	AVX512ER: ext | 32 + 27
+	AVX512CD: ext | 32 + 28
+	AVX512BW: ext | 32 + 30
+	AVX512VL: ext | 32 + 31
+	AVX512_VBMI: ext | 64 + 1
+	AVX512_VBMI2: ext | 64 + 6
+	CET_SS: ext | 64 + 7
+	GFNI: ext | 64 + 8
+	VAES: ext | 64 + 9
+	VPCLMULQDQ: ext | 64 + 10
+	AVX512_VNNI: ext | 64 + 11
+	AVX512_BITALG: ext | 64 + 12
+	AVX512_VPOPCNTDQ: ext | 64 + 14
+	MOVDIRI: ext | 64 + 27
+	MOVDIR64B: ext | 64 + 28
+	AVX512_4VNNIW: ext | 96 + 2
+	CET_IBT: ext | 96 + 20
+
+	3DNow: ext | 128 + 31
 
 	; Some CPU presets:
 
@@ -174,11 +220,16 @@ end macro
 	i486: cpu = 4, fpu = 0, simd = 0, ext = 0
 	Pentium: cpu = 5, fpu = 5, simd = 0, ext = 0
 	PentiumPro: cpu = 6, fpu = 5, simd = 0, ext = 0
-	PentiumMMX: cpu = 5, fpu = 5, simd = 1, ext = 0
-	Pentium2: cpu = 6, fpu = 5, simd = 1, ext = 0
-	Pentium3: cpu = 6, fpu = 5, simd = 2, ext = 0
-	Pentium4: cpu = 6, fpu = 5, simd = 4, ext = 0
-	AMD64: cpu = 8, fpu = 5, simd = 3, ext = x86.3DNow.ext
+	PentiumMMX: cpu = 5, fpu = 5, simd = 5, ext = 0
+	Pentium2: cpu = 6, fpu = 5, simd = 5, ext = 0
+	Pentium3: cpu = 6, fpu = 5, simd = 10, ext = 0
+	Pentium4: cpu = 6, fpu = 5, simd = 30, ext = 0
+	AMD64: cpu = 8, fpu = 5, simd = 20, ext = x86.3DNow.ext
+
+	SSE4: simd = x86.SSE4.2.simd, ext | x86.POPCNT.ext
+	AVX512: simd = 60, ext | x86.AVX512VL.ext + x86.AVX512BW.ext + x86.AVX512DQ.ext + x86.AVX512CD.ext + x86.AVX512_IFMA.ext + x86.AVX512_VBMI.ext
+
+	everything: cpu = 8, fpu = 5, simd = 60, ext = -1
 
 	; Following settings are just hints of a preference, instruction encoder may listen to them
 	; when it is possible without altering the meaning of the instruction.
@@ -367,6 +418,10 @@ define x86.tword? :10
 define x86.tbyte? :10
 define x86.dqword? :16
 define x86.xword? :16
+define x86.qqword? :32
+define x86.yword? :32
+define x86.dqqword? :64
+define x86.zword? :64
 
 x86.REX_REQUIRED = 100h
 x86.REX_FORBIDDEN = 200h
@@ -381,6 +436,14 @@ end macro
 
 macro use64?
 	use bits64
+end macro
+
+macro useavx256?
+	use avx2
+end macro
+
+macro useavx512?
+	use avx512f
 end macro
 
 use16
@@ -3708,6 +3771,7 @@ calminstruction cmpxchg8b? dest*
 end calminstruction
 
 calminstruction cmpxchg16b? dest*
+	call	x86.require.CMPXCHG16B
 	call	x86.parse_operand@dest, dest
 	check	@dest.type = 'mem'
 	jyes	operand_ok
@@ -3874,9 +3938,264 @@ iterate <instr,postbyte>, fxsave64,0, fxrstor64,1
 
 end iterate
 
+iterate <instr,postbyte>, xsave,4, xrstor,5
+
+	macro instr? src*
+		require XSAVE
+		x86.parse_operand@src src
+		if @src.type = 'mem'
+			x86.store_instruction@src <0Fh,0AEh>,postbyte
+		else
+			err 'invalid operand'
+		end if
+	end macro
+
+	macro instr#64? src*
+		require XSAVE
+		require bits64
+		x86.parse_operand@src src
+		if @src.type = 'mem'
+			x86.select_operand_prefix@src 8
+			x86.store_instruction@src <0Fh,0AEh>,postbyte
+		else
+			err 'invalid operand'
+		end if
+	end macro
+
+end iterate
+
+macro xgetbv?
+	require XSAVE
+	db 0Fh,1,0D0h
+end macro
+
+macro xsetbv?
+	require XSAVE
+	db 0Fh,1,0D1h
+end macro
+
+macro getsec?
+	require SMX
+	db 0Fh,37h
+end macro
+
+macro monitor? arg1,arg2,arg3
+	require MONITOR
+	match any, arg1 arg2 arg3
+		if ~ arg1 eq eax | ~ arg2 eq ecx | ~ arg3 eq edx
+			err 'invalid combination of operands'
+		end if
+	end match
+	db 0Fh,01h,0C8h
+end macro
+
+macro mwait? arg1,arg2
+	require MONITOR
+	match any, arg1 arg2
+		if ~ arg1 eq eax | ~ arg2 eq ecx
+			err 'invalid combination of operands'
+		end if
+	end match
+	db 0Fh,01h,0C9h
+end macro
+
+iterate <instr,postbyte>, rdfsbase,0, rdgsbase,1, wrfsbase,2, wrgsbase,3
+
+	macro instr? dest*
+		require FSGSBASE
+		require bits64
+		x86.parse_operand@dest dest
+		if @dest.type = 'reg'
+			if @dest.size >= 4
+				@dest.opcode_prefix = 0F3h
+				x86.select_operand_prefix@dest @dest.size
+				x86.store_instruction@dest <0Fh,0AEh>,postbyte
+			else
+				err 'invalid operand size'
+			end if
+		else
+			err 'invalid operand'
+		end if
+	end macro
+
+end iterate
+
+macro rdrand? dest*
+	require RDRAND
+	x86.parse_operand@dest dest
+	if @dest.type = 'reg'
+		x86.select_operand_prefix@dest @dest.size
+		x86.store_instruction@dest <0Fh,0C7h>,6
+	else
+		err 'invalid operand'
+	end if
+end macro
+
+macro rdseed? dest*
+	require RDSEED
+	x86.parse_operand@dest dest
+	if @dest.type = 'reg'
+		x86.select_operand_prefix@dest @dest.size
+		x86.store_instruction@dest <0Fh,0C7h>,7
+	else
+		err 'invalid operand'
+	end if
+end macro
+
+include 'iset/vmx.inc'
+include 'iset/mpx.inc'
+include 'iset/cet.inc'
+
+macro xacquire? instr&
+	require HLE
+	db 0F2h
+	instr
+end macro
+
+macro xrelease? instr&
+	require HLE
+	db 0F3h
+	instr
+end macro
+
+macro xtest?
+	require HLE
+	db 0Fh,1,0D6h
+end macro
+
+macro xbegin? dest*
+	require RTM
+	x86.parse_jump_operand@dest dest
+	if @dest.type = 'imm' & ~ @dest.jump_type
+		if x86.mode shr 3 <> @dest.size
+			err 'invalid operand size'
+		end if
+		if x86.mode = 16
+			db 0C7h,0F8h
+			dw @dest.imm-($+2)
+		else
+			if ~ $ relativeto 0 & @dest.imm relativeto 0
+				@dest.imm = @dest.imm + $ - 0 scaleof $
+				err 'invalid address'
+			end if
+			if @dest.unresolved | ( @dest.imm relativeto $ & @dest.imm-($+5) < 8000h & @dest.imm-($+5) >= -8000h )
+				db 66h,0C7h,0F8h
+				dw @dest.imm-($+2)
+			else
+				db 0C7h,0F8h
+				dd @dest.imm-($+4)
+			end if
+		end if
+	else
+		err 'invalid operand'
+	end if
+end macro
+
+macro xabort? imm*
+	require RTM
+	db 0C6h,0F8h,imm
+end macro
+
+macro xend?
+	require RTM
+	db 0Fh,1,0D5h
+end macro
+
+macro xtest?
+	require RTM
+	db 0Fh,1,0D6h
+end macro
+
+iterate <instr,pfx>, adcx,66h, adox,0F3h
+
+	macro instr? dest*,src*
+		require ADX
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
+		if @dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
+			if @src.size <> 0 & @src.size <> @dest.size
+				err 'operand sizes do not match'
+			end if
+			if @dest.size = 8 & x86.mode = 64
+				@src.prefix = 48h
+			else if @dest.size <> 4
+				err 'invalid operand size'
+			end if
+			@src.opcode_prefix = pfx
+			x86.store_instruction@src <0Fh,38h,0F6h>,@dest.rm
+		else
+			err 'invalid combination of operands'
+		end if
+	end macro
+
+end iterate
+
+macro movbe? dest*,src*
+	require MOVBE
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	if @dest.size & @src.size & @src.size <> @dest.size
+		err 'operand sizes do not match'
+	end if
+	if @dest.type = 'reg' & @src.type = 'mem' & @dest.size > 1
+		x86.select_operand_prefix@src @dest.size
+		x86.store_instruction@src <0Fh,38h,0F0h>,@dest.rm
+	else if @dest.type = 'mem' & @src.type = 'reg' & @src.size > 1
+		x86.select_operand_prefix@dest @src.size
+		x86.store_instruction@dest <0Fh,38h,0F1h>,@src.rm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
+
+macro movdiri? dest*,src*
+	require MOVDIRI
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	if @src.type = 'reg' & @dest.type = 'mem'
+		if @dest.size <> 0 & @src.size <> @dest.size
+			err 'operand sizes do not match'
+		end if
+		if @src.size = 8 & x86.mode = 64
+			@dest.prefix = 48h
+		else if @src.size <> 4
+			err 'invalid operand size'
+		end if
+		x86.store_instruction@dest <0Fh,38h,0F9h>,@src.rm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
+
+macro movdir64b? dest*,src*
+	require MOVDIR64B
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	if @dest.type = 'reg' & @src.type = 'mem'
+		if @src.size and not 64
+			err 'invalid operand size'
+		end if
+		if (@src.mode = 16 & @dest.size <> 2) | (@src.mode = 32 & @dest.size <> 4) | (@src.mode = 64 & @dest.size <> 8)
+			err 'invalid operand size'
+		end if
+		@src.opcode_prefix = 66h
+		x86.store_instruction@src <0Fh,38h,0F8h>,@dest.rm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
+
 include 'iset/mmx.inc'
 include 'iset/sse.inc'
 include 'iset/sse2.inc'
 include 'iset/sse3.inc'
+include 'iset/sse4.inc'
+
+include 'iset/avx.inc'
+include 'iset/bmi.inc'
+
+include 'iset/aes.inc'
+include 'iset/gfni.inc'
+include 'iset/pclmulqdq.inc'
 
 include 'iset/3dnow.inc'

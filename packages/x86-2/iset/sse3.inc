@@ -57,22 +57,28 @@ macro lddqu? dest*,src*
 	end if
 end macro
 
-macro monitor? arg1,arg2,arg3
-	require SSE3+
-	match any, arg1 arg2 arg3
-		if ~ arg1 eq eax | ~ arg2 eq ecx | ~ arg3 eq edx
-			err 'invalid combination of operands'
-		end if
-	end match
-	db 0Fh,01h,0C8h
-end macro
+iterate <instr,supp>, pshufb,0, phaddw,1, phaddd,2, phaddsw,3, pmaddubsw,4, phsubw,5, phsubd,6, phsubsw,7, psignb,8, psignw,9, psignd,0Ah, pmulhrsw,0Bh, pabsb,1Ch, pabsw,1Dh, pabsd,1Eh
+	macro instr? dest*,src*
+		require SSSE3+
+		MMX.basic_instruction <38h,supp>,dest,src
+	end macro
+end iterate
 
-macro mwait? arg1,arg2
-	require SSE3+
-	match any, arg1 arg2
-		if ~ arg1 eq eax | ~ arg2 eq ecx
-			err 'invalid combination of operands'
+macro palignr? dest*,src*,aux*
+	require SSSE3+
+	SSE.parse_operand@dest dest
+	SSE.parse_operand@src src
+	x86.parse_operand@aux aux
+	if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg') & @aux.type = 'imm'
+		if @src.size and not @dest.size
+			err 'operand sizes do not match'
 		end if
-	end match
-	db 0Fh,01h,0C9h
+		if @aux.size and not 1
+			err 'invalid operand size'
+		end if
+		MMX.select_operand_prefix @src,@dest.size
+		x86.store_instruction@src <0Fh,3Ah,0Fh>,@dest.rm,1,@aux.imm
+	else
+		err 'invalid combination of operands'
+	end if
 end macro
