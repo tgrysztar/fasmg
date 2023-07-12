@@ -96,16 +96,16 @@ macro ? line&
 					c3 check x86.item = value
 					c3 jno unsatisfied
 				else match |, operator
-					c1 compute x86.item, x86.item or 1 shl value
-					c2 check x86.item and 1 shl value
+					c1 compute x86.item, x86.item or 1 shl (value)
+					c2 check x86.item and 1 shl (value)
 					c2 jno unsatisfied
-					c3 check x86.item and 1 shl value
+					c3 check x86.item and 1 shl (value)
 					c3 jno unsatisfied
 				else match +, operator
-					c1 compute x86.item, x86.item or value
-					c2 check x86.item and value = value
+					c1 compute x86.item, x86.item or (value)
+					c2 check x86.item and (value) = value
 					c2 jno unsatisfied
-					c3 check x86.item and value = value
+					c3 check x86.item and (value) = value
 					c3 jno unsatisfied
 				else
 					err 'unknown syntax (',`association,')'
