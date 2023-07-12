@@ -61,7 +61,7 @@ EVEX_W1 = 1 shl 15
 EVEX_REQUIRED = 1 shl 10
 EVEX_FORBIDDEN = 1 shl 2
 EVEX_VL = 1 shl 22
-EVEX_VL_AVX2 = 1 shl 2
+EVEX_VL_AVX2 = 1 shl 32
 EVEX_BW = 1 shl 23
 EVEX_DQ = 1 shl 24
 
@@ -1036,6 +1036,25 @@ macro AVX_512.single_source_instruction vex_mpw,evex_f,opcode,unit,dest,src
 	end if
 end macro
 
+macro AVX_512.single_source_instruction_imm8 vex_mpw,evex_f,opcode,unit,dest,src,aux
+	AVX_512.parse_k1z_operand@dest dest
+	AVX_512.parse_operand@src src
+	x86.parse_operand@aux aux
+	if @dest.type = 'mmreg' & (@src.type = 'mem' | @src.type = 'mmreg')
+		if @aux.size and not 1
+			err 'invalid operand size'
+		else if unit & ( @dest.size <> (unit-1) and not 15 + 16 | (@src.type = 'mem' & @src.size and not unit) )
+			err 'invalid operand size'
+		else if @src.size and not @dest.size & (unit = 0 | @src.type = 'mmreg')
+			err 'operand sizes do not match'
+		end if
+		@src.memsize = unit
+		AVX_512.store_instruction@src @dest.size,vex_mpw,evex_f,opcode,@dest.mask,@dest.rm,,1,@aux.imm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
+
 iterate <instr,opcode>, add,58h, mul,59h, sub,5Ch, div,5Eh
 
 	macro v#instr#pd? dest*,src*,src2*&
@@ -1151,6 +1170,33 @@ end macro
 macro vshufps? dest*,src*,src2*,aux*&
 	AVX_512.basic_instruction_bcst_imm8 VEX_0F_W0,EVEX_AS_VEX+EVEX_VL,0C6h,4,dest,src,src2,aux
 end macro
+
+iterate <instr,opcode>, blendps,0Ch, blendpd,0Dh
+
+	macro v#instr? dest*,src*,src2*,imm*
+		AVX_512.basic_instruction_imm8 VEX_66_0F3A_W0,EVEX_FORBIDDEN,opcode,0,dest,src,src2,imm
+	end macro
+
+end iterate
+
+iterate <instr,opcode>, blendvps,4Ah, blendvpd,4Bh
+
+	macro v#instr? dest*,src*,src2*,mask*
+		AVX_512.parse_operand@dest dest
+		AVX_512.parse_operand@src src
+		AVX_512.parse_operand@src2 src2
+		AVX_512.parse_operand@aux mask
+		if @dest.type = 'mmreg' & @src.type = 'mmreg' & (@src2.type = 'mem' | @src2.type = 'mmreg') & @aux.type = 'mmreg'
+			if @src.size <> @dest.size | @src2.size and not @dest.size | @aux.size <> @dest.size
+				err 'operand sizes do not match'
+			end if
+			AVX_512.store_instruction@src2 @dest.size,VEX_66_0F3A_W0,EVEX_FORBIDDEN,opcode,0,@dest.rm,@src.rm,1,(@aux.rm and 1111b) shl 4
+		else
+			err 'invalid combination of operands'
+		end if
+	end macro
+
+end iterate
 
 macro vbroadcastss? dest*,src*
 	require AVX2+
@@ -2716,9 +2762,9 @@ iterate <instr,opcode,asize>, vpgatherdd,90h,4, vpgatherqd,91h,8, vgatherdps,92h
 			end if
 		else
 			require AVX2+
-			AVX.parse_operand@dest dest
-			AVX.parse_vsib_operand@src src
-			AVX.parse_operand@aux aux
+			AVX_512.parse_operand@dest dest
+			AVX_512.parse_vsib_operand@src src
+			AVX_512.parse_operand@aux aux
 			if @dest.type = 'mmreg' & @src.type = 'mem' & @aux.type = 'mmreg'
 				if @src.size and not 4 | (@dest.size > 16 & @dest.size * (asize shr 2) > @src.visize) | (@src.visize > 16 & @dest.size * (asize shr 2) < @src.visize)
 					err 'invalid operand size'
@@ -2755,9 +2801,9 @@ iterate <instr,opcode,asize>, vpgatherdq,90h,4, vpgatherqq,91h,8, vgatherdpd,92h
 			end if
 		else
 			require AVX2+
-			AVX.parse_operand@dest dest
-			AVX.parse_vsib_operand@src src
-			AVX.parse_operand@aux aux
+			AVX_512.parse_operand@dest dest
+			AVX_512.parse_vsib_operand@src src
+			AVX_512.parse_operand@aux aux
 			if @dest.type = 'mmreg' & @src.type = 'mem' & @aux.type = 'mmreg'
 				if @src.size and not 8 | (@dest.size > 16 & @dest.size * (asize shr 2) > @src.visize * 2) | (@src.visize > 16 & @dest.size * (asize shr 2) < @src.visize * 2)
 					err 'invalid operand size'
@@ -3880,7 +3926,7 @@ macro vdpps? dest*,src*,src2*,imm*
 end macro
 
 macro vlddqu? dest*,src*
-	AVX.parse_operand@dest dest
+	AVX_512.parse_operand@dest dest
 	x86.parse_operand@src src
 	if @dest.type = 'mmreg' & @src.type = 'mem'
 		if @src.size and not @dest.size

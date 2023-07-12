@@ -16,3 +16,6 @@ use AMD64, bits64
 
     {imm32}	mov rax,1000	; 48 C7 C0 E8 03 00 00
     {imm64}	mov rax,1000	; 48 B8 E8 03 00 00 00 00 00 00
+
+    {AVX}	vaddpd ymm1,ymm2,[rbx+80h]	; C5 ED 58 8B 80 00 00 00
+    {AVX512}	vaddpd ymm1,ymm2,[rbx+80h]	; 62 F1 ED 28 58 4B 04

@@ -101,6 +101,12 @@ macro ? line&
 					c2 jno unsatisfied
 					c3 check x86.item and 1 shl value
 					c3 jno unsatisfied
+				else match +, operator
+					c1 compute x86.item, x86.item or value
+					c2 check x86.item and value = value
+					c2 jno unsatisfied
+					c3 check x86.item and value = value
+					c3 jno unsatisfied
 				else
 					err 'unknown syntax (',`association,')'
 				end match
@@ -226,8 +232,8 @@ end macro
 	Pentium4: cpu = 6, fpu = 5, simd = 30, ext = 0
 	AMD64: cpu = 8, fpu = 5, simd = 20, ext = x86.3DNow.ext
 
-	SSE4: simd = x86.SSE4.2.simd, ext | x86.POPCNT.ext
-	AVX512: simd = 60, ext | x86.AVX512VL.ext + x86.AVX512BW.ext + x86.AVX512DQ.ext + x86.AVX512CD.ext + x86.AVX512_IFMA.ext + x86.AVX512_VBMI.ext
+	SSE4: simd = x86.SSE4.2.simd, ext + x86.POPCNT.ext
+	AVX512: simd = x86.AVX512F.simd, ext + x86.AVX512VL.ext + x86.AVX512BW.ext + x86.AVX512DQ.ext + x86.AVX512CD.ext + x86.AVX512_IFMA.ext + x86.AVX512_VBMI.ext
 
 	everything: cpu = 8, fpu = 5, simd = 60, ext = -1
 

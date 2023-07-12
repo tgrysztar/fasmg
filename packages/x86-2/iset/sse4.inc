@@ -149,7 +149,7 @@ macro pextrw? dest*,src*,sel*
 		if @dest.size <> 4 | @aux.size and not 1
 			err 'invalid operand size'
 		end if
-		MMX.select_operand_prefix @src,@src.size
+		MMX.select_operand_prefix@src @src.size
 		x86.store_instruction@src <0Fh,0C5h>,@dest.rm,1,@aux.imm
 	else if @dest.type = 'mem' & (@src.type = 'mmreg' & @src.size = 16) & @aux.type = 'imm'
 		if @dest.size and not 2 | @aux.size and not 1

@@ -76,7 +76,7 @@ macro palignr? dest*,src*,aux*
 		if @aux.size and not 1
 			err 'invalid operand size'
 		end if
-		MMX.select_operand_prefix @src,@dest.size
+		MMX.select_operand_prefix@src @dest.size
 		x86.store_instruction@src <0Fh,3Ah,0Fh>,@dest.rm,1,@aux.imm
 	else
 		err 'invalid combination of operands'
