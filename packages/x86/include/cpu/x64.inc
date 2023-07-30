@@ -2529,9 +2529,7 @@ calminstruction jmp? dest*
 	exit
 
     jmp_imm:
-	check	@dest.jump_type & @dest.jump_type <> 'near'
-	jyes	invalid_operand
-	check	@dest.jump_type
+	check	@dest.jump_type = 'far'
 	jyes	invalid_operand
 	check	(@dest.size = 8 & x86.mode < 64) | (@dest.size < 8 & x86.mode = 64)
 	jyes	invalid_operand
@@ -2539,6 +2537,10 @@ calminstruction jmp? dest*
 	jyes	jmp_imm_prefix_ok
 	call	x86.store_operand_prefix, @dest.size
       jmp_imm_prefix_ok:
+	check	@dest.jump_type = 'short'
+	jyes	jmp_imm_short_verify
+	check	@dest.jump_type = 'near'
+	jyes	jmp_imm_near
 	check	~ $ relativeto 0 & @dest.imm relativeto 0
 	jno	jmp_optimize
 	compute @dest.imm, @dest.imm + $ - 0 scaleof $

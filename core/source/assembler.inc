@@ -938,6 +938,8 @@ assemble_instruction:
 	jz	unrecognized_instruction
 	cmp	[ebx+SymbolTree_Leaf.class],SYMCLASS_INSTRUCTION
 	jne	labeled_instruction
+	cmp	[symbol_independent],-1
+	je	unrecognized_instruction
 	call	get_available_value
 	jc	unrecognized_instruction
 	test	[edx+ValueDefinition.flags],VAL_UNCONDITIONAL
@@ -2327,7 +2329,7 @@ identify_symbol_in_namespace:
 ;   edx - SymbolTree_Foliage, may be null if either ebx or edi is null
 ;   edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
 ;   [symbol_start] - first token of identified symbol
-;   [symbol_independent] = zero when identifier is relative to current label
+;   [symbol_independent] = zero when identifier is relative to current label, all bits set for special identifiers
 ; note:
 ;  when ebx is null but edi is not, the identifier was malformed
 ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
@@ -2351,7 +2353,7 @@ identify_symbol:
 ;   edx - SymbolTree_Foliage, may be null if either ebx or edi is null
 ;   edi - SymbolTree_Root, null when there was no identifier at all or when identified symbol is not in a namespace
 ;   [symbol_start] - first token of identified symbol (within current embedded value or preprocessed line)
-;   [symbol_independent] = zero when identifier is relative to current label
+;   [symbol_independent] = zero when identifier is relative to current label, all bits set for special identifiers
 ; note:
 ;  when ebx is null but edi is not, the identifier was malformed
 ;  when edi is null but ebx is not, a special symbol was identified; this is possible only for SYMCLASS_INSTRUCTION and SYMCLASS_STRUCTURE
@@ -2532,9 +2534,11 @@ identify_symbol:
 	jmp	return_no_identifier
     return_label_interceptor_symbol:
 	mov	ebx,[label_interceptor_symbol]
-	jmp	return_no_namespace
+	jmp	return_special_symbol
     return_interceptor_symbol:
 	mov	ebx,[interceptor_symbol]
+    return_special_symbol:
+	or	[symbol_independent],-1
 	jmp	return_no_namespace
     repeated_question_mark:
 	inc	esi
@@ -2546,12 +2550,10 @@ identify_symbol:
 	call	check_concatenation
 	jnc	symbol_after_question_mark
     return_other_interceptor_symbol:
-	cmp	[symbol_definition],0
-	je	malformed_identifier
 	cmp	[expected_class],SYMCLASS_INSTRUCTION
 	jne	malformed_identifier
 	mov	ebx,[other_interceptor_symbol]
-	jmp	return_no_namespace
+	jmp	return_special_symbol
     multiple_dot_operator:
 	mov	ebx,edi
 	xor	edi,edi

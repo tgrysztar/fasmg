@@ -427,8 +427,8 @@ get_macro_definition_symbol:
     ; for regular ones this section interferes with operation of SYM_PREDICTED to sometimes prevent excess passes,
     ; when SYM_PREDICTED is needed to behave reliably for an instruction, its symbol
     ; should be marked with SYMX_INSTRUCTION_PREDICTED to skip this section
-       test    [ebx+SymbolTree_Leaf.extra_flags],SYMX_INSTRUCTION_PREDICTED
-       jnz     macro_symbol_ready
+	test	[ebx+SymbolTree_Leaf.extra_flags],SYMX_INSTRUCTION_PREDICTED
+	jnz	macro_symbol_ready
 	call	create_value_definition
 	test	edx,edx
 	jz	macro_symbol_ready

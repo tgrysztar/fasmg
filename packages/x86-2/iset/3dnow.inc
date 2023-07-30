@@ -5,7 +5,7 @@ iterate <instr,opcode>, pf2id,1Dh, pfacc,0AEh, pfadd,9Eh, pfmax,0A4h, pfmin,94h,
 			pfrsqrt,97h, pmulhrw,0B7h, pfrcpit2,0B6h, pfrsqit1,0A7h
 
 	calminstruction instr? dest*,src*
-		call	x86.requireexact.3DNow
+		call	x86.require.3DNow
 		call	MMX.parse_operand@dest, dest
 		call	MMX.parse_operand@src, src
 		check	@src.size and not @dest.size
@@ -23,14 +23,14 @@ iterate <instr,opcode>, pf2id,1Dh, pfacc,0AEh, pfadd,9Eh, pfmax,0A4h, pfmin,94h,
 end iterate
 
 calminstruction femms?
-	call	x86.requireexact.3DNow
+	call	x86.require.3DNow
 	emit	1, 0Fh
 	emit	1, 0Eh
 end calminstruction
 
 iterate <instr,postbyte>, prefetch,0, prefetchw,1
 	calminstruction instr? src*
-		call	x86.requireexact.3DNow
+		call	x86.require.3DNow
 		call	MMX.parse_operand@src, src
 		check	@src.type = 'mem'
 		jno	invalid_operand

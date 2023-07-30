@@ -17,33 +17,36 @@ calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
 end calminstruction
 
-; UNIQUE
-; generates a new unique identifier and stores it in given variable
-; (the identifier uses the name of said variable as a prefix)
-calminstruction calminstruction?.unique? name
-	local counter, buffer
-	init counter
-	compute counter, counter + 1
-	arrange buffer, name#counter
-	publish name, buffer
-end calminstruction
-
 ; ASM
 ; generates code to assemble given line of text as-is
 ; (any symbols in this text keep the context of the instruction's namespace)
 calminstruction calminstruction?.asm? line&
-	local tmp, ln, buffer
-	initsym tmp, unique ln
-	assemble tmp
-	publish ln, line
-	arrange buffer, =assemble ln
-	assemble buffer
+	local	name, i
+	initsym name, name.0
+	match	name.i, name
+	compute i, i+1
+	arrange name, name.i
+	publish name:, line
+	arrange line, =assemble name
+	assemble line
+end calminstruction
+
+; UNIQUE
+; generates a new unique identifier at the definition time of CALM instruction;
+; the identifier is stored in variable specified by name,
+; and the same name is used as a prefix for generated identifier
+calminstruction calminstruction?.unique? name
+	local i, buffer
+	init i
+	compute i, i+1
+	arrange buffer, name#i
+	publish name, buffer
 end calminstruction
 
 ; XCALL
 ; extends the CALL command with the ability to define some arguments as literal values;
 ; arguments enclosed with () are treated as numeric,
-; ones enclosed with <> are treated as a text of symbolic value.
+; ones enclosed with <> are treated as a text of symbolic value
 calminstruction calminstruction?.xcall? instruction*, arguments&
 	arrange instruction, =call instruction
     convert:
@@ -65,8 +68,8 @@ calminstruction calminstruction?.xcall? instruction*, arguments&
     numeric:
 	compute v, v
     symbolic:
-	local name
-	asm unique name
+	local	name
+	asm	unique name
 	publish name, v
 	arrange instruction, instruction=,name
 	jump	convert

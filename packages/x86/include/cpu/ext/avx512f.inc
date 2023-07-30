@@ -2141,7 +2141,7 @@ if ~ defined AVX_512
 				else if @src.size <> @dest.size
 					err 'operand sizes do not match'
 				end if
-				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F_W0,EVEX_AS_VEX,opcode_rrm,@dest.mask,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F_W0,EVEX_AS_VEX+EVEX_VL,opcode_rrm,@dest.mask,@dest.rm,@src.rm
 			else if @dest.type = 'mmreg' & (@src.type = 'mmreg' | @src.type = 'mem') & @src2.type = 'imm'
 				if @src2.size and not 1
 					err 'invalid operand size'

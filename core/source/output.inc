@@ -535,7 +535,8 @@ rewrite_output:
 	add	eax,edi
 	adc	ecx,ecx
 	add	eax,dword [file_offset]
-	jnc	rewrite_initialized_data
+	adc	ecx,0
+	jz	rewrite_initialized_data
 	cmp	eax,edi
 	jbe	rewrite_uninitialized_data
 	mov	eax,edi
