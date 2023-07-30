@@ -1,18 +1,18 @@
 
 macro local_include? instr
-	local pos,chr,path
-	pos = lengthof __FILE__
-	while pos
-		chr = (__FILE__ shr (8*(pos-1))) and 0FFh
-		if chr = '/' | chr = '\'
-			break
-		end if
-		pos = pos - 1
-	end while
-	path = string __FILE__ and not ( (-1) shl (8*pos) )
-	macro instr file
-		include string path + file shl (8*lengthof path)
-	end macro
+	local pos,chr,path 
+	pos = lengthof __FILE__ 
+	while pos 
+		chr = (__FILE__ shr (8*(pos-1))) and 0FFh 
+		if chr = '/' | chr = '\' 
+			break 
+		end if 
+		pos = pos - 1 
+	end while 
+	path = string __FILE__ and not ( (-1) shl (8*pos) ) 
+	macro instr file 
+		include string path + file shl (8*lengthof path) 
+	end macro 
 end macro
 
 local_include format?.include
@@ -43,9 +43,6 @@ macro format?.PE? settings
 			redefine seq more
 		else match =NX? more, seq
 			PE.Settings.DllCharacteristics = PE.Settings.DllCharacteristics or IMAGE_DLLCHARACTERISTICS_NX_COMPAT
-			redefine seq more
-		else match =ASLR? more, seq
-			PE.Settings.DllCharacteristics = PE.Settings.DllCharacteristics or IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE
 			redefine seq more
 		else match =at? base =on? stub :, seq
 			PE.Settings.ImageBase = base
@@ -125,9 +122,6 @@ macro format?.PE64? settings
 			redefine seq more
 		else match =NX? more, seq
 			PE.Settings.DllCharacteristics = PE.Settings.DllCharacteristics or IMAGE_DLLCHARACTERISTICS_NX_COMPAT
-			redefine seq more
-		else match =ASLR? more, seq
-			PE.Settings.DllCharacteristics = PE.Settings.DllCharacteristics or IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE or IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA
 			redefine seq more
 		else match =at? base =on? stub :, seq
 			PE.Settings.ImageBase = base
