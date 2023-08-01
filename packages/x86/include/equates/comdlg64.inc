@@ -2,8 +2,7 @@
 ; COMDLG32.DLL structures and constants
 
 struct OPENFILENAME
-  lStructSize	    dd ?
-		    dd ?
+  lStructSize	    dq ?
   hwndOwner	    dq ?
   hInstance	    dq ?
   lpstrFilter	    dq ?
@@ -22,29 +21,27 @@ struct OPENFILENAME
   nFileOffset	    dw ?
   nFileExtension    dw ?
   lpstrDefExt	    dq ?
-  lCustData	    dd ?
-		    dd ?
+  lCustData	    dq ?
   lpfnHook	    dq ?
   lpTemplateName    dq ?
 ends
 
 struct CHOOSECOLOR
-  lStructSize	 dd ?
-		 dd ?
+  lStructSize	 dq ?
   hwndOwner	 dq ?
   hInstance	 dq ?
   rgbResult	 dd ?
 		 dd ?
   lpCustColors	 dq ?
   Flags 	 dd ?
-  lCustData	 dd ?
+		 dd ?
+  lCustData	 dq ?
   lpfnHook	 dq ?
   lpTemplateName dq ?
 ends
 
 struct FINDREPLACE
-  lStructSize	   dd ?
-		   dd ?
+  lStructSize	   dq ?
   hwndOwner	   dq ?
   hInstance	   dq ?
   Flags 	   dd ?
@@ -53,21 +50,22 @@ struct FINDREPLACE
   lpstrReplaceWith dq ?
   wFindWhatLen	   dw ?
   wReplaceWithLen  dw ?
-  lCustData	   dd ?
+		   dd ?
+  lCustData	   dq ?
   lpfnHook	   dq ?
   lpTemplateName   dq ?
 ends
 
 struct CHOOSEFONT
-  lStructSize	 dd ?
-		 dd ?
+  lStructSize	 dq ?
   hwndOwner	 dq ?
   hDC		 dq ?
   lpLogFont	 dq ?
   iPointSize	 dd ?
   Flags 	 dd ?
   rgbColors	 dd ?
-  lCustData	 dd ?
+		 dd ?
+  lCustData	 dq ?
   lpfnHook	 dq ?
   lpTemplateName dq ?
   hInstance	 dq ?
@@ -79,8 +77,7 @@ struct CHOOSEFONT
 ends
 
 struct PRINTDLG
-  lStructSize	      dd ?
-		      dd ?
+  lStructSize	      dq ?
   hwndOwner	      dq ?
   hDevMode	      dq ?
   hDevNames	      dq ?
@@ -93,8 +90,7 @@ struct PRINTDLG
   nCopies	      dw ?
 		      dw ?
   hInstance	      dq ?
-  lCustData	      dd ?
-		      dd ?
+  lCustData	      dq ?
   lpfnPrintHook       dq ?
   lpfnSetupHook       dq ?
   lpPrintTemplateName dq ?
@@ -111,8 +107,7 @@ struct DEVNAMES
 ends
 
 struct PAGESETUPDLG
-  lStructSize		  dd ?
-			  dd ?
+  lStructSize		  dq ?
   hwndOwner		  dq ?
   hDevMode		  dq ?
   hDevNames		  dq ?
@@ -122,8 +117,7 @@ struct PAGESETUPDLG
   rtMargin		  RECT
 			  dd ?
   hInstance		  dq ?
-  lCustData		  dd ?
-			  dd ?
+  lCustData		  dq ?
   lpfnPageSetupHook	  dq ?
   lpfnPagePaintHook	  dq ?
   lpPageSetupTemplateName dq ?
