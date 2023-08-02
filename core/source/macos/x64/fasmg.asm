@@ -480,7 +480,7 @@ section '__cstring' align 4
 	 db 'Optional settings:',10
 	 db '    -p limit    Set the maximum allowed number of passes (default 100)',10
 	 db '    -e limit    Set the maximum number of displayed errors (default 1)',10
-	 db '    -r limit    Set the maximum depth of stack (default 10000)',10
+	 db '    -r limit    Set the maximum depth of the stack (default 10000)',10
 	 db '    -v flag     Enable or disable showing all lines from the stack (default 0)',10
 	 db '    -i command  Insert instruction at the beginning of source',13,10
 	 db '    -n          Do not show logo nor summary',13,10

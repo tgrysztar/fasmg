@@ -47,6 +47,6 @@ _assertion_failed db "assertion failed",0
 _area_overflow db "exceeded the maximum allowed length of output area",0
 _address_out_of_range db "address out of range",0
 _invalid_area db "invalid or inaccessible addressing area",0
-_stack_limit_exceeded db "exceeded the maximum allowed depth of stack",0
+_stack_limit_exceeded db "exceeded the maximum allowed depth of the stack",0
 _repeated_declaration db "choice has already been declared",0
 _undefined_jump_target db "the target of the jump is not defined in this instruction",0
