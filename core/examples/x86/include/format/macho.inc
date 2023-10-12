@@ -495,7 +495,7 @@ macro MachO.segment declaration
 				size	       dd	?
 			end if
 				offset	       dd	?
-				align.	       dd	?
+				?align	       dd	?
 				reloff	       dd	?
 				nreloc	       dd	?
 				flags	       dd	?
@@ -632,7 +632,7 @@ macro MachO.section declaration
 				size	       dd	?
 			end if
 				offset	       dd	?
-				align.	       dd	?
+				?align	       dd	?
 				reloff	       dd	?
 				nreloc	       dd	?
 				flags	       dd	?

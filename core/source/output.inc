@@ -281,7 +281,7 @@ load_from_area:
 	jc	area_offset_unavailable
 	mov	ecx,[edx+ValueDefinition.value_length]
 	sub	ecx,ebx
-	jbe	load_out_of_initialized_data
+	jb	load_out_of_initialized_data
 	call	prepare_load_length
 	jc	area_offset_unavailable
 	xchg	esi,ebx

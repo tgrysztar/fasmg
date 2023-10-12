@@ -4006,7 +4006,7 @@ iterate <instr,w>, vpmaskmovd,0, vpmaskmovq,1
 			if @src.size <> @src2.size | @dest.size and not @src.size
 				err 'operand sizes do not match'
 			end if
-			AVX.store_instruction@dest @dest.size,VEX_66_0F38_W#w,8Eh,@src2.rm,@src.rm
+			AVX.store_instruction@dest @src.size,VEX_66_0F38_W#w,8Eh,@src2.rm,@src.rm
 		else
 			err 'invalid combination of operands'
 		end if
