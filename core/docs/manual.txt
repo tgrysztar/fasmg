@@ -1205,13 +1205,6 @@ initial part matters. For example, prepending a name of a parameter with
 "#" character is going to cause the identifier to use current context instead
 of context carried by the text of that parameter, because initial context
 for the identifier is then the context associated with text "#".
-  Unlike the value of a symbolic variable, the body of a macroinstruction
-by itself carries no context (although it may contain snippets of text that
-came from replaced parameters and because of that have some context associated
-with them). Also, if a macroinstruction becomes unrolled at the time when
-another one is being defined (this can only happen when called macroinstruction
-is unconditional), no context information is added to the arguments, to aid in
-preservation of this context-lessness.
   If the text following "equ" contains identifiers of known symbolic variables, 
 each of them is replaced with its contents and it is such processed text that
 gets assigned to the newly defined symbol.
@@ -1246,6 +1239,28 @@ the content of this variable, whatever it is. For example if a symbolic variable
 is made which is a link to a regular symbol, then any operator like "defined"
 followed by the identifier of said symbolic variable is going to determine
 the status of a linked symbol, not a linking variable.
+  Unlike the value of a symbolic variable, the body of a macroinstruction
+by itself carries no context (although it may contain snippets of text that
+came from replaced parameters and because of that have some context associated
+with them). Also, if a macroinstruction becomes unrolled at the time when
+another one is being defined (this can only happen when called macroinstruction
+is unconditional), no context information is added to the arguments, to aid in
+preservation of this context-lessness.
+  It also also possible to force a macro argument to add no context information
+to its text. The name of such argument should be preceded by "&" character.
+This allows to have an argument whose text is reinterpreted in the new context
+during the evaluation of a macro.
+
+        char = 'A'
+        other.char = 'W'
+
+        macro both a, &b
+                namespace other
+                        db a, b
+                end namespace
+        end macro
+
+        both char+1, char+1 ; db 'B', 'X'
 
 
 11. Repeating blocks of instructions

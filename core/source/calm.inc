@@ -3,10 +3,16 @@ struct CompiledMacroHeader
 	shared_namespace dd ?
 	literals_offset dd ?
 	label_argument_leaf dd ?
+	label_argument_contextless db ?
+	reserved db ?
+	reserved2 dw ?
 ends
 
 struct CompiledMacroArgument
 	symbol_leaf dd ?
+	contextless db ?
+	reserved db ?
+	reserved2 dw ?
 	default_value_length dd ?
 	default_value_offset dd ?
 ends
@@ -72,6 +78,12 @@ define_calm_instruction:
 	jz	calm_instruction_label_argument_ok
 	push	esi edi
 	mov	esi,ebx
+	cmp	byte [esi],'&'
+	sete	al
+	mov	[edi+CompiledMacroHeader.label_argument_contextless],al
+	jne	calm_instruction_label_prefix_ok
+	inc	esi
+    calm_instruction_label_prefix_ok:
 	mov	dl,SYMCLASS_EXPRESSION
 	mov	ebx,[new_local_namespace]
 	call	identify_symbol_in_namespace
@@ -94,6 +106,12 @@ define_calm_instruction:
     calm_instruction_argument_declaration:
 	call	move_to_next_symbol
 	jc	calm_instruction_arguments_declared
+	cmp	al,'&'
+	sete	al
+	mov	[contextless_processing],al
+	jne	calm_instruction_argument_name
+	inc	esi
+    calm_instruction_argument_name:
 	mov	dl,SYMCLASS_EXPRESSION
 	push	edi
 	mov	ebx,[new_local_namespace]
@@ -106,6 +124,8 @@ define_calm_instruction:
 	mov	ecx,sizeof.CompiledMacroArgument+4
 	call	reserve_workspace
 	mov	[edi+CompiledMacroArgument.symbol_leaf],ebx
+	mov	al,[contextless_processing]
+	mov	[edi+CompiledMacroArgument.contextless],al
 	call	update_value_definition
 	test	edx,edx
 	jz	calm_instruction_argument_prepared
@@ -178,6 +198,7 @@ define_calm_instruction:
 	mov	[edi+CompiledMacroArgument.default_value_offset],eax
 	jmp	calm_instruction_argument_ready
     calm_instruction_greedy_argument:
+	assert	CompiledMacroArgument.symbol_leaf = 0
 	or	eax,-1
 	stosd
 	jmp	call_instruction_begin_code
@@ -197,6 +218,7 @@ define_calm_instruction:
 	mov	dl,SYMCLASS_STRUCTURE
 	jmp	get_calm_instruction_identifier
     calm_instruction_arguments_declared:
+	assert	CompiledMacroArgument.symbol_leaf = 0
 	xor	eax,eax
 	stosd
     call_instruction_begin_code:
@@ -1688,6 +1710,10 @@ launch_calm:
 	mov	ebx,[esi+CompiledMacroHeader.label_argument_leaf]
 	test	ebx,ebx
 	jz	calm_label_argument_ok
+	test	[assembly_mode],AMODE_DEFINITION
+	setnz	al
+	or	al,[esi+CompiledMacroHeader.label_argument_contextless]
+	mov	[contextless_processing],al
 	call	update_value_definition
 	test	edx,edx
 	jz	calm_label_argument_ok
@@ -1730,6 +1756,10 @@ launch_calm:
 	sub	ecx,[calm_source_pointer]
 	add	ecx,1+sizeof.RecognitionContext
 	call	reserve_workspace
+	test	[assembly_mode],AMODE_DEFINITION
+	setnz	al
+	or	al,[esi+CompiledMacroArgument.contextless]
+	mov	[contextless_processing],al
 	mov	eax,[esi+sizeof.CompiledMacroArgument]
 	xchg	esi,[calm_source_pointer]
 	inc	eax
