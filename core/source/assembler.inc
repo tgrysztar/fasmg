@@ -2080,6 +2080,7 @@ extract_piece_of_line:
 ;  dl = initial byte of symbol that should end the cut value, zero to cut up to the end of line
 ;  dh = initial byte of symbol that would open the nested piece, zero for no nesting
 ;  [breakpoint_token] = initial byte of symbol that should unconditionally end the cut value if it is met
+;  [contextless_processing] = zero to have current context added to the extracted value
 ; out:
 ;  esi = pointer advanced past the processed piece
 ;  edi - end of the extracted sequence of tokens in provided buffer
@@ -2088,7 +2089,6 @@ extract_piece_of_line:
 ; preserves: ebx, edx
 ; note:
 ;  when [breakpoint_token] has the same value as either dl or dh, it has no effect
-;  when AMODE_DEFINITION is active, current context is not added to the extracted value
 	and	[context_boundary],0
 	call	move_to_next_symbol
 	jc	no_piece_to_extract
@@ -2110,8 +2110,8 @@ extract_piece_of_line:
 	dec	edi
 	jmp	extract_piece
     extract_current_context:
-	test	[assembly_mode],AMODE_DEFINITION
-	jnz	extract_contextless
+	cmp	[contextless_processing],0
+	jne	extract_contextless
 	call	store_current_context
     extract_piece:
 	lodsb

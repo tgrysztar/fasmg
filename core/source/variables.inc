@@ -307,6 +307,7 @@ variables:
     alm_statement db ?
     calm_result db ?
     hidden_context db ?
+    contextless_processing db ?
 
 variables_end:
 

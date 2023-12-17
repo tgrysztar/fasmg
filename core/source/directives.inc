@@ -334,6 +334,7 @@ extract_argument_value:
 ;  esi = pointer into preprocessed line (not an embedded value)
 ;  edi - buffer for token sequence, must be large enough to hold all the remaining tokens in line and an additional context token
 ;  [breakpoint_token] = initial byte of symbol that - if encountered - should immediately end the value
+;  [contextless_processing] = zero to have current context added to the extracted value
 ; out:
 ;  esi = pointer advanced past the processed piece
 ;  edi - end of the extracted sequence of tokens in provided buffer
@@ -3139,6 +3140,12 @@ define_macro:
 	call	move_to_next_symbol
 	jc	macro_parameters_correct
     check_macro_parameters:
+	cmp	al,'&'
+	jne	macro_parameter_prefix_ok
+	inc	esi
+	call	move_to_next_symbol
+	jc	invalid_macro_definition
+    macro_parameter_prefix_ok:
 	cmp	al,'#'
 	jne	check_parameter_name
 	call	check_concatenation
@@ -3290,6 +3297,11 @@ define_macro:
 	mov	[argument_start],esi
 	inc	esi
 	xor	ecx,ecx
+	call	move_to_next_symbol
+	jc	invalid_macro_definition
+	cmp	al,'&'
+	jne	check_label_parameter_initial_concatenation
+	inc	esi
 	call	move_to_next_symbol
 	jc	invalid_macro_definition
     check_label_parameter_initial_concatenation:
@@ -3540,6 +3552,17 @@ use_struc:
 	cmp	byte [esi],'('
 	jne	prepare_macro_parameters
 	inc	esi
+	call	move_to_next_symbol
+	jc	invalid_argument
+	test	[assembly_mode],AMODE_DEFINITION
+	setnz	dl
+	cmp	al,'&'
+	sete	al
+	jne	struc_label_prefix_ok
+	inc	esi
+      struc_label_prefix_ok:
+	or	al,dl
+	mov	[contextless_processing],al
 	mov	ebx,[new_local_namespace]
 	mov	dl,SYMCLASS_PARAMETER
 	call	identify_symbol_in_namespace
@@ -3587,6 +3610,14 @@ use_struc:
 	mov	[macro_greedy],al
 	mov	[number_of_parameters],eax
     macro_parameter_declaration:
+	call	move_to_next_symbol
+	jc	macro_parameters_declared
+	cmp	al,'&'
+	sete	al
+	mov	[contextless_processing],al
+	jne	identify_macro_parameter_name
+	inc	esi
+    identify_macro_parameter_name:
 	mov	ebx,[new_local_namespace]
 	mov	dl,SYMCLASS_PARAMETER
 	push	edi
@@ -3599,9 +3630,9 @@ use_struc:
 	cmp	eax,[new_local_namespace]
 	jne	invalid_argument
 	mov	eax,[number_of_parameters]
-	shl	eax,2
+	shl	eax,3
 	add	eax,[assembly_stack_base]
-	lea	ecx,[eax+4]
+	lea	ecx,[eax+8]
 	cmp	ecx,[assembly_stack_end]
 	jbe	store_macro_parameter_leaf
 	mov	eax,[assembly_stack_base]
@@ -3611,10 +3642,12 @@ use_struc:
 	add	ecx,eax
 	mov	[assembly_stack_end],ecx
 	mov	ecx,[number_of_parameters]
-	shl	ecx,2
+	shl	ecx,3
 	add	eax,ecx
       store_macro_parameter_leaf:
 	mov	[eax],ebx
+	mov	cl,[contextless_processing]
+	mov	[eax+4],cl
 	mov	edx,expression_workspace
 	mov	ecx,sizeof.LineExcerpt
 	call	reserve_workspace
@@ -3695,6 +3728,14 @@ use_struc:
 	inc	esi
       get_macro_parameter:
 	mov	edi,[assembly_workspace.memory_start]
+	mov	ecx,[parameter_index]
+	shl	ecx,3
+	add	ecx,[assembly_stack_base]
+	mov	ebx,[ecx]
+	test	[assembly_mode],AMODE_DEFINITION
+	setnz	dl
+	or	dl,[ecx+4]
+	mov	[contextless_processing],dl
 	cmp	[macro_greedy],0
 	je	standard_parameter_value
 	cmp	eax,1
@@ -3705,10 +3746,6 @@ use_struc:
       standard_parameter_value:
 	call	extract_argument_value
       parameter_value_ready:
-	mov	eax,[parameter_index]
-	shl	eax,2
-	add	eax,[assembly_stack_base]
-	mov	ebx,[eax]
 	or	[ebx+SymbolTree_Leaf.flags],SYM_VARIABLE
 	call	update_value_definition
 	mov	[value_type],VALTYPE_SYMBOLIC
@@ -3781,9 +3818,9 @@ use_struc:
 	mov	edx,assembly_workspace
 	call	reserve_workspace
 	mov	al,40h
-	stosb
 	cmp	[ebx+LineExcerpt.recognition_context],0
 	je	parameter_with_current_context
+	stosb
 	mov	eax,esi
 	mov	esi,[ebx+LineExcerpt.recognition_context]
 	assert	sizeof.RecognitionContext and 11b = 0
@@ -3793,6 +3830,9 @@ use_struc:
 	mov	esi,eax
 	jmp	copy_parameter_contents
       parameter_with_current_context:
+	cmp	[contextless_processing],0
+	jne	copy_parameter_contents
+	stosb
 	call	store_current_context
       copy_parameter_contents:
 	call	store_token
