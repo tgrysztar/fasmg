@@ -2195,6 +2195,7 @@ make_recognition_context_token:
 ;  esi - RecognitionContext (contents of the context token)
 ;  edi - buffer for the context token
 ;  [context_boundary] = equal to edi if it is at the end of another context token
+;  [contextless_processing] = zero to convert context reset into a context switch capturing the current context
 ; out:
 ;  esi - past the processed RecognitionContext
 ;  edi - past the extracted context token
@@ -2208,15 +2209,16 @@ make_recognition_context_token:
 	sub	edi,sizeof.RecognitionContext
     store_recognition_context:
     ; in:
-    ;  esi - RecognitionContext to read (may have base namespace zeroed to indicate current context)
+    ;  esi - RecognitionContext to read (may have base namespace zeroed to indicate context reset)
     ;  edi - RecognitionContext to fill
     ; out:
     ;  esi - past the processed RecognitionContext
     ;  edi - past the filled RecognitionContext
     ;  [context_boundary] - past the filled RecognitionContext
+    ;  [contextless_processing] = zero to convert context reset into a context switch capturing the current context
     ; preserves: ebx, edx
-	test	[assembly_mode],AMODE_DEFINITION
-	jnz	copy_recognition_context
+	cmp	[contextless_processing],0
+	jne	copy_recognition_context
 	cmp	[esi+RecognitionContext.base_namespace],0
 	je	capture_context_reset
       copy_recognition_context:
