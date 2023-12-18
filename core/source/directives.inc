@@ -783,6 +783,7 @@ define_symbolic_variable:
     symbolic_variable:
 	mov	edi,[assembly_workspace.memory_start]
 	and	[previous_symbol_end],0
+	and	[contextless_processing],0
     expand_symbols:
 	cmp	[raw_value],0
 	jne	copy_raw_symbols
