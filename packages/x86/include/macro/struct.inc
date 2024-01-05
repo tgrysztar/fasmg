@@ -350,7 +350,7 @@ macro ends?!
 				name.__body
 			end namespace
 			sizeof.name := $
-			label name: sizeof.name at 0
+			label name: sizeof.name at sizeof.name
 		end virtual
 
 		struct?.check name
