@@ -280,16 +280,13 @@ convert_number:
 	jae	invalid_digit
 	shl	eax,cl
 	or	[edi],al
-	sub	ebx,1
-	jc	number_converted
 	add	cl,3
 	cmp	cl,8
-	jb	octal_digit
+	jb	skip_octal_digit
 	sub	cl,8
 	inc	edi
 	mov	[edi],ah
 	xor	eax,eax
-	jmp	octal_digit
       skip_octal_digit:
 	sub	ebx,1
 	jnc	octal_digit
