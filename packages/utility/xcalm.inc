@@ -60,7 +60,7 @@ calminstruction calminstruction?.xcall? instruction*, arguments&
     recognize:
 	match	(v), v
 	jyes	numeric
-	match	<v>, v
+	match	<v?>, v
 	jyes	symbolic
     append:
 	arrange instruction, instruction=,v
