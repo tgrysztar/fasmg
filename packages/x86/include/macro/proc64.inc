@@ -64,6 +64,25 @@ macro fastcall?: proc*,args&
 		sub rsp,framesize
 	end if
 	offset = 0
+	local nest,called
+	called = 0
+	iterate arg, args
+		nest = 0
+		match =invoke? func, arg
+			nest = %
+		else match =fastcall? func, arg
+			nest = %
+		end match
+		if nest
+			if called
+				mov [rsp+8*(called-1)],rax
+			end if
+			frame
+				arg
+			end frame
+			called = nest
+		end if
+	end iterate
 	iterate arg, args
 		match =float? val, arg
 			type = 'f'
@@ -74,19 +93,21 @@ macro fastcall?: proc*,args&
 			value reequ val
 			x86.parse_operand@src [val]
 		else match =invoke? func, arg
-			frame
-			invoke func
-			end frame
-			type = 0
-			value reequ rax
-			x86.parse_operand@src rax
+			if called = %
+				type = 0
+				value reequ rax
+				x86.parse_operand@src rax
+			else
+				type = 'r'
+			end if
 		else match =fastcall? func, arg
-			frame
-			fastcall func
-			end frame
-			type = 0
-			value reequ rax
-			x86.parse_operand@src rax
+			if called = %
+				type = 0
+				value reequ rax
+				x86.parse_operand@src rax
+			else
+				type = 'r'
+			end if
 		else match first=,rest, arg
 			type = 's'
 			value reequ arg
@@ -118,7 +139,7 @@ macro fastcall?: proc*,args&
 						mov eax,value
 						movd fastcall.rf#%,eax
 					else
-						movd fastcall.rf#%,value
+					       movd fastcall.rf#%,value
 					end if
 				else
 					err 'invalid argument ',`arg
@@ -127,6 +148,11 @@ macro fastcall?: proc*,args&
 				if type = 'a'
 					lea fastcall.r#%,[value]
 				else
+					if type = 'r'
+						@src.size = 8
+						@src.type = 'mem'
+						value equ [rsp+8*(%-1)]
+					end if
 					if @src.size = 8 | ~ @src.size
 						redefine target fastcall.r#%
 						if @src.type <> 'reg' | ~ @src.imm eq fastcall.r#%
@@ -152,7 +178,9 @@ macro fastcall?: proc*,args&
 				end if
 			end if
 		else
-			if @src.type = 'reg'
+			if type = 'r'
+				; already on stack
+			else if @src.type = 'reg'
 				mov [rsp+offset],value
 			else if @src.type = 'mem'
 				if type = 'a'
@@ -217,7 +245,7 @@ macro fastcall?: proc*,args&
 end macro
 
 macro invoke?: proc*,args&
-	fastcall [proc],args 
+	fastcall [proc],args
 end macro 
 
 macro cinvoke?: proc*,args&
