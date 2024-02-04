@@ -95,7 +95,7 @@ show_errors:
 	push	esi
 	mov	eax,[esi+sizeof.Error+SourceContext.number_of_entries]
 	test	eax,eax
-	jz	show_error_message
+	jz	display_error_message
 	lea	ebx,[esi+sizeof.Error+sizeof.SourceContext]
 	dec	eax
 	imul	eax,sizeof.SourceEntry
@@ -211,9 +211,9 @@ show_errors:
 	call	display_error_string
 	mov	ebx,[esp]
 	test	[ebx+Error.flags],ERR_CUSTOM
-	jnz	show_error_message
+	jnz	display_error_message
 	cmp	[ebx+Error.preprocessed_length],0
-	je	show_error_message
+	je	display_error_message
 	mov	esi,_preprocessed_text_prefix
 	xor	ecx,ecx
 	call	display_error_string
@@ -223,13 +223,23 @@ show_errors:
 	mov	esi,_new_line
 	xor	ecx,ecx
 	call	display_error_string
-    show_error_message:
+    display_error_message:
 	pop	ebx
+	call	show_error_message
+	mov	esi,ebx
+    next_error:
+	mov	esi,[esi+Error.next]
+	jmp	display_error
+
+show_error_message:
+; in:
+;  ebx - Error
+; preserves: ebx
 	mov	esi,_error_prefix
 	test	[ebx+Error.flags],ERR_CUSTOM
 	jz	display_error_prefix
 	mov	esi,_custom_error_prefix
-      display_error_prefix:
+    display_error_prefix:
 	xor	ecx,ecx
 	call	display_error_string
 	mov	esi,[ebx+Error.message]
@@ -237,14 +247,11 @@ show_errors:
 	jz	format_error_message
 	xor	ecx,ecx
 	call	display_error_string
-      finish_error_message:
+    finish_error_message:
 	mov	esi,_message_suffix
 	xor	ecx,ecx
 	call	display_error_string
-	mov	esi,ebx
-    next_error:
-	mov	esi,[esi+Error.next]
-	jmp	display_error
+	retn
     format_error_message:
 	mov	edx,esi
       cut_error_message:
