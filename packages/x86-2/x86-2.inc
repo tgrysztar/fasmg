@@ -7,6 +7,7 @@ define MMX MMX
 define SSE SSE
 define AVX AVX
 define AVX_512 AVX_512
+define MPX MPX
 
 calminstruction calminstruction?.initsym? var*, val&
 	publish var, val
@@ -4049,7 +4050,7 @@ macro rdseed? dest*
 end macro
 
 include 'iset/vmx.inc'
-include 'iset/mpx.inc'
+;include 'iset/mpx.inc'
 include 'iset/cet.inc'
 
 macro xacquire? instr&

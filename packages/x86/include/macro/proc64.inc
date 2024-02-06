@@ -139,7 +139,7 @@ macro fastcall?: proc*,args&
 						mov eax,value
 						movd fastcall.rf#%,eax
 					else
-					       movd fastcall.rf#%,value
+						movd fastcall.rf#%,value
 					end if
 				else
 					err 'invalid argument ',`arg

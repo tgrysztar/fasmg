@@ -116,7 +116,7 @@ postpone ?
 	end virtual
 end postpone
 
-calminstruction ? line&
+calminstruction ? &line&
 	local	tmp
 	arrange tmp, line
 	stringify tmp

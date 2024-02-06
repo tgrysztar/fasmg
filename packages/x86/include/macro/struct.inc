@@ -5,28 +5,27 @@ define struct? struct?
 
 namespace struct?
 
-	calminstruction instantiate: instance*, sname*, values&
+	calminstruction instantiate: instance*, sname*, &values&
 
 		local tmp
-		arrange tmp, =label instance : =sizeof.sname
+		arrange tmp, =label instance : sname.=__size__
 		assemble tmp
 		arrange tmp, =namespace instance
 		assemble tmp
 
 		match , values
-		jyes default_body
-
-		arrange tmp, =struct?.=initialize sname, values
-		assemble tmp
+		jyes values_ready
+		call struct?.initialize, sname, values
+	    values_ready:
 
 		local i
 		compute i, 1
-
 		local field, val, stack
 	    process_statement:
 		arrange field, sname.=__label#i
 		transform field
 		jyes labeled_statement
+		arrange field,
 		arrange tmp, sname.=__statement#i
 		transform tmp
 		jyes statement_ready
@@ -37,18 +36,17 @@ namespace struct?
 		transform tmp
 		arrange val, =__init__.#field
 		transform val
-		jyes given_value
-		arrange val, sname.=__default__.#field
-		transform val
 		jyes got_value
-		jump statement_ready
-	    given_value:
-		take stack, field
+		arrange val, sname.=__default__.#field
+		arrange field,
+		transform val
+		jno statement_ready
 	    got_value:
 		arrange tmp, tmp val
 
 	    statement_ready:
 
+		take stack, field
 		take stack, i
 		take stack, sname
 		assemble tmp
@@ -56,9 +54,11 @@ namespace struct?
 		take sname, stack
 		take , i
 		take i, stack
-
+		take , field
 		take field, stack
-		jno next_statement
+		match , field
+		jyes next_statement
+
 		arrange tmp, sname.=__size__.#field - (=$ - field)
 		compute tmp, tmp
 		check tmp = 0
@@ -75,10 +75,6 @@ namespace struct?
 	    next_statement:
 		compute i, i + 1
 		jump	process_statement
-
-	    default_body:
-		arrange tmp, sname.=__body
-		assemble tmp
 
 	    finish:
 		asm end namespace
@@ -173,7 +169,7 @@ namespace struct?
 	define u
 	define a
 
-	calminstruction (label) collect?! definition&
+	calminstruction (&label) collect? &definition&
 		local sym, default, tmp
 		match , definition
 		jyes plain
@@ -206,7 +202,7 @@ namespace struct?
 		assemble label
 	end calminstruction
 
-	calminstruction collect?! statement&
+	calminstruction collect? &statement&
 		local proto, sym, tmp
 		check i
 		jyes in_body
@@ -214,9 +210,10 @@ namespace struct?
 		compute u, 0
 		compute i, 1
 		compute j, 1
+		asm virtual at 0
 		match pname= proto, pname
-		arrange statement, =macro pname.=__body
-		assemble statement
+		arrange tmp, =namespace pname
+		assemble tmp
 		jno prototype_copied
 	    use_prototype:
 		arrange a,
@@ -239,7 +236,6 @@ namespace struct?
 	    prototype_copied:
 		compute j, j - 1
 		arrange a, pname.=__argument
-		exit
 
 	    in_body:
 		match =ends?, statement
@@ -313,7 +309,14 @@ namespace struct?
 		take , u
 		take a, a
 		jyes done
-		asm end macro
+		asm end namespace
+		arrange sym, pname.=__size__
+		compute tmp, $
+		publish sym:, tmp
+		arrange tmp, #sym
+		arrange sym, =sizeof.pname
+		publish sym, tmp
+		asm end virtual
 		assemble statement
 	    done:
 	end calminstruction
@@ -336,22 +339,15 @@ macro struct? declaration*, attributes
 	struct?.i = 0
 	mvstruc ?, struct?.collect
 	mvmacro ?, struct?.collect
-	esc ; dummy line to launch the body definition
 end macro
 
-macro ends?!
+macro ends?
 	mvmacro struct?.collect, ?
 	mvstruc struct?.collect, ?
 
 	match name, struct?.pname
 
-		virtual at 0
-			namespace name
-				name.__body
-			end namespace
-			sizeof.name := $
-			label name: sizeof.name at sizeof.name
-		end virtual
+		label name: name.__size__ at name.__size__
 
 		struct?.check name
 
@@ -359,16 +355,15 @@ macro ends?!
 		define sname name
 
 		calminstruction (instance) name values&
-			arrange values, =struct?.=instantiate instance, sname, values
-			assemble values
+			call struct?.instantiate, instance, sname, values
 		end calminstruction
 
-		calminstruction name values&
-			local ic
+		calminstruction name &values&
+			local ic, iname
 			init ic
 			compute ic, ic + 1
-			arrange values, =struct?.=instantiate sname#ic, sname, values
-			assemble values
+			arrange iname, sname#ic
+			call struct?.instantiate, iname, sname, values
 		end calminstruction
 
 	end match

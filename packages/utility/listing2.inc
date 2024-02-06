@@ -29,7 +29,7 @@ namespace Listing
 	define base
 	define address
 
-	calminstruction ? line&
+	calminstruction ? &line&
 		assemble line
 		check	ON
 		jno	done

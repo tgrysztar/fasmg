@@ -1,7 +1,4 @@
 
-
-define MPX MPX
-
 element MPX.bnd
 
 repeat 4, i:0

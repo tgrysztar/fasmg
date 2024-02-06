@@ -33,7 +33,7 @@ macro end?.inlinemacro?!
 end macro
 
 macro inlinemacro?.enable?
-	calminstruction ?! text&
+	calminstruction ?! &text&
 		local	head, tail, name, arguments, more, i
 		init	i, 0
 		match	=inlinemacro? more, text
