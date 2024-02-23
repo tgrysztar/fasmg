@@ -888,24 +888,6 @@ alm_match:
 	call	skip_token
 	cmp	esi,edi
 	jne	invalid_argument
-	mov	esi,[pattern_start]
-    ensure_no_brackets_in_pattern:
-	cmp	esi,[calm_literals_cursor]
-	je	brackets_ok
-	mov	al,[esi]
-	cmp	al,dl
-	je	invalid_argument
-	cmp	al,dh
-	je	invalid_argument
-	cmp	al,1Bh
-	je	skip_reference_in_pattern
-	call	skip_token
-	jmp	ensure_no_brackets_in_pattern
-      skip_reference_in_pattern:
-	add	esi,1+8
-	jmp	ensure_no_brackets_in_pattern
-    brackets_ok:
-	mov	esi,edi
 	mov	word [brackets],dx
     no_brackets:
 	mov	edi,[calm_code_cursor]

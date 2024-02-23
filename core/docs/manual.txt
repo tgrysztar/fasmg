@@ -2164,7 +2164,6 @@ a text that has this kind of brackets properly balanced.
 
         please display 'H',('g'+2) + display '!'
 
-The brackets selected by the third argument must not be used anywhere in the pattern.
   The "arrange" command is like an inverse of "match", it can build up a text
 containing the values of one or more symbolic variables. The first argument defines
 a variable where the constructed text is going to be stored, while the second argument
