@@ -69,6 +69,9 @@ iterate context, @dest,@src,@src2,@aux
 
 	namespace context
 
+		define vex
+		define evex
+		define evex_flags
 		define mask
 		define evex_b
 		define memsize

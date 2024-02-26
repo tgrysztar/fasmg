@@ -157,6 +157,7 @@ end macro
 	80486: cpu = 4
 	P5: cpu = 5
 	P6: cpu = 6
+	P68: cpu = 7
 	x64: cpu = 8
 
 	8087: fpu = 1
@@ -230,7 +231,7 @@ end macro
 	PentiumMMX: cpu = 5, fpu = 5, simd = 5, ext = 0
 	Pentium2: cpu = 6, fpu = 5, simd = 5, ext = 0
 	Pentium3: cpu = 6, fpu = 5, simd = 10, ext = 0
-	Pentium4: cpu = 6, fpu = 5, simd = 30, ext = 0
+	Pentium4: cpu = 7, fpu = 5, simd = 30, ext = 0
 	AMD64: cpu = 8, fpu = 5, simd = 20, ext = x86.3DNow.ext
 
 	SSE4: simd = x86.SSE4.2.simd, ext + x86.POPCNT.ext
@@ -3923,6 +3924,27 @@ iterate <instr,opcode,postbyte>, fucomi,0DBh,5, fucomip,0DFh,5, fcomi,0DBh,6, fc
 	end calminstruction
 
 end iterate
+
+calminstruction nop? src
+	match	, src
+	jno	multibyte
+	emit	1, 90h
+	exit
+    multibyte:
+	call	x86.require.P68
+	call	x86.parse_operand@src, src
+	check	@src.type = 'mem' | @src.type = 'reg'
+	jyes	nop_rm_reg
+	err	'invalid operand'
+	exit
+    nop_rm_reg:
+	xcall	x86.select_operand_prefix@src, @src.size
+	xcall	x86.store_instruction@src, <0Fh,1Fh>,(0)
+end calminstruction
+
+calminstruction ud2?
+	emit	2, 0B0Fh
+end calminstruction
 
 iterate <instr,postbyte>, fxsave64,0, fxrstor64,1
 
