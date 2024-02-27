@@ -1,1 +1,1 @@
-VERSION equ "kcgn"
+VERSION equ "kcm8"

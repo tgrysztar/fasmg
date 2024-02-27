@@ -1281,7 +1281,7 @@ include_source:
 	call	get_constituent_value
 	jc	instruction_assembled
 	cmp	al,','
-	jne	instruction_assembled
+	jne	extra_characters_on_line
 	cmp	[number_of_line_embeddings],0
 	jne	invalid_argument
 	jmp	assemble_after_label
