@@ -53,7 +53,7 @@ calminstruction calminstruction?.xcall? instruction*, arguments&
 	match	, arguments
 	jyes	ready
 	local	v
-	match	v=,arguments, arguments, <>
+	match	v?=,arguments?, arguments, <>
 	jyes	recognize
 	arrange v, arguments
 	arrange arguments,

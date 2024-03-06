@@ -258,7 +258,7 @@ namespace COFF
 		element sym : relocatable * (1+SECTION_INDEX) + SYMBOL_INDEX
 		SECTION_BASE = sym
 		org sym
-		if DEFINED_SECTION | DEFAULT_SECTION_PRESENT
+		if DEFINED_SECTION | defined DEFAULT_SECTION
 			store SECTION_NAME : 8 at symbol_table : SYMBOL_INDEX * sizeof IMAGE_SYMBOL + IMAGE_SYMBOL.ShortName
 			store IMAGE_SYM_CLASS_STATIC at symbol_table : SYMBOL_INDEX * sizeof IMAGE_SYMBOL + IMAGE_SYMBOL.StorageClass
 			store 1+SECTION_INDEX at symbol_table : SYMBOL_INDEX * sizeof IMAGE_SYMBOL + IMAGE_SYMBOL.SectionNumber
@@ -276,7 +276,6 @@ namespace COFF
 	SECTION_NAME = '.flat'
 	SECTION_FLAGS = IMAGE_SCN_CNT_CODE + IMAGE_SCN_CNT_INITIALIZED_DATA
 	DEFINED_SECTION = 0
-	DEFAULT_SECTION_PRESENT = 0
 	section_start
 
 end namespace
@@ -289,7 +288,7 @@ macro section?
 		if DEFINED_SECTION | SECTION_SIZE > 0
 
 			if ~ DEFINED_SECTION
-				DEFAULT_SECTION_PRESENT = 1
+				DEFAULT_SECTION := 1
 			end if
 
 			if $%% = SECTION_OFFSET
