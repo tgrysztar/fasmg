@@ -161,7 +161,7 @@ namespace COFF
 		element sym : relocatable * (1+SECTION_INDEX) + SYMBOL_INDEX
 		SECTION_BASE = sym
 		org sym
-		if DEFINED_SECTION | DEFAULT_SECTION_PRESENT
+		if DEFINED_SECTION | defined DEFAULT_SECTION
 			store SECTION_NAME : 8 at symbol_table : SYMBOL_INDEX * SYMESZ + SYMENT.e_name
 			store C_STAT at symbol_table : SYMBOL_INDEX * SYMESZ + SYMENT.e_sclass
 			store 1+SECTION_INDEX at symbol_table : SYMBOL_INDEX * SYMESZ + SYMENT.e_scnum
@@ -179,7 +179,6 @@ namespace COFF
 	SECTION_NAME = '.flat'
 	SECTION_FLAGS = STYP_TEXT + STYP_DATA
 	DEFINED_SECTION = 0
-	DEFAULT_SECTION_PRESENT = 0
 	section_start
 
 end namespace
@@ -192,7 +191,7 @@ macro section?
 		if DEFINED_SECTION | SECTION_SIZE > 0
 
 			if ~ DEFINED_SECTION
-				DEFAULT_SECTION_PRESENT = 1
+				DEFAULT_SECTION := 1
 			end if
 
 			if $%% = SECTION_OFFSET

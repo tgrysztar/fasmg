@@ -965,14 +965,10 @@ move_variable_values:
 	jne	invalid_argument
 	inc	esi
 	mov	dl,[chosen_class]
-	and	[symbol_definition],0
 	call	identify_symbol
 	jc	missing_argument
 	test	ebx,ebx
 	jz	invalid_identifier
-	mov	al,[ebx+SymbolTree_Leaf.class]
-	cmp	al,[chosen_class]
-	jne	instruction_assembled
 	xor	edx,edx
 	mov	edi,[label_leaf]
 	call	remove_value_definition
