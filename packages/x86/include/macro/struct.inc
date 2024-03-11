@@ -337,13 +337,13 @@ macro struct? declaration*, attributes
 
 	define struct?.pname declaration
 	struct?.i = 0
-	mvstruc ?, struct?.collect
-	mvmacro ?, struct?.collect
+	mvstruc ?, struct?.collect?
+	mvmacro ?, struct?.collect?
 end macro
 
 macro ends?
-	mvmacro struct?.collect, ?
-	mvstruc struct?.collect, ?
+	mvmacro struct?.collect?, ?
+	mvstruc struct?.collect?, ?
 
 	match name, struct?.pname
 
