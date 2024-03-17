@@ -2248,7 +2248,7 @@ end iterate
 iterate <instr,size,opcode>, retw,2,0C2h, retnw,2,0C2h, retd,4,0C2h, retnd,4,0C2h, retfw,2,0CAh, retfd,4,0CAh
 
 	calminstruction instr? operand
-		check	x86.mode < 64
+		check	x86.mode = 64
 		jyes	illegal_instruction
 		xcall	x86.store_operand_prefix, (size)
 		match	, operand
