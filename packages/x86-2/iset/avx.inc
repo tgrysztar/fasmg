@@ -497,6 +497,7 @@ iterate context, @dest,@src,@src2,@aux
 		end calminstruction
 
 		calminstruction AVX.store_instruction#context vsize*,vex_mpw*,opcode*,reg*,vreg:0,imm_size:0,immediate
+			compute evex_b, 0
 			xcall	AVX_512.store_instruction#context, vsize,vex_mpw,(EVEX_FORBIDDEN),opcode,(0),reg,vreg,imm_size,immediate
 		end calminstruction
 
