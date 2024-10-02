@@ -1,1 +1,1 @@
-VERSION equ "kd3c"
+VERSION equ "kkod"

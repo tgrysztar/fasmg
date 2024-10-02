@@ -117,8 +117,8 @@ convert_number:
 	xor	edx,edx
       multiply_decimal_number:
 	add	ecx,4
-	mov	eax,edx
-	xchg	eax,[edi+ecx]
+	mov	eax,[edi+ecx]
+	mov	[edi+ecx],edx
 	mul	ebx
 	add	[edi+ecx],eax
 	cmp	ecx,[edi]

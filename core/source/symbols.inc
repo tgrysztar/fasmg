@@ -326,10 +326,11 @@ scan_namespace:
 	jz	scan_symbol_branch
 	test	[ebx+SymbolTree_Foliage.flags],FOLIAGE_WITH_TOKEN
 	jz	use_token_for_foliage
-	lea	eax,[esi-4]
-	xchg	[edx],eax
-	lea	edx,[esi-4]
-	mov	[eax+4+ecx+8],edx
+	sub	esi,4
+	mov	eax,[edx]
+	mov	[edx],esi
+	mov	[eax+4+ecx+8],esi
+	add	esi,4
 	jmp	scan_symbol_branch
     use_token_for_foliage:
 	mov	esi,[edx]
