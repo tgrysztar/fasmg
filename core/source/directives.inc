@@ -3,6 +3,8 @@ struct DirectiveBlock
 	type db ?			; DBLOCK_#
 	subtype db ?			; CTRL_# for DBLOCK_CONTROL
 	flags db ?			; CTRLF_# for DBLOCK_CONTROL
+	reserved db ?
+	reserved2 dw ?
 	prior_assembly_mode db ?
 	prior_special_parameters db ?
 	prior_counter_position dd ?
@@ -85,6 +87,9 @@ add_directive_block:
 ; out: edi - new DirectiveBlock
 ; note: area for additional data is placed below the DirectiveBlock structure
 ; preserves: ebx, edx, esi
+	dec	ecx
+	and	ecx,(-1) shl 2
+	add	ecx,1 shl 2
 	push	esi ecx
 	mov	esi,[source_context]
 	mov	eax,[esi+SourceContext.number_of_entries]
