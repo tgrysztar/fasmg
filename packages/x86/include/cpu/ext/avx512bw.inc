@@ -37,39 +37,67 @@ iterate <t,vex_mpw,msize>, d,VEX_66_0F_W1,4, q,VEX_0F_W1,8
 
 	end iterate
 
-	macro kmov#t? dest*,src*
-		AVX_512.parse_operand@dest dest
-		AVX_512.parse_operand@src src
-		if @dest.type = 'maskreg' & (@src.type = 'maskreg' | @src.type = 'mem')
-			if @src.type = 'mem' & @src.size and not msize
-				err 'invalid operand size'
-			end if
-			AVX.store_instruction@src 16,vex_mpw,90h,@dest.rm
-		else if @dest.type = 'mem' & @src.type = 'maskreg'
-			if @dest.size and not msize
-				err 'invalid operand size'
-			end if
-			AVX.store_instruction@dest 16,vex_mpw,91h,@src.rm
-		else if @dest.type = 'maskreg' & @src.type = 'reg'
-			if (msize < 8 & @src.size <> 4) | (msize = 8 & @src.size <> 8)
-				err 'invalid operand size'
-			else if msize = 8 & x86.mode < 64
-				err 'instruction requires long mode'
-			end if
-			AVX.store_instruction@src 16,vex_mpw,92h,@dest.rm
-		else if @dest.type = 'reg' & @src.type = 'maskreg'
-			if (msize < 8 & @dest.size <> 4) | (msize = 8 & @dest.size <> 8)
-				err 'invalid operand size'
-			else if msize = 8 & x86.mode < 64
-				err 'instruction requires long mode'
-			end if
-			AVX.store_instruction@src 16,vex_mpw,93h,@dest.rm
-		else
-			err 'invalid combination of operands'
-		end if
-	end macro
-
 end iterate
+
+macro kmovd? dest*,src*
+	AVX_512.parse_operand@dest dest
+	AVX_512.parse_operand@src src
+	if @dest.type = 'maskreg' & (@src.type = 'maskreg' | @src.type = 'mem')
+		if @src.type = 'mem' & @src.size and not 4
+			err 'invalid operand size'
+		end if
+		AVX.store_instruction@src 16,VEX_66_0F_W1,90h,@dest.rm
+	else if @dest.type = 'mem' & @src.type = 'maskreg'
+		if @dest.size and not 4
+			err 'invalid operand size'
+		end if
+		AVX.store_instruction@dest 16,VEX_66_0F_W1,91h,@src.rm
+	else if @dest.type = 'maskreg' & @src.type = 'reg'
+		if @src.size <> 4
+			err 'invalid operand size'
+		end if
+		AVX.store_instruction@src 16,VEX_F2_0F_W0,92h,@dest.rm
+	else if @dest.type = 'reg' & @src.type = 'maskreg'
+		if @dest.size <> 4
+			err 'invalid operand size'
+		end if
+		AVX.store_instruction@src 16,VEX_F2_0F_W0,93h,@dest.rm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
+
+macro kmovq? dest*,src*
+	AVX_512.parse_operand@dest dest
+	AVX_512.parse_operand@src src
+	if @dest.type = 'maskreg' & (@src.type = 'maskreg' | @src.type = 'mem')
+		if @src.type = 'mem' & @src.size and not 8
+			err 'invalid operand size'
+		end if
+		AVX.store_instruction@src 16,VEX_0F_W1,90h,@dest.rm
+	else if @dest.type = 'mem' & @src.type = 'maskreg'
+		if @dest.size and not 8
+			err 'invalid operand size'
+		end if
+		AVX.store_instruction@dest 16,VEX_0F_W1,91h,@src.rm
+	else if @dest.type = 'maskreg' & @src.type = 'reg'
+		if @src.size <> 8
+			err 'invalid operand size'
+		else if x86.mode < 64
+			err 'instruction requires long mode'
+		end if
+		AVX.store_instruction@src 16,VEX_F2_0F_W1,92h,@dest.rm
+	else if @dest.type = 'reg' & @src.type = 'maskreg'
+		if @dest.size <> 8
+			err 'invalid operand size'
+		else if x86.mode < 64
+			err 'instruction requires long mode'
+		end if
+		AVX.store_instruction@src 16,VEX_F2_0F_W1,93h,@dest.rm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
 
 iterate <instr,vex_mpw,opcode>, kshiftrd,VEX_66_0F3A_W0,31h, kshiftrq,VEX_66_0F3A_W1,31h, \
 				kshiftld,VEX_66_0F3A_W0,33h, kshiftlq,VEX_66_0F3A_W1,33h
