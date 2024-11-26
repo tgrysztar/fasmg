@@ -1,19 +1,19 @@
 ; Challenger
 ; Esoteric language inspired by Befunge and x86.
 ; Designed and implemented by Tomasz Grysztar in 2009.
-; This code is public domain.
+; This code is in public domain.
 ;
 ; The main similarity to Befunge is the instruction flow on a two-dimensional
-; plane of characters, while a slight semblance of x86 is that this language
+; plane of characters, while a slight semblance to x86 is that this language
 ; is register-based.
 ;
 ; There are no input and output instructions - the character plane is similar
-; to memory in x86 system, any portion can be used to present an output,
-; analogously to something like a video memory. The intepreter displays
+; to memory in x86 system and any area can be used to present an output,
+; analogously to something like a video memory. The intepreter shows
 ; the contents of the plane in real time.
 ;
 ; Each memory cell is a 32-bit signed value, presented as Unicode character.
-; The program is loaded from UTF-8 text file and put somewhere on the plane.
+; The program is loaded from UTF-8 text file and placed on an empty plane.
 ;
 ; There are three pointers operated by the Challenger machine:
 ; instruction pointer (IP), data pointer (DP) and stack pointer (SP).
@@ -62,7 +62,7 @@
 ; Both the 0 and 32 (space) are NOP instructions.
 ; The uninitialized parts of plane are filled with 0 values.
 ; The initial value of accumulator is 0.
-; The interpreter displays the pointers with a tiny arrows: IP is green, DP is red, SP is yellow.
+; The interpreter displays the pointers with tiny arrows: IP is green, DP is red, SP is yellow.
 ; The instruction pointer wraps when it reaches the end of the initialized part of the plane.
 
 format PE GUI 4.0

@@ -2,7 +2,7 @@
 ; by Tomasz Grysztar
 
 ; Requires VGA and 80386 CPU or higher.
-; Version 1.01 was submitted in 2004 for a 512-byte OS contest
+; Version 1.01 was submitted in 2004 to 512-byte OS contest
 ;   (https://web.archive.org/web/20040930044834/http://512.decard.net/)
 
 ; For your playing pleasure, it's a boot-sector Tetris game.

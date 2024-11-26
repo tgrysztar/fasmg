@@ -91,7 +91,7 @@ section '.idata' import data readable writeable
      library kernel32,'KERNEL32.DLL',\
 	     user32,'USER32.DLL'
 
-     include 'api/kernel32.inc'
-     include 'api/user32.inc'
+     include '../x86/include/api/kernel32.inc'
+     include '../x86/include/api/user32.inc'
 
 section '.reloc' fixups data readable discardable
