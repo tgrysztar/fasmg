@@ -896,6 +896,8 @@ macro PE.fixups
 		calminstruction BuildFixups
 			local	PAGE_RVA, BLOCK_HEADER, BLOCK_SIZE
 			local	INDEX, ADDRESS, TYPE, FIXUP
+			check	NUMBER_OF_RELOCATIONS = 0
+			jyes	dummy
 			compute PAGE_RVA, -1
 			compute BLOCK_HEADER, 0
 			compute BLOCK_SIZE, 0
@@ -903,7 +905,7 @@ macro PE.fixups
 		    process:
 			check	INDEX = NUMBER_OF_RELOCATIONS
 			jyes	close_block
-			asm	load ADDRESS:4 from relocated_addresses:INDEX shl 2
+			load	ADDRESS, relocated_addresses:INDEX shl 2, 4
 			check	PAGE_RVA >= 0 & ADDRESS and not 0FFFh = PAGE_RVA
 			jyes	append_to_block
 		    close_block:
@@ -911,24 +913,28 @@ macro PE.fixups
 			jno	start_new_block
 			check	BLOCK_SIZE and 11b
 			jno	finish_block
-			asm	dw 0
+			emit	2, 0
 			compute BLOCK_SIZE, BLOCK_SIZE + 2
 		    finish_block:
-			asm	store BLOCK_SIZE:4 at BLOCK_HEADER+4
+			store	BLOCK_HEADER+4, 4, BLOCK_SIZE
 		    start_new_block:
 			check	INDEX = NUMBER_OF_RELOCATIONS
 			jyes	done
 			compute PAGE_RVA, ADDRESS and not 0FFFh
-			compute BLOCK_HEADER, $
-			asm	dd PAGE_RVA, 0
+			compute BLOCK_HEADER, $%
+			emit	4, PAGE_RVA
+			emit	4, 0
 			compute BLOCK_SIZE, 8
 		    append_to_block:
-			asm	load TYPE:2 from relocation_types:INDEX shl 1
+			load	TYPE, relocation_types:INDEX shl 1, 2
 			compute FIXUP, (ADDRESS and 0FFFh) or (TYPE shl 12)
-			asm	dw FIXUP
+			emit	2, FIXUP
 			compute BLOCK_SIZE, BLOCK_SIZE + 2
 			compute INDEX, INDEX + 1
 			jump	process
+		    dummy:
+			emit	4, 0
+			emit	4, 8
 		    done:
 		end calminstruction
 		BuildFixups
