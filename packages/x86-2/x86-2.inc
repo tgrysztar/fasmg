@@ -1346,7 +1346,7 @@ iterate <instr,basecode>, add,0, or,8, adc,10h, sbb,18h, and,20h, sub,28h, xor,3
 		jyes	imm32
 		check	size = 8
 		jyes	simm32
-		asm	emit size: @src.imm
+		call	word, @src.imm
 		exit
 	      imm32:
 		call	dword, @src.imm
