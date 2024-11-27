@@ -89,20 +89,22 @@ macro ? line&
 					x86.item = 0
 					define x86.settings item
 				end if
-				x86.name.item := value
 				match ==, operator
+					x86.name.item := value
 					c1 compute x86.item, value
 					c2 check x86.item >= value
 					c2 jno unsatisfied
 					c3 check x86.item = value
 					c3 jno unsatisfied
 				else match |, operator
+					x86.name.item := 1 shl (value)
 					c1 compute x86.item, x86.item or 1 shl (value)
 					c2 check x86.item and 1 shl (value)
 					c2 jno unsatisfied
 					c3 check x86.item and 1 shl (value)
 					c3 jno unsatisfied
 				else match +, operator
+					x86.name.item := value
 					c1 compute x86.item, x86.item or (value)
 					c2 check x86.item and (value) = value
 					c2 jno unsatisfied
