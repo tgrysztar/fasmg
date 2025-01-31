@@ -247,6 +247,8 @@ variables:
 
     number_of_lines dd ?
 
+    output_executable db ?
+
     preprocessing_mode db ?
     assembly_mode db ?
     next_pass_needed db ?

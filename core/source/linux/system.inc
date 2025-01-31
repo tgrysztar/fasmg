@@ -70,14 +70,19 @@ open:
 	stc
 	retn
 create:
-; in: edx - path to file
+; in: edx - path to file, al = executable flag
 ; out: ebx = file handle, cf set on error
 ; preserves: esi, edi
 	push	esi edi ebp
+	mov	edi,S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH
+	test	al,al
+	jz	file_attributes_ok
+	or	edi,S_IXUSR+S_IXGRP+S_IXOTH
+      file_attributes_ok:
 	call	adapt_path
 	mov	eax,5			; sys_open
 	mov	ecx,O_CREAT+O_TRUNC+O_WRONLY
-	mov	edx,S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH
+	mov	edx,edi
 	int	0x80
 	pop	ebp edi esi
 	test	eax,eax

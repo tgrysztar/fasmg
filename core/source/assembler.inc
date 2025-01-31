@@ -547,6 +547,7 @@ assembly_pass:
 	mov	[proxy_number],eax
 	mov	[output_extension],eax
 	mov	[output_extension_length],eax
+	mov	[output_executable],al
 	mov	ebx,[source_context]
 	mov	[ebx+SourceContext.number_of_entries],eax
 	add	ebx,sizeof.SourceContext

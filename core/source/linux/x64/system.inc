@@ -72,13 +72,18 @@ open:
 	jnz	copy_path
 	retn
 create:
-; in: edx - path to file
+; in: edx - path to file, al = executable flag
 ; out: ebx = file handle, cf set on error
 ; preserves: esi, edi
 	push	rsi rdi
+	mov	ebx,S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH
+	test	al,al
+	jz	file_attributes_ok
+	or	ebx,S_IXUSR+S_IXGRP+S_IXOTH
+      file_attributes_ok:
 	call	adapt_path
 	mov	esi,O_CREAT+O_TRUNC+O_WRONLY
-	mov	edx,S_IRUSR+S_IWUSR+S_IRGRP+S_IROTH
+	mov	edx,ebx
 	mov	eax,2			; sys_open
 	syscall
 	pop	rdi rsi

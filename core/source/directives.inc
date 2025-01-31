@@ -4710,6 +4710,8 @@ format_directive:
 	call	get_available_value
 	jc	invalid_argument
 	jmp	prefixed_directive
+format_executable:
+	or	[output_executable],1
 format_binary:
 	call	get_constituent_value
 	jc	instruction_assembled

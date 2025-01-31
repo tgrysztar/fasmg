@@ -566,6 +566,9 @@ db 6,'format'
   db 6,'binary',SYMCLASS_INSTRUCTION,VALTYPE_NATIVE_COMMAND,VAL_INTERNAL,0
   dd format_binary
 
+  db 10,'executable',SYMCLASS_INSTRUCTION,VALTYPE_NATIVE_COMMAND,VAL_INTERNAL,0
+  dd format_executable
+
   db 0
 
 db 15,'calminstruction'

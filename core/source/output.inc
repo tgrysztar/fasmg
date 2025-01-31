@@ -782,6 +782,7 @@ write_output_file:
 	mov	ecx,[output_extension_length]
 	call	create_output_path
     create_output_file:
+	mov	al,[output_executable]
 	call	create
 	jc	output_write_failed
 	mov	esi,[initial_output_area_entry]
@@ -862,6 +863,7 @@ write_auxiliary_output_area:
 	jz	auxiliary_output_processed
 	push	eax
 	call	create_output_path
+	xor	al,al
 	call	create
 	pop	edx
 	jc	auxiliary_file_creation_failed
