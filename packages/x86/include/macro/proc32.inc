@@ -216,7 +216,7 @@ macro proc? statement&
 
 			purge ret?,locals?,endl?,proclocal?
 
-			match close:reglist, close@proc,<regs>
+			match close:reglist, close@proc:<regs>
 				close name,flag,parmbytes,localbytes,reglist
 			end match
 
