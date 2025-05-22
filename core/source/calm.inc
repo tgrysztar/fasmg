@@ -2604,6 +2604,8 @@ match_number:
 	call	check_concatenation
 	jnc	match_number
     get_number_to_match:
+	cmp	al,1Ah
+	jne	no_number_matched
 	call	detect_numeric_symbol
 	jnc	no_number_matched
 	push	ebx edi
