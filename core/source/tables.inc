@@ -595,7 +595,10 @@ db 15,'calminstruction'
   dd alm_publish
 
   db 4,'take',SYMCLASS_INSTRUCTION,VALTYPE_NATIVE_COMMAND,VAL_INTERNAL,0
-  dd alm_take
+  dd alm_take_any
+
+  db 8,'taketext',SYMCLASS_INSTRUCTION,VALTYPE_NATIVE_COMMAND,VAL_INTERNAL,0
+  dd alm_take_symbolic
 
   db 7,'compute',SYMCLASS_INSTRUCTION,VALTYPE_NATIVE_COMMAND,VAL_INTERNAL,0
   dd alm_compute
@@ -638,6 +641,36 @@ db 15,'calminstruction'
 
   db 15,'calminstruction',SYMCLASS_STRUCTURE,VALTYPE_NATIVE_COMMAND,VAL_INTERNAL,0
   dd alm_end
+
+  db 6,'quoted',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_quoted_string
+
+  db 4,'name',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_valid_identifier
+
+  db 3,'equ',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_symbolic_variable
+
+  db 5,'macro',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_instruction
+
+  db 5,'struc',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_labeled_instruction
+
+  db 8,'priorequ',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_prior_symbolic_variable
+
+  db 10,'priormacro',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_prior_instruction
+
+  db 10,'priorstruc',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_prior_labeled_instruction
+
+  db 6,'number',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_number
+
+  db 10,'expression',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_expression
 
 db 0
 

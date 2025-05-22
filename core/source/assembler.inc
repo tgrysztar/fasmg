@@ -598,7 +598,7 @@ assembly_pass:
 assembly_line:
 	xor	eax,eax
 	mov	[value_position],eax
-	mov	[current_constituent],al
+	mov	[current_component],al
 	call	clear_line_embeddings
     get_line:
 	xor	eax,eax
@@ -1072,7 +1072,7 @@ assemble_instruction:
 	mov	esi,[line_start]
 	jmp	execute_instruction
 instruction_assembled:
-	cmp	[current_constituent],0
+	cmp	[current_component],0
 	jne	extra_characters_on_line
 	call	warp_to_next_symbol
 	jc	assembly_line
@@ -2841,7 +2841,7 @@ check_concatenation:
 
 get_literal:
 ; in:
-;  esi - token in preprocessed line or in current embedded value
+;  esi - token in preprocessed line or in current embedded value, past any initial concatenation characters
 ; out:
 ;  al = type of value
 ;  esi = pointer advanced past the processed literal and the whitespace that follows it
@@ -3199,7 +3199,7 @@ get_literal:
 
 skip_literal:
 ; in:
-;  esi - token in preprocessed line or in current embedded value
+;  esi - token in preprocessed line or in current embedded value, past any initial concatenation characters
 ; out:
 ;  esi = pointer advanced past the processed literal and the whitespace that follows it
 ;  ecx = number of whitespace tokens encountered immediately before the new position

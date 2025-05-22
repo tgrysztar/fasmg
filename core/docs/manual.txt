@@ -31,6 +31,7 @@ Table of contents
 14. Source and output control
 15. CALM instructions
 16. Assembly commands in CALM instructions
+17. Advanced matching in CALM instructions
 
 
 0. Executing the assembler
@@ -1214,7 +1215,7 @@ assigned text. It should be followed by an identifier of symbol to be defined
 and then by the text of the value.
   The difference between "equ" and "define" is often not noticeable, because
 when used in final expression the symbolic variables are nestedly evaluated
-until only the usable constituents of expressions are left. A possible use of
+until only the usable components of expressions are left. A possible use of
 "define" is to create a link to another symbolic variable, like the following
 example demonstrates:
 
@@ -2150,24 +2151,6 @@ of a wildcard, it does not affect how the symbol is identified (whether the used
 is case-insensitive depends on what is present in the local scope at the time
 the instruction is defined). Instead, modifying the name of a wildcard with "?" allows it
 to be matched with an empty text.
-  Since the source text for "match" is in this variant given by just a single identifier,
-this syntax allows to have more optional arguments. A third argument to "match" may
-contain a pair of bracket characters. Any wildcard element must then be matched with
-a text that has this kind of brackets properly balanced.
-
-        calminstruction please? cmd&
-                local first, second
-                match first + second, cmd, ()
-                jyes split
-                assemble cmd
-                exit
-            split:
-                assemble first
-                assemble second
-        end calminstruction
-
-        please display 'H',('g'+2) + display '!'
-
   The "arrange" command is like an inverse of "match", it can build up a text
 containing the values of one or more symbolic variables. The first argument defines
 a variable where the constructed text is going to be stored, while the second argument
@@ -2433,6 +2416,31 @@ is used.
 
         demo
 
+  Since some commands, like "match", do not accept values other than symbolic
+(ones containing tokenized text), there is a variant of "take" called "taketext"
+which performs its operation only when the value of source variable is of such kind.
+The called instruction may use "taketext" as a simple test to ensure that the value
+of an argument can be inspected with "match":
+
+        calminstruction forced_db? value*
+                taketext value, value
+                jno     proceed
+                match   ?, value
+                jno     proceed
+                arrange value, =rb 1
+                assemble value
+                exit
+             proceed:
+                compute value, value and 0FFh
+                arrange value, =db value
+                assemble value
+        end calminstruction
+
+        calminstruction xoredbyte a, b
+                compute a, a xor b
+                call    forced_db, a
+        end calminstruction
+
 
 16. Assembly commands in CALM instructions
 
@@ -2446,15 +2454,34 @@ similar to the second argument to "compute".
 the standard output, just like the regular directive with the same name.
 It takes a single argument, an expression giving either a string or a numeric
 value of a single byte.
+
+        calminstruction println? text
+                display text bappend 13 bappend 10
+        end calminstruction
+
   The "err" command signalizes an error, analogously to its namesake in
 base language. It takes a single argument, specifying a custom message to
 present. The argument is expected to evaluate to string value.
+
+        calminstruction check8bit? value*
+                check   value and 0FFh = value
+                jyes    ok
+                stringify value
+                err     value bappend ' is out of range'
+            ok:
+        end calminstruction
+
   The "emit" command generates data of length specified by the first argument
 and the value specified by the second. Both arguments are treated as
 pre-compiled expressions. The second argument is optional, if it is omitted,
 the data of specified length is generated as uninitialized. When the second
 argument is a string, it must fit within the specified size (a "lengthof"
 operator may be useful in this case).
+
+        calminstruction bigendian64? value*
+                emit    8, value bswap 8
+        end calminstruction
+
   The "load" and "store" commands allow to inspect or modify values in the
 already generated output or in the virtual blocks. While they are similar
 to their counterparts in base language, they have a different syntax, both
@@ -2464,15 +2491,161 @@ To point to the first byte of an area, stated offset must be zero.
   The arguments to "load" are, in order: target variable, offset to load from,
 number of bytes to load. The first argument must be an identifier of a symbol,
 the latter two are pre-compiled expressions. The second argument may contain
-a label of the area, followed by ":" and then offset, or just a plain numeric
-expression, in which case it is an offset within entire output generated
-up to this point. The loaded value is always a string of the specified length.
+a label of the area, followed by ":" and then the index of a byte, or only
+a plain numeric expression, in which case it is an offset within entire output
+generated up to this point. The index/offset must be an expression that
+evaluates to absolute numeric value. The loaded value is always a string
+of the specified length.
+
+        virtual
+                __upper::
+                repeat 256, c:0
+                        if c >= 'a' & c <= 'z'
+                                db c-'a'+'A'
+                        else
+                                db c
+                        end if
+                end repeat
+        end virtual
+
+        calminstruction (out) uppercase char*
+                load    char, __upper:+char, 1
+                publish out, char
+        end calminstruction
+
   The arguments to "store" are, in order: offset to store at, number of bytes
 to store, the value to store (numeric or string). The last two arguments
 are analogous to the arguments to "emit", at the same time the first two
 arguments are like the last two arguments to "load". The offset may be 
 prepended with the label of an area with ":" as the separator.
+
+        calminstruction encrypt offset, key
+                local   byte
+                load    byte, offset, 1
+                store   offset, 1, byte xor key
+        end calminstruction
+
   To convert between the addresses used by classic "load" and "store" and
 the raw offsets expected by the CALM commands, it suffices to add or subtract
 the base address of the area. If the base address is not known, it can be
 obtained with help of "1 metadataof" operator applied to an area label.
+
+
+17. Advanced matching in CALM instructions
+
+  The CALM "match" command has more capabilities than its regular counterpart.
+As already mentioned, modifying a wildcard with "?" character makes it optional,
+allowing it to match an empty text:
+
+        calminstruction show_tokens text&
+            loop:
+                match   token text?, text
+                jno     done
+                stringify token
+                display token bappend 0A0Dh
+                jump    loop
+            done:
+        end calminstruction
+
+  Since the second argument of CALM "match" is just an identifier and not
+a freeform text, it can be followed by more arguments. An optional third one
+may contain a pair of bracket characters and all wildcards must then be matched
+with a text that has these brackets properly balanced.
+
+        calminstruction range definition
+                match   from-to, definition, ()
+                emit    1, from
+                emit    1, to
+            done:
+        end calminstruction
+
+        range (10-3)-10
+
+  If the third argument contains only a single special character, it instead chooses
+the symbol that may be used to modify wildcards. It is best to select a character that
+otherwise does not show up in the pattern, but it is still possible to match it by
+prefixing it with "=" as usual. If the chosen character follows a wildcard name, it
+needs to be followed by one of the wildcard modifiers (which are built-in
+expression-class symbols in the namespace of case-insensitive "calminstruction").
+  The "name" modifier makes the wildcard match a complete symbol identifier:
+
+        calminstruction constdefine? var
+                local   val
+                arrange val,
+                match   var:name val, var, :
+                publish var:, val
+        end calminstruction
+
+        constdefine plus?+
+
+  The "expression" modifier makes the wildcard match a complete computable
+expression. It ensures that the expression is correctly structured, but does not
+attempt computing it. An additional "defined" check may determine if it also
+contains no undefined values, but even this does not guarantee an error-free
+evaluation: issues like overflows only come up during the actual computation.
+
+        calminstruction bigendian64? text
+                match   text/expression, text, /
+                jyes    inspect
+                err     'malformed expression'
+                exit
+            inspect:
+                check   defined text
+                jyes    evaluate
+                err     'expression with unknown quantities'
+            evaluate:
+                emit    8, text bswap 8
+        end calminstruction
+
+  A wildcard modified with "number" matches a numeric literal, either integer or
+floating-point. One modified with "quoted" matches a quoted string.
+
+        calminstruction inspect text
+                match   text-quoted, text, -
+                jyes    quoted
+                match   text-expression, text, -
+                jno     not
+                check   text eqtype ''
+                jyes    computed
+            not:
+                display 'not a string' bappend 0A0Dh
+                exit
+            quoted:
+                display 'string token' bappend 0A0Dh
+                exit
+            computed:
+                display 'computed string' bappend 0A0Dh
+        end calminstruction
+
+        inspect 'a'
+        inspect 10
+        inspect string 10
+
+  The "equ", "macro" and "struc" modifiers make the wildcard accept only an
+identifier of defined symbol: a symbolic variable, an instruction, or a labeled
+instruction respectively. The "priorequ", "priormacro" and "priorstruc" modifiers
+do the same, but also ensure that the symbol has been defined earlier and is not
+forward-referenced.
+
+        if_true equ if 1
+        if_false equ if 0
+
+        calminstruction ifdef? sym*
+                match   sym.name, sym, .
+                jno     error
+                match   sym.equ, sym, .
+                jyes    true
+                check   defined sym
+                jno     false
+            true:
+                assemble if_true
+                exit
+            error:
+                err     'not a name'
+            false:
+                assemble if_false
+        end calminstruction
+
+  Specialized wildcards cannot be modified in any other way: they cannot be made
+optional and it is not possible to combine bracket balancing and wildcard
+modifying in the same command.

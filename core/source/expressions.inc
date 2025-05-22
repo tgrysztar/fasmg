@@ -811,38 +811,38 @@ get_area_value:
 	stc
 	retn
 
-get_constituent_value:
+get_component:
 ; same as get_processed_value
-; note: after any expression evaluation functions have been used, only this function should be used to retrieve constituents of line
+; note: after any expression evaluation functions have been used, only this function should be used to retrieve components of line
 	xor	al,al
-	xchg	al,[current_constituent]
+	xchg	al,[current_component]
 	test	al,al
 	jz	get_processed_value
-    get_constituent_components:
-	mov	ebx,[constituent_symbol]
-	mov	edx,[constituent_value]
-	mov	ecx,[constituent_whitespace]
+    get_component_data:
+	mov	ebx,[component_symbol]
+	mov	edx,[component_value]
+	mov	ecx,[component_whitespace]
 	clc
 	retn
 
-peek_at_constituent_value:
-; same as get_constituent_value, but returned values are also kept in constituent variables
+peek_at_component:
+; same as get_component, but returned values are also kept in component variables
 ; note:
-;  the retrieved value is still going to be available to expression evaluation functions or to the next call of get_constituent_value
-;  to consume the value it is enough to set [current_constituent] to zero
-	cmp	[current_constituent],0
-	jne	get_current_constituent
+;  the retrieved value is still going to be available to expression evaluation functions or to the next call of get_component
+;  to consume the value it is enough to set [current_component] to zero
+	cmp	[current_component],0
+	jne	get_current_component
 	call	get_processed_value
-	jc	constituent_value_ok
-	mov	[current_constituent],al
-	mov	[constituent_symbol],ebx
-	mov	[constituent_value],edx
-	mov	[constituent_whitespace],ecx
-    constituent_value_ok:
+	jc	component_ok
+	mov	[current_component],al
+	mov	[component_symbol],ebx
+	mov	[component_value],edx
+	mov	[component_whitespace],ecx
+    component_ok:
 	retn
-    get_current_constituent:
-	mov	al,[current_constituent]
-	jmp	get_constituent_components
+    get_current_component:
+	mov	al,[current_component]
+	jmp	get_component_data
 
 parse_expression:
 ; in:
@@ -859,7 +859,7 @@ parse_expression:
 	mov	eax,[operator_stack_base]
 	mov	[operator_stack],eax
 	mov	[operator_stack_position],eax
-	mov	[operator_argument_expected],1
+	mov	[operation_argument_expected],1
     get_expression_element:
 	mov	edi,[expression_end]
 	mov	edx,expression_workspace
@@ -868,7 +868,7 @@ parse_expression:
 	add	ecx,16
 	call	reserve_workspace
 	mov	[expression_end],edi
-	call	peek_at_constituent_value
+	call	peek_at_component
 	mov	edi,[expression_end]
 	jc	expression_line_end
 	cmp	al,'('
@@ -901,7 +901,7 @@ parse_expression:
 	jne	inspect_expression_symbol
 	test	[ecx+ValueDefinition.attribute],OPERATOR_UNARY
 	setnz	al
-	xor	al,[operator_argument_expected]
+	xor	al,[operation_argument_expected]
 	jz	store_expression_operator
 	mov	ecx,[ecx+ValueDefinition.previous]
 	test	ecx,ecx
@@ -910,7 +910,7 @@ parse_expression:
 	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_COMPARATOR
 	je	terminate_expression
     store_expression_symbol:
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	je	terminate_expression
 	mov	eax,EXPR_SYMBOL_VALUE
 	stosd
@@ -920,11 +920,11 @@ parse_expression:
 	stosd
     expression_symbol_stored:
 	mov	[expression_end],edi
-	and	[operator_argument_expected],0
-	and	[current_constituent],0
+	and	[operation_argument_expected],0
+	and	[current_component],0
 	jmp	get_expression_element
     store_expression_number:
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	je	terminate_expression
 	mov	eax,EXPR_NUMBER
     value_pointer_in_expression:
@@ -941,12 +941,12 @@ parse_expression:
 	stosd
 	jmp	expression_symbol_stored
     store_expression_string:
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	je	terminate_expression
 	mov	eax,EXPR_STRING
 	jmp	value_pointer_in_expression
     store_expression_float:
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	je	terminate_expression
 	mov	eax,EXPR_FLOAT
 	jmp	value_pointer_in_expression
@@ -956,7 +956,7 @@ parse_expression:
 	mov	ch,cl
 	and	cl,OPERATOR_PRECEDENCE_MASK
 	mov	ebx,[operator_stack_position]
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	jne	push_operator
     establish_operator_precedence:
 	cmp	ebx,[operator_stack]
@@ -984,11 +984,11 @@ parse_expression:
 	add	ebx,8
 	mov	[operator_stack_position],ebx
 	mov	[expression_end],edi
-	or	[operator_argument_expected],1
-	and	[current_constituent],0
+	or	[operation_argument_expected],1
+	and	[current_component],0
 	jmp	get_expression_element
     open_subexpression:
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	je	terminate_expression
 	mov	ebx,[operator_stack_position]
 	call	reserve_operator_stack
@@ -998,13 +998,13 @@ parse_expression:
 	add	ebx,4
 	mov	[operator_stack],ebx
 	mov	[operator_stack_position],ebx
-	and	[current_constituent],0
+	and	[current_component],0
 	jmp	get_expression_element
     close_subexpression:
 	mov	eax,[operator_stack]
 	cmp	eax,[operator_stack_base]
 	je	terminate_expression
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	je	subexpression_closed
 	mov	eax,EXPR_MISSING_ARGUMENT
 	stosd
@@ -1016,12 +1016,12 @@ parse_expression:
 	add	eax,[operator_stack_base]
 	mov	[operator_stack],eax
 	mov	[operator_stack_position],ebx
-	and	[current_constituent],0
+	and	[current_component],0
 	jmp	get_expression_element
     expression_line_end:
-	and	[current_constituent],0
+	and	[current_component],0
     terminate_expression:
-	cmp	[operator_argument_expected],0
+	cmp	[operation_argument_expected],0
 	je	close_expression
 	mov	eax,[operator_stack_position]
 	cmp	eax,[operator_stack]
@@ -1202,7 +1202,7 @@ calculate_parsed_expression:
 	and	[leave_opening_parentheses],0
 	call	parse_expression
 	pop	edi
-	call	get_constituent_value
+	call	get_component
 	jnc	invalid_subexpression
 	mov	esi,[expression_workspace.memory_start]
 	push	[calculation_position]

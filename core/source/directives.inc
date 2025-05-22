@@ -567,7 +567,7 @@ restart_output:
 	mov	ebx,[edx+ValueDefinition.value]
 	test	[ebx+AreaHeader.flags],AREA_VIRTUAL
 	jnz	unexpected_instruction
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	restart_output_at_current_address
 	call	get_expression_value
 	jc	invalid_argument
@@ -991,7 +991,7 @@ label_directive:
 	mov	al,[symbol_independent]
 	mov	[label_independent],al
 	and	[metadata_length],0
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	label_at_current_address
 	cmp	al,1Ah
 	jne	label_with_size
@@ -1004,7 +1004,7 @@ label_directive:
     label_with_size:
 	cmp	al,':'
 	jne	get_label_size
-	and	[current_constituent],0
+	and	[current_component],0
       get_label_size:
 	call	get_expression_value
 	jc	invalid_argument
@@ -1013,7 +1013,7 @@ label_directive:
 	call	convert_terms_to_numeric_value_in_workspace
 	mov	[metadata_length],ecx
 	pop	esi
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	label_at_current_address
 	cmp	al,1Ah
 	jne	label_at_current_address
@@ -1024,7 +1024,7 @@ label_directive:
 	cmp	[edx+ValueDefinition.value],PREPOSITION_AT
 	jne	invalid_argument
     label_at_specified_address:
-	and	[current_constituent],0
+	and	[current_component],0
 	call	get_expression_value
 	jc	invalid_argument
 	push	esi
@@ -1081,7 +1081,7 @@ virtual_block:
 	mov	[edi-sizeof.VirtualBlockData+VirtualBlockData.outer_area],edx
 	mov	al,[shift_tracking]
 	mov	[edi-sizeof.VirtualBlockData+VirtualBlockData.shift_tracking],al
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	virtual_at_current_address
 	cmp	al,1Ah
 	jne	invalid_argument
@@ -1094,7 +1094,7 @@ virtual_block:
 	je	virtual_at_current_address
 	cmp	eax,PREPOSITION_AT
 	jne	invalid_argument
-	and	[current_constituent],0
+	and	[current_component],0
 	call	get_expression_value
 	jc	invalid_argument
 	push	esi
@@ -1115,7 +1115,7 @@ virtual_block:
 	or	[edx+ValueDefinition.flags],VAL_IN_USE
 	mov	[current_area],edx
 	pop	esi
-	call	get_constituent_value
+	call	get_component
 	jc	instruction_assembled
 	cmp	al,1Ah
 	jne	invalid_argument
@@ -1279,7 +1279,7 @@ include_source:
 	and	[eax+SymbolTree_Root.parameters],0
 	mov	[ebx+SourceEntry.local_namespace],eax
 	pop	esi
-	call	get_constituent_value
+	call	get_component
 	jc	instruction_assembled
 	cmp	al,','
 	jne	extra_characters_on_line
@@ -1355,7 +1355,7 @@ evaluate_string:
 	mov	esi,ebx
     source_fragment_collected:
 	mov	[string_end],edi
-	call	get_constituent_value
+	call	get_component
 	jc	source_string_ready
 	cmp	al,','
 	jne	invalid_argument
@@ -1678,7 +1678,7 @@ repeated_block:
 	mov	[ecx+SymbolTree_Root.parameters],SPECPARM_COUNTER + SPECPARM_LIMIT
     define_named_counters:
 	xor	al,al
-	xchg	al,[current_constituent]
+	xchg	al,[current_component]
 	test	al,al
 	jz	get_counter_name
 	cmp	al,','
@@ -1692,11 +1692,11 @@ repeated_block:
 	test	ebx,ebx
 	jz	invalid_argument
 	mov	[label_leaf],ebx
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	counter_with_default_base
 	cmp	al,':'
 	jne	counter_with_default_base
-	and	[current_constituent],0
+	and	[current_component],0
 	call	get_numeric_constant_value
 	test	edx,edx
 	jz	invalid_counter_base
@@ -3068,7 +3068,7 @@ postponed_block:
 	mov	[edi+DirectiveBlock.subtype],CTRL_POSTPONE
 	mov	[directive_block],edi
 	or	[assembly_mode],AMODE_SKIP
-	call	get_constituent_value
+	call	get_component
 	jc	instruction_assembled
 	cmp	al,'?'
 	jne	invalid_argument
@@ -3951,7 +3951,7 @@ define_labeled_data:
 	js	value_out_of_range
 	cmp	[data_unit_length],0
 	je	value_out_of_range
-	call	get_constituent_value
+	call	get_component
 	jc	missing_argument
 	cmp	al,':'
 	je	data_unit_length_ok
@@ -3962,7 +3962,7 @@ define_labeled_data:
 	je	data_definition
 	call	define_data_label
     data_definition:
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	missing_argument
 	cmp	al,'?'
 	je	single_uninitialized_unit
@@ -3975,7 +3975,7 @@ define_labeled_data:
 	jne	invalid_argument
 	call	output_string
     data_outputted:
-	call	get_constituent_value
+	call	get_component
 	jc	instruction_assembled
 	cmp	al,','
 	jne	invalid_argument
@@ -3992,7 +3992,7 @@ define_labeled_data:
 	jmp	data_outputted
     numeric_data:
 	call	keep_value
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	single_data_unit
 	cmp	al,1Ah
 	jne	single_data_unit
@@ -4011,7 +4011,7 @@ define_labeled_data:
 	jc	value_out_of_range
 	jmp	data_outputted
     single_uninitialized_unit:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	ecx,[data_unit_length]
 	call	uninitialized_output
 	jmp	data_outputted
@@ -4023,9 +4023,9 @@ define_labeled_data:
 	jc	value_out_of_range
 	js	value_out_of_range
 	xor	eax,eax
-	mov	[current_constituent],al
+	mov	[current_component],al
 	mov	[initial_parentheses],eax
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	invalid_argument
 	cmp	al,'?'
 	je	reserve_through_duplication
@@ -4040,7 +4040,7 @@ define_labeled_data:
 	mov	eax,[eax]
 	test	eax,eax
 	jnz	duplicated_value_parsed
-	call	get_constituent_value
+	call	get_component
 	jc	invalid_argument
 	cmp	al,'?'
 	jne	invalid_argument
@@ -4053,19 +4053,19 @@ define_labeled_data:
 	cmp	[initial_parentheses],1
 	jb	duplicated_data_parsed
 	ja	invalid_argument
-	call	get_constituent_value
+	call	get_component
 	jc	missing_closing_parenthesis
 	cmp	al,')'
 	je	duplicated_data_parsed
 	cmp	al,','
 	jne	invalid_argument
 	mov	edi,[expression_sequence_end]
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	invalid_argument
 	mov	edi,[expression_sequence_end]
 	cmp	al,'?'
 	jne	parse_duplicated_expression
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	ecx,4
 	mov	edx,expression_workspace
 	call	reserve_workspace
@@ -4130,7 +4130,7 @@ define_labeled_data:
 	jnz	duplicated_data
 	jmp	data_outputted
     reserve_through_duplication:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	eax,[number_of_iterations]
 	mul	[data_unit_length]
 	test	edx,edx
@@ -4239,7 +4239,7 @@ include_data:
 	push	esi
 	call	prepare_file_path
 	pop	esi
-	call	get_constituent_value
+	call	get_component
 	jc	include_all_available_data
 	cmp	al,':'
 	jne	get_data_length
@@ -4251,7 +4251,7 @@ include_data:
 	call	fit_value
 	jc	value_out_of_range
 	js	value_out_of_range
-	call	get_constituent_value
+	call	get_component
 	jc	include_all_available_data
     get_data_length:
 	cmp	al,','
@@ -4327,7 +4327,7 @@ load_value:
 	jz	invalid_identifier
 	mov	[label_leaf],ebx
 	mov	[size_specified],0
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	load_syntax_error
 	cmp	al,':'
 	je	size_after_separator
@@ -4339,10 +4339,10 @@ load_value:
 	jne	get_load_size
 	cmp	[edx+ValueDefinition.value],PREPOSITION_FROM
 	jne	load_syntax_error
-	and	[current_constituent],0
+	and	[current_component],0
 	jmp	get_source_address
     size_after_separator:
-	and	[current_constituent],0
+	and	[current_component],0
     get_load_size:
 	call	get_numeric_constant_value
 	test	edx,edx
@@ -4353,7 +4353,7 @@ load_value:
 	call	fit_value
 	jc	value_out_of_range
 	js	value_out_of_range
-	call	get_constituent_value
+	call	get_component
 	jc	load_syntax_error
 	cmp	al,1Ah
 	jne	load_syntax_error
@@ -4364,7 +4364,7 @@ load_value:
 	cmp	[edx+ValueDefinition.value],PREPOSITION_FROM
 	jne	load_syntax_error
     get_source_address:
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	invalid_argument
 	cmp	al,':'
 	je	load_from_output_offset
@@ -4374,11 +4374,11 @@ load_value:
 	and	[leave_opening_parentheses],0
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	source_address_parsed
 	cmp	al,':'
 	jne	source_address_parsed
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	edi,[expression_workspace.memory_start]
 	call	get_area_value
 	jc	invalid_area
@@ -4518,7 +4518,7 @@ load_value:
 	jne	data_out_of_area
 	jmp	value_loaded
     read_output_offset:
-	and	[current_constituent],0
+	and	[current_component],0
 	call	get_numeric_constant_value
 	test	edx,edx
 	jz	output_offset_out_of_range
@@ -4558,7 +4558,7 @@ store_value:
 	cmp	al,30h
 	jne	invalid_argument
 	call	keep_value
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	invalid_argument
 	cmp	al,':'
 	je	size_after_value
@@ -4588,12 +4588,12 @@ store_value:
 	mov	eax,[edx]
 	mov	[value_length],eax
 	call	keep_value
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	invalid_argument
 	cmp	al,':'
 	jne	check_symbol_after_value_with_size
     size_after_value:
-	and	[current_constituent],0
+	and	[current_component],0
 	call	get_constant_value
 	cmp	al,30h
 	jne	invalid_argument
@@ -4604,7 +4604,7 @@ store_value:
 	jc	value_out_of_range
 	js	value_out_of_range
     value_with_size_ready:
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	invalid_argument
     check_symbol_after_value_with_size:
 	cmp	al,1Ah
@@ -4616,8 +4616,8 @@ store_value:
     get_destination_address:
 	cmp	[edx+ValueDefinition.value],PREPOSITION_AT
 	jne	invalid_argument
-	and	[current_constituent],0
-	call	peek_at_constituent_value
+	and	[current_component],0
+	call	peek_at_component
 	jc	invalid_argument
 	cmp	al,':'
 	je	store_at_output_offset
@@ -4627,11 +4627,11 @@ store_value:
 	and	[leave_opening_parentheses],0
 	mov	edi,[expression_workspace.memory_start]
 	call	parse_expression
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	destination_address_parsed
 	cmp	al,':'
 	jne	destination_address_parsed
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	edi,[expression_workspace.memory_start]
 	call	get_area_value
 	jc	invalid_area
@@ -4686,7 +4686,7 @@ display_data:
 	jne	invalid_argument
 	call	display_string_data
     display_next_value:
-	call	get_constituent_value
+	call	get_component
 	jc	assembly_line
 	cmp	al,','
 	jne	invalid_argument
@@ -4713,7 +4713,7 @@ format_directive:
 format_executable:
 	or	[output_executable],1
 format_binary:
-	call	get_constituent_value
+	call	get_component
 	jc	instruction_assembled
 	cmp	al,1Ah
 	jne	invalid_argument
@@ -4788,7 +4788,7 @@ custom_error:
 	inc	edi
     collect_next_part_of_message:
 	push	edi
-	call	get_constituent_value
+	call	get_component
 	pop	edi
 	jc	custom_error_message_ready
 	cmp	al,','

@@ -28,6 +28,7 @@ struct MatchedExcerpt
 	data_end dd ?
 	recognition_context dd ?
 	symbol_leaf dd ?
+	matcher dd ?
 ends
 
 BOOL_NEG = -1
@@ -687,6 +688,7 @@ alm_arrange:
 	shl	ecx,1
 	call	reserve_workspace
 	mov	[breakpoint_token],0
+	mov	[wildcard_modifier],0
 	call	parse_pattern
 	mov	[calm_literals_cursor],edi
 	mov	eax,edi
@@ -700,6 +702,7 @@ alm_arrange:
     ;  esi - first token of the pattern in the preprocessed line
     ;  edi - buffer with enough space to hold twice the length of the preprocessed text left in line
     ;  [breakpoint_token] = initial byte of symbol that should end the pattern
+    ;  [wildcard_modifier] = character chosen to modify wildcards
     ; out:
     ;  esi - after the processed portion of line (might be at [line_end])
     ;  edi - in the buffer after the stored pattern
@@ -818,34 +821,118 @@ alm_arrange:
 	stosd
 	mov	eax,ebx
 	stosd
+	xor	eax,eax
+	stosd
     parsed_name_in_pattern:
 	cmp	esi,[line_end]
 	je	pattern_parsed
 	lodsb
 	cmp	al,40h
 	je	ignore_context_after_name_in_pattern
+	cmp	al,[wildcard_modifier]
+	je	wildcard_modifier_in_pattern
 	cmp	al,'?'
 	jne	token_available
 	mov	al,0BFh
 	stosb
 	jmp	parse_pattern
-    ignore_context_after_name_in_pattern:
-	call	pass_context
-	jmp	parsed_name_in_pattern
-    numeric_name_in_pattern:
-	movsb
-	movsd
-	jmp	parsed_name_in_pattern
+    wildcard_modifier_in_pattern:
+	cmp	esi,[line_end]
+	je	error_in_parsed_pattern
+	mov	al,[esi]
+	cmp	al,40h
+	je	ignore_context_before_modifier_in_pattern
+	cmp	al,1Ah
+	jne	error_in_parsed_pattern
+	add	esi,1+4
+	mov	[symbol_class],SYMCLASS_EXPRESSION
+	push	esi edi
+	mov	esi,[esi-4]
+	lodsd
+	mov	ecx,eax
+	mov	edx,[esi+ecx+4]
+	mov	ebx,[alm_namespace]
+	mov	[name_kind],NAME_CASEINSENSITIVE
+	and	[name_token],0
+	and	[symbol_required],0
+	and	[symbol_expected],0
+	call	scan_namespace
+	pop	edi esi
+	jc	error_in_parsed_pattern
+	mov	edx,[ebx+SymbolTree_Leaf.definition]
+	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_MATCHER
+	jne	error_in_parsed_pattern
+	mov	eax,[edx+ValueDefinition.value]
+	xchg	[edi-4],eax
+	test	eax,eax
+	jz	parse_pattern
     error_in_parsed_pattern:
 	mov	edx,_invalid_argument
 	call	register_error
 	jmp	parse_pattern
+    ignore_context_after_name_in_pattern:
+	call	pass_context
+	jmp	parsed_name_in_pattern
+    ignore_context_before_modifier_in_pattern:
+	call	pass_context
+	jmp	wildcard_modifier_in_pattern
+    numeric_name_in_pattern:
+	movsb
+	movsd
+	jmp	parsed_name_in_pattern
 
 alm_match:
 	test	[assembly_mode],AMODE_CALM_DEFINITION
 	jz	unexpected_instruction
 	call	move_to_next_symbol
 	jc	missing_argument
+	mov	ebx,esi
+	push	[embedded_context]
+	and	[brackets],0
+	mov	[wildcard_modifier],0
+	mov	dl,2
+    scan_arguments_to_match:
+	mov	dh,al
+	call	skip_token
+	call	move_to_next_symbol
+	jc	arguments_to_match_scanned
+	cmp	dh,','
+	je	scan_next_argument_to_match
+	cmp	dl,2
+	jne	scan_arguments_to_match
+	cmp	dh,'='
+	jne	scan_arguments_to_match
+	call	skip_token
+	call	move_to_next_symbol
+	jnc	scan_arguments_to_match
+	jmp	arguments_to_match_scanned
+    scan_next_argument_to_match:
+	dec	dl
+	jnz	scan_arguments_to_match
+	mov	dl,al
+	lea	edi,[esi+1]
+	call	skip_token
+	cmp	esi,edi
+	jne	third_argument_malformed
+	call	move_to_next_symbol
+	jc	wildcard_modifier_chosen
+	mov	byte [brackets],dl
+	mov	byte [brackets+1],al
+	lea	edi,[esi+1]
+	call	skip_token
+	cmp	esi,edi
+	jne	third_argument_malformed
+	call	move_to_next_symbol
+	jc	arguments_to_match_scanned
+    third_argument_malformed:
+	mov	edx,_invalid_argument
+	call	register_error
+	jmp	arguments_to_match_scanned
+    wildcard_modifier_chosen:
+	mov	[wildcard_modifier],dl
+    arguments_to_match_scanned:
+	pop	[embedded_context]
+	mov	esi,ebx
 	mov	edx,calm_literals_buffer
 	mov	edi,[calm_literals_cursor]
 	mov	ecx,[line_end]
@@ -868,28 +955,6 @@ alm_match:
 	jc	invalid_identifier
 	test	ebx,ebx
 	jz	invalid_identifier
-	and	[brackets],0
-	call	move_to_next_symbol
-	jc	no_brackets
-	cmp	al,','
-	jne	no_brackets
-	inc	esi
-	call	move_to_next_symbol
-	jc	invalid_argument
-	mov	dl,al
-	lea	edi,[esi+1]
-	call	skip_token
-	cmp	esi,edi
-	jne	invalid_argument
-	call	move_to_next_symbol
-	jc	invalid_argument
-	mov	dh,al
-	lea	edi,[esi+1]
-	call	skip_token
-	cmp	esi,edi
-	jne	invalid_argument
-	mov	word [brackets],dx
-    no_brackets:
 	mov	edi,[calm_code_cursor]
 	mov	edx,calm_code_buffer
 	mov	ecx,8+16
@@ -910,7 +975,11 @@ alm_match:
 	mov	eax,[brackets]
 	stosd
 	mov	[calm_code_cursor],edi
-	jmp	instruction_assembled
+	call	move_to_next_symbol
+	jc	assembly_line
+	cmp	al,','
+	jne	invalid_argument
+	jmp	assembly_line
 
 alm_compute:
 	test	[assembly_mode],AMODE_CALM_DEFINITION
@@ -1149,11 +1218,11 @@ alm_check:
 	add	ebx,4
 	mov	[condition_stack],ebx
     parse_alm_condition:
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	calm_condition_parsed
 	cmp	al,'~'
 	jne	parse_alm_logical_value
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	ecx,BOOL_NEG
 	call	push_to_condition_stack
 	jmp	parse_alm_condition
@@ -1197,7 +1266,7 @@ alm_check:
 	mov	[edi-4],ecx
 	mov	esi,[calm_source_pointer]
     parse_alm_logical_operator:
-	call	get_constituent_value
+	call	get_component
 	jc	calm_condition_parsed
 	cmp	al,')'
 	je	close_subconditions
@@ -1380,7 +1449,12 @@ alm_transform:
 	mov	[calm_code_cursor],edi
 	jmp	instruction_assembled
 
-alm_take:
+alm_take_any:
+	mov	[value],calm_take_any
+	jmp	alm_take
+alm_take_symbolic:
+	mov	[value],calm_take_symbolic
+    alm_take:
 	test	[assembly_mode],AMODE_CALM_DEFINITION
 	jz	unexpected_instruction
 	call	move_to_next_symbol
@@ -1412,7 +1486,7 @@ alm_take:
 	call	reserve_workspace
 	mov	eax,[calm_line_number]
 	stosd
-	mov	eax,calm_take
+	mov	eax,[value]
 	stosd
 	mov	eax,[label_leaf]
 	stosd
@@ -1453,11 +1527,11 @@ alm_emit:
 	stosd
 	call	compile_expression
 	mov	edi,[calm_code_cursor]
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	alm_call_arguments_ready
 	cmp	al,','
 	jne	alm_call_arguments_ready
-	and	[current_constituent],0
+	and	[current_component],0
 	call	compile_expression
 	jmp	instruction_assembled
 
@@ -1491,7 +1565,7 @@ alm_load:
 	call	move_to_next_symbol
 	call	compile_expression
 	push	ecx
-	call	get_constituent_value
+	call	get_component
 	pop	ecx
 	jc	alm_missing_argument
 	cmp	al,':'
@@ -1505,7 +1579,7 @@ alm_load:
     alm_load_offset:
 	mov	edi,[calm_code_cursor]
 	call	compile_expression
-	call	get_constituent_value
+	call	get_component
 	jc	alm_missing_argument
 	cmp	al,','
 	jne	alm_malformed_argument
@@ -1535,7 +1609,7 @@ alm_store:
 	mov	eax,calm_store
 	stosd
 	call	compile_expression
-	call	get_constituent_value
+	call	get_component
 	jc	alm_missing_argument
 	cmp	al,':'
 	je	alm_store_offset
@@ -1548,14 +1622,14 @@ alm_store:
     alm_store_offset:
 	mov	edi,[calm_code_cursor]
 	call	compile_expression
-	call	get_constituent_value
+	call	get_component
 	jc	alm_missing_argument
 	cmp	al,','
 	jne	alm_malformed_argument
     alm_store_length:
 	mov	edi,[calm_code_cursor]
 	call	compile_expression
-	call	get_constituent_value
+	call	get_component
 	jc	alm_missing_argument
 	cmp	al,','
 	jne	alm_malformed_argument
@@ -1919,7 +1993,7 @@ calm_arrange:
 	mov	esi,[edx+ValueDefinition.value]
 	mov	ecx,[edx+ValueDefinition.value_length]
 	rep	movsb
-	lea	esi,[ebx+8]
+	lea	esi,[ebx+12]
 	cmp	esi,[pattern_end]
 	je	assign_arranged_value
 	mov	al,40h
@@ -1947,10 +2021,10 @@ calm_arrange:
 	stosd
 	mov	ecx,eax
 	rep	movsb
-	lea	esi,[ebx+8]
+	lea	esi,[ebx+12]
 	jmp	arrange_by_pattern
     arrange_empty_value:
-	add	esi,8
+	add	esi,12
 	jmp	arrange_token
     arrange_plain_value:
 	mov	edx,[edx+ValueDefinition.value]
@@ -1967,7 +2041,7 @@ calm_arrange:
 	jnz	store_plain_bytes
 	test	byte [edi-1],80h
 	jnz	store_plain_bytes
-	add	esi,8
+	add	esi,12
 	jmp	arrange_by_pattern
     arrange_unsupported_value:
 	mov	edx,_invalid_symbol_value
@@ -1980,6 +2054,7 @@ calm_arrange:
 	stosb
 	movsd
 	lodsd
+	add	esi,4
 	mov	eax,[eax+SymbolTree_Leaf.branch]
 	cmp	[eax+SymbolTree_Foliage.name_kind],NAME_CASEINSENSITIVE
 	jne	arrange_token
@@ -2021,6 +2096,7 @@ calm_match:
 	cmp	al,VALTYPE_SYMBOLIC
 	jne	calm_invalid_value
 	push	esi
+	call	clear_line_embeddings
 	mov	[value],edx
 	inc	[edx+ValueDefinition.reference_count]
 	mov	esi,[edx+ValueDefinition.value]
@@ -2028,7 +2104,6 @@ calm_match:
 	add	ecx,esi
 	mov	[line_end],ecx
 	mov	ebx,[expression_workspace.memory_start]
-	and	[matched_context],0
 	and	[stored_position],0
     calm_match_with_pattern:
 	cmp	edi,[pattern_end]
@@ -2037,8 +2112,7 @@ calm_match:
 	cmp	ah,1Bh
 	jne	calm_exact_match
     calm_wildcard_match:
-	and	[stored_position],0
-	add	edi,1+8
+	add	edi,1+12
 	cmp	edi,[pattern_end]
 	je	calm_required_wildcard_match
 	cmp	byte [edi],0BFh
@@ -2048,37 +2122,48 @@ calm_match:
 	je	calm_match_done
 	call	calm_consume_whitespace
 	jz	calm_match_done
-	xchg	edi,ebx
-	mov	edx,expression_workspace
-	mov	ecx,sizeof.MatchedExcerpt
-	call	reserve_workspace
-	xchg	edi,ebx
-	mov	eax,[edi-4]
-	mov	ecx,[matched_context]
-	mov	[ebx+MatchedExcerpt.symbol_leaf],eax
-	mov	[ebx+MatchedExcerpt.recognition_context],ecx
-	mov	[ebx+MatchedExcerpt.data_start],esi
+	call	initialize_calm_wildcard
 	mov	al,[esi]
+	mov	ecx,[ebx-sizeof.MatchedExcerpt+MatchedExcerpt.matcher]
+	jecxz	calm_standard_matcher
+	call	ecx
+	jc	calm_retract_match
+	jmp	calm_wildcard_matched
+    calm_standard_matcher:
 	call	calm_consume_token
 	jc	calm_match_done
-	mov	[ebx+MatchedExcerpt.data_end],esi
-	add	ebx,sizeof.MatchedExcerpt
-	jmp	calm_match_with_pattern
+	jmp	calm_wildcard_matched
     calm_optional_wildcard_match:
+	call	initialize_calm_wildcard
+	inc	edi
+	jmp	calm_wildcard_matched
+    initialize_calm_wildcard:
 	xchg	edi,ebx
 	mov	edx,expression_workspace
 	mov	ecx,sizeof.MatchedExcerpt
 	call	reserve_workspace
 	xchg	edi,ebx
-	mov	eax,[edi-4]
-	inc	edi
-	mov	ecx,[matched_context]
+	mov	eax,[edi-8]
+	mov	edx,[edi-4]
+	mov	ecx,[embedded_context]
 	mov	[ebx+MatchedExcerpt.symbol_leaf],eax
 	mov	[ebx+MatchedExcerpt.recognition_context],ecx
+	mov	[ebx+MatchedExcerpt.matcher],edx
 	mov	[ebx+MatchedExcerpt.data_start],esi
-	mov	[ebx+MatchedExcerpt.data_end],esi
 	add	ebx,sizeof.MatchedExcerpt
-	jmp	calm_match_with_pattern
+	test	edx,edx
+	jnz	update_stored_position
+	and	[stored_position],0
+	retn
+    update_stored_position:
+	cmp	[stored_position],0
+	jne	calm_match_position_stored
+	mov	[stored_position],esi
+	mov	ecx,[embedded_context]
+	mov	[stored_context],ecx
+	mov	[stored_pattern],edi
+      calm_match_position_stored:
+	retn
     calm_exact_match:
 	cmp	esi,[line_end]
 	je	calm_end_of_text
@@ -2086,17 +2171,15 @@ calm_match:
 	cmp	al,40h
 	jne	found_token_to_match
 	inc	esi
-	mov	[matched_context],esi
+	mov	ecx,[esi+RecognitionContext.base_namespace]
+	jecxz	calm_update_match_context
+	mov	ecx,esi
+      calm_update_match_context:
+	mov	[embedded_context],ecx
 	add	esi,sizeof.RecognitionContext
 	jmp	calm_exact_match
       found_token_to_match:
-	cmp	[stored_position],0
-	jne	calm_match_position_stored
-	mov	[stored_position],esi
-	mov	ecx,[matched_context]
-	mov	[stored_context],ecx
-	mov	[stored_pattern],edi
-      calm_match_position_stored:
+	call	update_stored_position
 	cmp	al,20h
 	je	calm_match_whitespace
 	cmp	ah,20h
@@ -2237,15 +2320,22 @@ calm_match:
 	xor	esi,esi
 	xchg	esi,[stored_position]
 	mov	ecx,[stored_context]
-	mov	[matched_context],ecx
+	mov	[embedded_context],ecx
 	mov	edi,[stored_pattern]
 	call	calm_consume_whitespace
 	jz	calm_match_done
     calm_expand_wildcard_match:
 	cmp	ebx,[expression_workspace.memory_start]
 	je	calm_match_done
+	cmp	[ebx-sizeof.MatchedExcerpt+MatchedExcerpt.matcher],0
+	je	calm_wildcard_to_expand_ready
+	sub	ebx,sizeof.MatchedExcerpt
+	jmp	calm_expand_wildcard_match
+      calm_wildcard_to_expand_ready:
+	xor	ecx,ecx
 	call	calm_consume_token
 	jc	calm_match_done
+    calm_wildcard_matched:
 	mov	[ebx-sizeof.MatchedExcerpt+MatchedExcerpt.data_end],esi
 	jmp	calm_match_with_pattern
     calm_consume_whitespace:
@@ -2261,13 +2351,16 @@ calm_match:
 	retn
       calm_consume_context_token:
 	inc	esi
-	mov	[matched_context],esi
+	mov	ecx,[esi+RecognitionContext.base_namespace]
+	jecxz	calm_update_match_context_in_whitespace
+	mov	ecx,esi
+      calm_update_match_context_in_whitespace:
+	mov	[embedded_context],ecx
 	add	esi,sizeof.RecognitionContext
 	cmp	esi,[line_end]
 	jne	calm_consume_whitespace
 	retn
     calm_consume_token:
-	xor	ecx,ecx
 	mov	edx,[brackets]
 	inc	esi
       consume_token_content:
@@ -2363,8 +2456,6 @@ calm_match:
 	jz	calm_matched_value_ready
 	test	eax,eax
 	jz	calm_matched_value_ready
-	cmp	dword [eax],0
-	je	calm_matched_value_ready
 	push	esi ecx edx
 	mov	esi,eax
 	mov	edx,assembly_workspace
@@ -2390,6 +2481,240 @@ calm_match:
 	dec	[edx+ValueDefinition.reference_count]
 	pop	esi
 	jmp	calm_execution_unit
+
+; specialized matcher
+; in:
+;  esi - beginning of preprocessed token sequence to match
+;  al = same as [esi], the first byte of the token sequence
+;  ebx - immediately after the related MatchedExcerpt in expression workspace
+; out:
+;  cf cleared when match found
+;  esi - end of the matched token sequence (in the same line segment, no embeddings)
+;  [embedded_context] updated if there were context switch tokens in the matched sequence
+; preserves: ebx, edi
+; notes:
+;  MatchedExcerpt is updated by the caller, the matcher does not need to modify it;
+;  at a given position, a specialized matcher gets only one attempt to match the text,
+;  therefore it must be defined to consume a maximum sequence that meets the condition;
+;  for the same reason it cannot be combined with other modifiers of wildcard behavior
+match_quoted_string:
+	cmp	al,22h
+	je	quoted_string_matched
+	cmp	al,27h
+	je	quoted_string_matched
+	stc
+	retn
+    quoted_string_matched:
+	add	esi,1+4
+	retn
+match_valid_identifier:
+	mov	dl,SYMCLASS_EXPRESSION
+	or	[symbol_definition],1
+	push	ebx edi
+	call	identify_symbol
+	jc	identifier_matching_done
+	test	ebx,ebx
+	jnz	identifier_matching_done
+    identifier_matching_failed:
+	stc
+    identifier_matching_done:
+	pop	edi ebx
+	retn
+match_symbolic_variable:
+	mov	dl,SYMCLASS_EXPRESSION
+	mov	[symbol_definition],0
+	push	ebx edi
+	call	identify_symbol
+	jc	identifier_matching_done
+	test	ebx,ebx
+	jz	identifier_matching_failed
+	call	get_available_value
+	jc	identifier_matching_done
+	cmp	[edx+ValueDefinition.type],VALTYPE_SYMBOLIC
+	je	identifier_matching_done
+	stc
+	jmp	identifier_matching_done
+match_labeled_instruction:
+	mov	dl,SYMCLASS_STRUCTURE
+	jmp	match_defined_symbol
+match_instruction:
+	mov	dl,SYMCLASS_INSTRUCTION
+    match_defined_symbol:
+	mov	[symbol_definition],0
+	push	ebx edi
+	push	edx
+	call	identify_symbol
+	pop	edx
+	jc	identifier_matching_done
+	test	ebx,ebx
+	jz	identifier_matching_failed
+	cmp	dl,[ebx+SymbolTree_Leaf.class]
+	jne	identifier_matching_failed
+	call	get_available_value
+	jmp	identifier_matching_done
+match_prior_symbolic_variable:
+	mov	dl,SYMCLASS_EXPRESSION
+	mov	[symbol_definition],0
+	push	ebx edi
+	call	identify_symbol
+	jc	identifier_matching_done
+	test	ebx,ebx
+	jz	identifier_matching_failed
+	mov	edx,[ebx+SymbolTree_Leaf.definition]
+	test	edx,edx
+	jz	identifier_matching_failed
+	test	[edx+ValueDefinition.flags],VAL_INTERNAL
+	jnz	match_prior_value
+	mov	ecx,[current_pass]
+	cmp	[edx+ValueDefinition.pass],ecx
+	jne	identifier_matching_failed
+    match_prior_value:
+	cmp	[edx+ValueDefinition.type],VALTYPE_SYMBOLIC
+	je	identifier_matching_done
+	jmp	identifier_matching_failed
+match_prior_labeled_instruction:
+	mov	dl,SYMCLASS_STRUCTURE
+	jmp	match_prior_symbol
+match_prior_instruction:
+	mov	dl,SYMCLASS_INSTRUCTION
+    match_prior_symbol:
+	mov	[symbol_definition],0
+	push	ebx edi
+	push	edx
+	call	identify_symbol
+	pop	edx
+	jc	identifier_matching_done
+	test	ebx,ebx
+	jz	identifier_matching_failed
+	cmp	dl,[ebx+SymbolTree_Leaf.class]
+	jne	identifier_matching_failed
+	mov	edx,[ebx+SymbolTree_Leaf.definition]
+	test	edx,edx
+	jz	identifier_matching_failed
+	test	[edx+ValueDefinition.flags],VAL_INTERNAL
+	jnz	identifier_matching_done
+	mov	ecx,[current_pass]
+	cmp	[edx+ValueDefinition.pass],ecx
+	je	identifier_matching_done
+	jmp	identifier_matching_failed
+match_number:
+	cmp	al,'#'
+	jne	get_number_to_match
+	xor	ecx,ecx
+	call	check_concatenation
+	jnc	match_number
+    get_number_to_match:
+	call	detect_numeric_symbol
+	jnc	no_number_matched
+	push	ebx edi
+	call	get_literal
+	pop	edi ebx
+	test	edx,edx
+	jnz	number_matched
+    no_number_matched:
+	stc
+    number_matched:
+	retn
+match_expression:
+	push	ebx edi
+	xor	eax,eax
+	mov	[number_of_enclosings],eax
+	mov	[value_position],eax
+    match_expression_operator:
+	mov	[operation_argument_expected],1
+    continue_expression_matching:
+	mov	eax,esi
+	cmp	[number_of_line_embeddings],0
+	je	keep_expression_position
+	call	warp_to_next_symbol
+	mov	eax,esi
+	cmp	[number_of_line_embeddings],0
+	je	keep_expression_position
+	xor	eax,eax
+    keep_expression_position:
+	mov	[previous_symbol_end],eax
+	mov	eax,[embedded_context]
+	mov	[matched_context],eax
+	call	get_component
+	jc	stop_expression_matching
+	cmp	al,'('
+	je	match_subexpression_start
+	cmp	al,')'
+	je	match_subexpression_end
+	cmp	al,30h
+	je	match_operation_argument
+	cmp	al,22h
+	je	match_operation_argument
+	cmp	al,2Eh
+	je	match_operation_argument
+	cmp	al,1Ah
+	je	match_expression_symbol
+	movzx	eax,al
+	shl	eax,2
+	add	eax,[operator_table]
+	mov	edx,[eax]
+	test	edx,edx
+	jz	stop_expression_matching
+	mov	ecx,edx
+    select_operator_to_match:
+	cmp	[ecx+ValueDefinition.type],VALTYPE_NATIVE_COMMAND
+	jne	match_non_operator
+	test	[ecx+ValueDefinition.attribute],OPERATOR_UNARY
+	setnz	al
+	xor	al,[operation_argument_expected]
+	jz	match_expression_operator
+	mov	ecx,[ecx+ValueDefinition.previous]
+	test	ecx,ecx
+	jnz	select_operator_to_match
+    stop_expression_matching:
+	cmp	[number_of_line_embeddings],0
+	je	verify_expression_match
+	mov	esi,[line_end]
+	call	warp_to_next_symbol
+	jmp	stop_expression_matching
+    match_expression_symbol:
+	test	edx,edx
+	jz	match_operation_argument
+	mov	ecx,edx
+	jmp	select_operator_to_match
+    match_non_operator:
+	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_COMPARATOR
+	je	stop_expression_matching
+    match_operation_argument:
+	xor	al,al
+	xchg	al,[operation_argument_expected]
+	test	al,al
+	jz	stop_expression_matching
+	jmp	continue_expression_matching
+    match_subexpression_start:
+	cmp	[operation_argument_expected],0
+	je	stop_expression_matching
+	inc	[number_of_enclosings]
+	jmp	match_expression_operator
+    match_subexpression_end:
+	cmp	[operation_argument_expected],0
+	jne	stop_expression_matching
+	cmp	[number_of_enclosings],0
+	je	stop_expression_matching
+	dec	[number_of_enclosings]
+	jmp	continue_expression_matching
+    verify_expression_match:
+	cmp	[operation_argument_expected],0
+	jne	no_expression_match
+	cmp	[number_of_enclosings],0
+	jne	no_expression_match
+	mov	eax,[previous_symbol_end]
+	test	eax,eax
+	jz	no_expression_match
+	mov	esi,eax
+	mov	eax,[matched_context]
+	mov	[embedded_context],eax
+	pop	edi ebx
+	retn
+    no_expression_match:
+	pop	edi ebx
+	stc
+	retn
 
 calm_compute:
 	lodsd
@@ -2770,14 +3095,27 @@ calm_publish_variable:
 	call	register_error
 	jmp	calm_execution_unit
 
-calm_take:
+calm_take_any:
 	lodsd
 	mov	edi,eax
 	lodsd
 	mov	ebx,eax
+    calm_take_ready:
 	xor	edx,edx
 	call	remove_value_definition
 	setnc	[calm_result]
+	jmp	calm_execution_unit
+calm_take_symbolic:
+	lodsd
+	mov	edi,eax
+	lodsd
+	mov	ebx,eax
+	mov	eax,[ebx+SymbolTree_Leaf.definition]
+	test	eax,eax
+	jz	calm_take_ready
+	cmp	[eax+ValueDefinition.type],VALTYPE_SYMBOLIC
+	je	calm_take_ready
+	mov	[calm_result],0
 	jmp	calm_execution_unit
 
 calm_display:

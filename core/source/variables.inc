@@ -121,9 +121,9 @@ variables:
     macro_leaf dd ?
     macro_end_position dd ?
 
-    constituent_symbol dd ?
-    constituent_value dd ?
-    constituent_whitespace dd ?
+    component_symbol dd ?
+    component_value dd ?
+    component_whitespace dd ?
 
     alm_namespace dd ?
     alm_adjusted_context RecognitionContext
@@ -275,10 +275,10 @@ variables:
 
     last_token db ?
     breakpoint_token db ?
-    current_constituent db ?
+    current_component db ?
     kept_value_in_workspace db ?
     leave_opening_parentheses db ?
-    operator_argument_expected db ?
+    operation_argument_expected db ?
     term_type db ?
     bit_shift db ?
     shift_overflow db ?
@@ -310,6 +310,7 @@ variables:
     calm_result db ?
     hidden_context db ?
     contextless_processing db ?
+    wildcard_modifier db ?
 
 variables_end:
 

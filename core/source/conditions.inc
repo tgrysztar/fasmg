@@ -14,10 +14,10 @@ get_condition_value:
 	mov	[condition_stack],ebx
 	mov	byte [ebx],COND_EVALUATE
     get_logical_value:
-	call	peek_at_constituent_value
+	call	peek_at_component
 	cmp	al,'~'
 	jne	negation_registered
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	ebx,[condition_stack]
 	mov	al,[ebx]
 	test	byte [ebx],COND_EVALUATE
@@ -58,7 +58,7 @@ get_condition_value:
 	cmp	dx,'~'
 	je	get_logical_value
     get_logical_operator:
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	end_of_logical_expression
 	cmp	al,')'
 	je	close_logical_subexpression
@@ -67,7 +67,7 @@ get_condition_value:
 	cmp	al,'&'
 	jne	end_of_logical_expression
     logical_and:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	ebx,[condition_stack]
 	mov	al,[ebx]
 	test	al,COND_EVALUATE
@@ -96,7 +96,7 @@ get_condition_value:
 	mov	byte [ebx],COND_EVALUATE
 	jmp	get_logical_value
     logical_or:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	ebx,[condition_stack]
 	mov	al,[ebx]
 	test	al,COND_EVALUATE
@@ -123,7 +123,7 @@ get_condition_value:
 	mov	byte [ebx],COND_DETERMINED + COND_TRUE
 	jmp	get_logical_value
     close_logical_subexpression:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	ebx,[condition_stack]
 	cmp	ebx,[condition_stack_base]
 	je	excess_parenthesis
@@ -191,7 +191,7 @@ parse_logical_value:
 	call	parse_expression
 	mov	[initial_parentheses],ecx
 	mov	[expression_end],edi
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	end_of_line
 	cmp	al,'&'
 	je	end_of_logical_value
@@ -215,16 +215,16 @@ parse_logical_value:
 	jz	end_of_logical_value
 	cmp	[edx+ValueDefinition.type],VALTYPE_NATIVE_COMPARATOR
 	jne	end_of_logical_value
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	eax,[edx+ValueDefinition.value]
 	jmp	set_comparator
     parse_less:
-	and	[current_constituent],0
+	and	[current_component],0
 	call	warp_to_next_symbol
 	jc	parse_less_than
 	test	ecx,ecx
 	jnz	parse_less_than
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	parse_less_than
 	cmp	al,'='
 	je	parse_less_or_equal
@@ -234,20 +234,20 @@ parse_logical_value:
 	mov	eax,check_if_less
 	jmp	set_comparator
     parse_less_or_equal:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	eax,check_if_not_greater
 	jmp	set_comparator
     parse_not_equal:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	eax,check_if_not_equal
 	jmp	set_comparator
     parse_greater:
-	and	[current_constituent],0
+	and	[current_component],0
 	call	warp_to_next_symbol
 	jc	parse_greater_than
 	test	ecx,ecx
 	jnz	parse_greater_than
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jc	parse_greater_than
 	cmp	al,'='
 	je	parse_greater_or_equal
@@ -255,11 +255,11 @@ parse_logical_value:
 	mov	eax,check_if_greater
 	jmp	set_comparator
     parse_greater_or_equal:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	eax,check_if_not_less
 	jmp	set_comparator
     parse_equal:
-	and	[current_constituent],0
+	and	[current_component],0
 	mov	eax,check_if_equal
     set_comparator:
 	mov	edi,[expression_end]
@@ -267,7 +267,7 @@ parse_logical_value:
 	and	[leave_opening_parentheses],0
 	call	parse_expression
 	mov	[expression_end],edi
-	call	peek_at_constituent_value
+	call	peek_at_component
 	jnc	end_of_logical_value
     end_of_line:
 	xor	al,al
@@ -617,7 +617,7 @@ check_if_defined_earlier:
 	mov	edi,[expression_workspace.memory_start]
 	and	[leave_opening_parentheses],0
 	call	parse_expression
-	call	get_constituent_value
+	call	get_component
 	mov	esi,[expression_workspace.memory_start]
 	retn
 
