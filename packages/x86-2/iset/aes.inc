@@ -16,10 +16,10 @@ iterate <instr,supp>, aesdec,0DEh, aesenc,0DCh, aesdeclast,0DFh, aesenclast,0DDh
 			end if
 			@src2.memsize = 0
 			if x86.ext and x86.VAES.ext
-				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,opcode,0,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F38_W0,EVEX_AS_VEX+EVEX_VL,supp,0,@dest.rm,@src.rm
 			else
 				require AESNI
-				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F38_W0,EVEX_FORBIDDEN,opcode,0,@dest.rm,@src.rm
+				AVX_512.store_instruction@src2 @dest.size,VEX_66_0F38_W0,EVEX_FORBIDDEN,supp,0,@dest.rm,@src.rm
 			end if
 
 		else
