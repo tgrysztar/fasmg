@@ -2561,6 +2561,7 @@ with a text that has these brackets properly balanced.
 
         range (10-3)-10
 
+The brackets selected by the third argument must not occur anywhere in the pattern.
   If the third argument contains only a single special character, it instead chooses
 the symbol that may be used to modify wildcards. It is best to select a character that
 otherwise does not show up in the pattern, but it is still possible to match it by

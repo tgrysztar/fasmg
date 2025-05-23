@@ -689,6 +689,7 @@ alm_arrange:
 	call	reserve_workspace
 	mov	[breakpoint_token],0
 	mov	[wildcard_modifier],0
+	and	[brackets],0
 	call	parse_pattern
 	mov	[calm_literals_cursor],edi
 	mov	eax,edi
@@ -703,6 +704,7 @@ alm_arrange:
     ;  edi - buffer with enough space to hold twice the length of the preprocessed text left in line
     ;  [breakpoint_token] = initial byte of symbol that should end the pattern
     ;  [wildcard_modifier] = character chosen to modify wildcards
+    ;  [brackets] = pair of characters disallowed in pattern
     ; out:
     ;  esi - after the processed portion of line (might be at [line_end])
     ;  edi - in the buffer after the stored pattern
@@ -723,6 +725,11 @@ alm_arrange:
 	je	whitespace_in_pattern
 	stosb
     literal_token_in_pattern:
+	mov	edx,[brackets]
+	cmp	al,dl
+	je	error_in_parsed_pattern
+	cmp	al,dh
+	je	error_in_parsed_pattern
 	cmp	al,22h
 	je	copy_pattern_data
 	cmp	al,27h
@@ -888,8 +895,8 @@ alm_match:
 	jc	missing_argument
 	mov	ebx,esi
 	push	[embedded_context]
-	and	[brackets],0
 	mov	[wildcard_modifier],0
+	and	[brackets],0
 	mov	dl,2
     scan_arguments_to_match:
 	mov	dh,al
