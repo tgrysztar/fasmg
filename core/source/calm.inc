@@ -2527,17 +2527,24 @@ match_valid_identifier:
     identifier_matching_done:
 	pop	edi ebx
 	retn
+match_area_label:
+	mov	cl,VALTYPE_AREA
+	jmp	match_symbol_type
 match_symbolic_variable:
+	mov	cl,VALTYPE_SYMBOLIC
+    match_symbol_type:
 	mov	dl,SYMCLASS_EXPRESSION
 	mov	[symbol_definition],0
 	push	ebx edi
+	push	ecx
 	call	identify_symbol
+	pop	ecx
 	jc	identifier_matching_done
 	test	ebx,ebx
 	jz	identifier_matching_failed
 	call	get_available_value
 	jc	identifier_matching_done
-	cmp	[edx+ValueDefinition.type],VALTYPE_SYMBOLIC
+	cmp	cl,[edx+ValueDefinition.type]
 	je	identifier_matching_done
 	stc
 	jmp	identifier_matching_done

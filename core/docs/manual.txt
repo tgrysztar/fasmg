@@ -2647,6 +2647,7 @@ forward-referenced.
                 assemble if_false
         end calminstruction
 
+A wildcard modified with "area" requires an identifier of area label.
   Specialized wildcards cannot be modified in any other way: they cannot be made
 optional and it is not possible to combine bracket balancing and wildcard
 modifying in the same command.

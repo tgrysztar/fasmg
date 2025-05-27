@@ -651,6 +651,9 @@ db 15,'calminstruction'
   db 3,'equ',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
   dd match_symbolic_variable
 
+  db 4,'area',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
+  dd match_area_label
+
   db 5,'macro',SYMCLASS_EXPRESSION,VALTYPE_NATIVE_MATCHER,VAL_INTERNAL,0
   dd match_instruction
 
