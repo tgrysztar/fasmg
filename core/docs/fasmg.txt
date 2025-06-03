@@ -1,3 +1,18 @@
+flat assembler g
+Introduction and Overview
+
+
+Table of contents
+
+What is flat assembler g?
+How does this work?
+What are the means of parsing the arguments of an instruction?
+How are the labels processed?
+How can multiple sections of file be generated in parallel?
+What options are there to parse other kinds of syntax?
+How to control recognition context for symbol identifiers?
+How to define an instruction sharing a name with one of the core directives?
+How to convert a macroinstruction to CALM?
 
 
 
@@ -391,6 +406,30 @@ modifier to pass the complete contents of the arguments to "match":
 
 This approach also allows to handle other, more difficult cases, like when
 the arguments may contain commas or are delimited in different ways.
+  The CALM macros are capable of finer control over the process of parsing
+the arguments, and their variant of "match" has more options. Here is
+how the above macro could be rewritten:
+
+        calminstruction CALL? target&
+                local   condition
+                match   condition:name =, target, target, :
+                jno     unconditional
+                check   defined condition & condition relativeto CC
+                jno     error
+                emit    1, 0C4h + (condition - CC) shl 3
+                jump    address
+            error:
+                err     "unrecognized syntax"
+            unconditional:
+                emit    1, 0CDh
+            address:
+                emit    2, target
+        end calminstruction
+
+This time no proxies are necessary, because the text of the arguments
+is only evaluated when computing the expressions that contain them.
+Furthermore, "match" could be used to check for malformed expressions,
+just like it checks for a correct name of condition symbol in the example.
 
 
 
@@ -821,6 +860,209 @@ that get called for nearly every line in source text.
 
 
 
+How to control recognition context for symbol identifiers?
+
+  When designing a macro for a general use, it is important to ensure
+that it works correctly wherever it is called. While the "local" directive
+allows to create private symbols for every instance of macro without
+interfering with an unknown environment, sometimes a variable may need
+to be shared across the multiple macro calls. A globally defined symbol
+usually works well enough for this purpose, but it is something that
+could be interfered with. Consider the following example:
+
+        GLOBAL_STATE = 0
+
+        macro state 
+                db GLOBAL_STATE
+        end macro
+
+        macro switch value
+                GLOBAL_STATE = GLOBAL_STATE xor (value)
+        end macro
+
+This solution has a few issues. First, if symbol called "GLOBAL_STATE" was
+also used anywhere for different purposes, it would interfere with these
+macros. A choice of rare and specific name for a global may help a bit
+(and if there is a need for multiple global symbols, it is better to create
+a dedicated namespace for them, preferably with an unusual name), but
+it would be better to separate these symbols somehow.
+  Another problem would manifest if the above macros were used inside
+any "namespace" block, because then a definition of "GLOBAL_STATE" would
+instead create a symbol in the other namespace. There is one basic solution
+to the second problem: it is enough to add the dot at the end of the identifier
+to ensure that the defined symbol is the same whose value is accessed
+on the right-hand side:
+
+        GLOBAL_STATE. = GLOBAL_STATE xor (value)
+
+There is, however, another option. The arguments given to macro preserve
+the context for any identifiers in their text (unless specifically told
+not to do so, when the name of an argument is preceded by "&").
+Following example demonstrates the effect:
+
+        macro tester arg
+                namespace X
+                        a = 0
+                        db a
+                        db arg
+                end namespace
+        end macro
+
+        a = 3
+        tester a
+
+Both data definitions that get assembled have he same text: "db a",
+but the second one interprets "a" in the context in which the macro was called
+and generates byte 3 instead of 0. This is achieved though a mechanism that
+could be interpreted as a kind of text coloring. The value of parameter "arg"
+has an additional property, like a color of text, that makes the first "db a"
+differ from the second one. Now, if we define a macro inside another macro, 
+the text of that inner macro is going to preserve the coloring. 
+The following example uses this mechanism to improve the definition of
+"state"/"switch" macros from earlier sample:
+
+        macro setup variable
+
+                variable = 0
+
+                macro state
+                        db variable
+                end macro
+
+                macro switch value
+                        variable = variable xor (value)
+                end macro
+
+        end macro
+
+        setup GLOBAL_STATE
+
+        namespace Program
+
+                switch 8
+
+                GLOBAL_STATE = 0
+
+                state
+
+        end namespace
+
+When the "setup GLOBAL_STATE" gets assembled, the "switch" macro is defined
+with a body containing the text:
+        GLOBAL_STATE = GLOBAL_STATE xor (value)
+where both instances of "GLOBAL_STATE" have the global context attached to them.
+Other parts of text have no such additional information associated. However,
+when "switch 8"  is assembled, the line generated by macro is:
+        GLOBAL_STATE = GLOBAL_STATE xor (8)
+and this time there is another colored piece of text, the value of "8" carries
+the context in which the "switch" macro was called.
+  The above variant of "switch" and "state" always uses the global variable,
+no matter where they are called. This bears a similarity to the concept
+of closure present in many programming languages.
+  The variable is still global, though, and other code could still interfere
+with it. To make the variable completely out of reach of others, we can use
+the "local" directive, which creates a special parameter that replaces
+its name with the same text, but colored specifically to carry the context
+unique to the instance of a macro:
+
+        macro setup
+
+                local variable
+
+                variable = 0
+
+                macro state
+                        db variable
+                end macro
+
+                macro switch value
+                        variable = variable xor (value)
+                end macro
+
+        end macro
+
+        setup
+
+  Another place where this kind of context transfer occurs is any value of
+a symbolic variable. When a symbol is defined with "equ" or "define",
+its entire value becomes marked with the context that was present
+at the time of definition. When the text of such value is assigned
+to a parameter with "match" or "irpv", the context information carried
+by the snippets of text is preserved:
+
+        First:
+                .x = 1
+
+        define LIST .x
+
+        Second:
+                .x = 2
+
+        LIST equ LIST, .x
+
+        match values, LIST
+                display `values
+                db values
+        end match
+
+The "display" shows that the text extracted from "LIST" variable with "match"
+is ".x, .x". But the texts of these two identifiers have different contexts,
+and it turns out the list contains two different values.
+  When a "match" cuts the text of an identifier into many parts, all parts
+preserve the context information of the original text. And if an identifier
+becomes patched up from the parts of text from different sources, only
+the context associated with the initial part has any effect on the recognition
+of the symbol. This allows to force any symbol to be recognized in current
+context by prepending a "#" to it:
+
+        macro tester name
+                namespace my
+                        name db ?       ; symbol defined in its original namespace
+                        #name db ?      ; symbol defined in "my" namespace
+                end namespace
+        end macro 
+
+If such trick is not enough, and a text is needed to be stripped of
+any context information it might have, the "rawmatch" directive does
+exactly that. A similar effect could be achieved by converting
+the value of a parameter into a string with the ` operator and then
+interpreting such pure text with "eval".
+  An argument to macro that is prefixed with "&" does not any context information
+to its value, but it also does not remove any such information if it is
+already carried by given text or some parts of it. This allows to pass text
+safely without losing any information, but also without contaminating it with
+unwanted context, as demonstrated by this multi-stage example:
+
+        calminstruction (var) transparent_equ &val&
+                publish :var, val
+        end calminstruction
+
+        namespace a
+                x = 'a'
+                link equ x
+        end namespace
+
+        x = 's'
+
+        match linked_x, a.link
+                list    equ             linked_x, x
+                list    transparent_equ linked_x, x
+        end match
+
+        namespace p
+                x = 'p'
+                irpv items, list
+                        display items
+                end irpv
+        end namespace
+
+All the items passed to "display" have the text "x", but with different
+meaning: either with context of namespace "a", of a global namespace,
+or a raw text without context (in which case "x" ends up pointing to
+the nearest definition, in the namespace of "p").
+
+
+
 How to define an instruction sharing a name with one of the core directives?
 
   It may happen that a language can be in general easily implemented with
@@ -1088,7 +1330,7 @@ to prepare a text for "assemble" containing references to local symbols:
                 assemble command
         end calminstruction 
 
-Again, after this intruction is compiled, it contains just two actual commands,
+Again, after this instruction is compiled, it contains just two actual commands,
 "compute" and "assemble", and the value of local symbol "command" is a text
 that is interpreted in the same local context and refers to the same symbol
 "value" as the "compute" does.
@@ -1098,4 +1340,10 @@ behavior that is allowed by a simple substitution of text. The text of "value"
 is going to be evaluated by "compute" as a numeric sub-expression, signalling
 an error on any unexpected syntax. Therefore it should be favorable to process
 arguments entirely through CALM commands and only use "assemble" for final
-simple statements.
+simple statements. And even these could be eliminated in cases where a CALM
+command exists to perform the same task:
+
+        calminstruction be32? value
+                compute value, value bswap 4
+                emit 4, value
+        end calminstruction 
