@@ -1037,29 +1037,29 @@ unwanted context, as demonstrated by this multi-stage example:
                 publish :var, val
         end calminstruction
 
-        namespace a
-                x = 'a'
-                link equ x
+        namespace Windows
+                EOL := string 0x0A0D
+                link equ EOL
         end namespace
 
-        x = 's'
+        EOL := 0x0A
 
-        match linked_x, a.link
-                list    equ             linked_x, x
-                list    transparent_equ linked_x, x
+        match WinEOL, Windows.link
+                list    equ             WinEOL, EOL	; added context
+                list    transparent_equ WinEOL, EOL     ; no context added
         end match
 
-        namespace p
-                x = 'p'
+        namespace C64
+                EOL := 0x0D
                 irpv items, list
-                        display items
+                        db items
                 end irpv
         end namespace
 
-All the items passed to "display" have the text "x", but with different
-meaning: either with context of namespace "a", of a global namespace,
-or a raw text without context (in which case "x" ends up pointing to
-the nearest definition, in the namespace of "p").
+All the items passed to "db" contain the text "EOL", but interpreted
+differently: within context of namespace "Windows", of a global namespace,
+and finally as a raw text without context (in which case it ends up pointing
+to the nearest definition, the one in the namespace of "C64").
 
 
 
@@ -1347,3 +1347,9 @@ command exists to perform the same task:
                 compute value, value bswap 4
                 emit 4, value
         end calminstruction 
+
+This performs operations completely independently from the standard
+assembly process, so if the containing instruction was defined as
+unconditional, the output would be generated even if it was invoked inside
+a skipped "if" block or while defining a macroinstruction (and it would
+happen without adding any line to the definition).
