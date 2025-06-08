@@ -1323,7 +1323,7 @@ The text of "val" argument carries the recognition context of the definition
 of CALM instruction that contains the "initsym" statement, therefore it allows
 to prepare a text for "assemble" containing references to local symbols:
 
-        calminstruction be32? value
+        calminstruction bigendian32? value
                 local command
                 initsym command, dd value
                 compute value, value bswap 4
@@ -1343,9 +1343,8 @@ arguments entirely through CALM commands and only use "assemble" for final
 simple statements. And even these could be eliminated in cases where a CALM
 command exists to perform the same task:
 
-        calminstruction be32? value
-                compute value, value bswap 4
-                emit 4, value
+        calminstruction bigendian32? value
+                emit 4, value bswap 4
         end calminstruction 
 
 This performs operations completely independently from the standard

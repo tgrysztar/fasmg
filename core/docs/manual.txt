@@ -310,7 +310,12 @@ Therefore, unless identifier also uses a dot, it always refers to a symbol
 in the current namespace.
   A number can be used in a role of a name inside an identifier, but not when
 it is placed at the beginning, because then it is considered a literal value.
-This restriction also may be bypassed by prepending an identifier with "?".
+This restriction also may be bypassed by prepending an identifier with "?":
+
+        in.1 = 3
+        namespace in
+	        ?2 = ?1 + 1             ; in.2 = 4
+        end namespace
 
 
 3. Basic symbol definitions
