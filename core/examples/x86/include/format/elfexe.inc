@@ -100,6 +100,12 @@ namespace ELF
 		ABI := ELFOSABI_NONE
 	end if
 
+	if defined Settings.Endianness
+		ENDIANNESS := Settings.Endianness
+	else
+		ENDIANNESS := ELFDATA2LSB
+	end if
+
 	if TYPE = ET_DYN
 		element DYNAMIC
 	else
@@ -120,7 +126,7 @@ namespace ELF
 
 	Header:
 
-	e_ident 	db 0x7F,'ELF',CLASS,ELFDATA2LSB,EV_CURRENT,ABI,(16-$) dup 0
+	e_ident 	db 0x7F,'ELF',CLASS,ENDIANNESS,EV_CURRENT,ABI,(16-$) dup 0
 	e_type		dw TYPE
 	e_machine	dw MACHINE
 	e_version	dd EV_CURRENT
