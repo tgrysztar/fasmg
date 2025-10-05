@@ -229,6 +229,10 @@ iterate <instr,supp>, pcmpestrm,60h, pcmpestri,61h, pcmpistrm,62h, pcmpistri,63h
 		require SSE4.2+
 		SSE.basic_instruction_imm8 66h,<3Ah,supp>,16,dest,src,imm
 	end macro
+	macro v#instr? dest*,src*,imm*
+		require AVX+
+		AVX_512.single_source_instruction_imm8 VEX_66_0F3A_W0,EVEX_FORBIDDEN,supp,16,dest,src,imm
+	end macro
 end iterate
 
 macro crc32? dest*,src*

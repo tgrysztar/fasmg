@@ -2656,3 +2656,23 @@ A wildcard modified with "area" requires an identifier of area label.
   Specialized wildcards cannot be modified in any other way: they cannot be made
 optional and it is not possible to combine bracket balancing and wildcard
 modifying in the same command.
+  Because the presence of whitespace is meaningful for some of the specialized
+matchers (like the ones for symbol identifiers), the token sequences assigned
+to such wildcards may contain trailing spaces. When this is unwanted, like when
+there is a need to attach a suffix to matched identifier, an additional
+"match" with a plain wildcard can be used to strip the spaces:
+
+        calminstruction ? &expr&
+                local sym, value
+                match sym|name == expr, expr, |
+                jyes assign
+                assemble expr
+                exit
+            assign:
+                compute value, expr
+                publish sym:, value
+                match sym, sym          ; strip spaces
+                arrange sym, sym.=expression
+                stringify expr
+                publish sym:, expr
+        end calminstruction

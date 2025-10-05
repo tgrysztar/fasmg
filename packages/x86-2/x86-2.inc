@@ -1,5 +1,5 @@
 
-; Advanced x86 Encoder prototype
+; Advanced x86 Encoder.
 
 define x86 x86
 define x87 x87
@@ -7,56 +7,8 @@ define MMX MMX
 define SSE SSE
 define AVX AVX
 define AVX_512 AVX_512
-define MPX MPX
 
-calminstruction calminstruction?.initsym? var*, val&
-	publish var, val
-end calminstruction
-
-calminstruction calminstruction?.asm? line&
-	local	name, i
-	initsym name, name.0
-	match	name.i, name
-	compute i, i+1
-	arrange name, name.i
-	publish name, line
-	arrange line, =assemble name
-	assemble line
-end calminstruction
-
-calminstruction calminstruction?.xcall? instruction*, arguments&
-	arrange instruction, =call instruction
-    convert:
-	match	, arguments
-	jyes	ready
-	local	v
-	match	v=,arguments, arguments, <>
-	jyes	recognize
-	arrange v, arguments
-	arrange arguments,
-    recognize:
-	match	(v), v
-	jyes	numeric
-	match	<v>, v
-	jyes	symbolic
-    append:
-	arrange instruction, instruction=,v
-	jump	convert
-    numeric:
-	compute v, v
-    symbolic:
-	local proxy, base, i
-	initsym base, proxy
-	initsym i, 0
-	compute i, i+1
-	arrange proxy, base.i
-	publish proxy, v
-	arrange instruction, instruction=,proxy
-	jump	convert
-    ready:
-	assemble instruction
-end calminstruction
-
+include '../utility/xcalm.inc'
 
 repeat 3
 	calminstruction c#% line&
@@ -78,12 +30,15 @@ repeat 3
 end repeat
 
 macro ? line&
-	match name: associations, line
+	local proxy
+	define proxy line
+	match name: associations, proxy
 		c1 calminstruction x86.use.name?
 		c2 calminstruction x86.require.name?
 		c3 calminstruction x86.requireexact.name?
 		iterate association, associations
-			match item operator value, association
+			define proxy association
+			match item operator value, proxy
 				if ~ defined x86.item
 					restore x86.item
 					x86.item = 0
@@ -218,12 +173,15 @@ end macro
 	MOVDIR64B: ext | 64 + 28
 	AVX512_4VNNIW: ext | 96 + 2
 	CET_IBT: ext | 96 + 20
+	AMX_BF16: ext | 96 + 22
+	AMX_TILE: ext | 96 + 24
+	AMX_INT8: ext | 96 + 25
 
 	3DNow: ext | 128 + 31
 
 	; Some CPU presets:
 
-	i86: cpu = 0, fpu = 0, simd = 0, ext = 0
+	i8086: cpu = 0, fpu = 0, simd = 0, ext = 0
 	i186: cpu = 1, fpu = 0, simd = 0, ext = 0
 	i286: cpu = 2, fpu = 0, simd = 0, ext = 0
 	i386: cpu = 3, fpu = 0, simd = 0, ext = 0
@@ -259,6 +217,18 @@ end macro
 	rm2: rmposition = 2
 	rmsrc: rmposition = 2
 
+	; Enable or disable automatic RIP-relative addressing in long mode.
+
+	ripauto: userip = 0
+	rip: userip = 1
+	norip: userip = -1
+	absolute: userip = -1
+
+	; Enable or disable SIB addressing enforcement
+
+	sibauto: usesib = 0
+	sib: usesib = 1
+
 purge ?, c1, c2, c3
 
 ; To select a group of settings:
@@ -284,7 +254,7 @@ macro use? names*&
 	end iterate
 end macro
 
-calminstruction ?? line&
+calminstruction ?? &line&
 	local settings, instruction
 	match {settings} instruction, line
 	jyes annotated
@@ -297,7 +267,6 @@ calminstruction ?? line&
 	assemble instruction
 	asm x86.settings.restore
 end calminstruction
-
 
 x86.emit.byte = 1
 calminstruction (name) ?! flag&
@@ -328,6 +297,7 @@ if defined x86.emit.qword
 		emit	8, value
 	end calminstruction
 end if
+
 
 element x86.reg
 element x86.r8	: x86.reg + 1
@@ -663,7 +633,7 @@ iterate context, @dest,@src,@src2,@aux
 
 		      direct_address_in_long_mode:
 			compute displacement_size, 4
-			check	mode = 0 & segment_prefix < 64h
+			check	(x86.userip = 0 & mode = 0 & segment_prefix < 64h) | x86.userip = 1
 			jyes	auto_relative_address
 			check	mode = 16
 			jyes	invalid_address_size
@@ -791,7 +761,7 @@ iterate context, @dest,@src,@src2,@aux
 			jyes	one_register_split
 			jump	invalid_address
 		      one_register_unscaled:
-			check	base and 111b = 4
+			check	base and 111b = 4 | x86.usesib
 			jyes	one_register_unscaled_in_sib
 			compute rm, base
 			jump	setup_displacement
@@ -1062,7 +1032,7 @@ iterate context, @dest,@src,@src2,@aux
 			jno	rex_prefix_ok
 			check	x86.mode < 64
 			jyes	instruction_requires_long_mode
-			check	reg and x86.REX_FORBIDDEN
+			check	(reg or rm) and x86.REX_FORBIDDEN
 			jno	store_rex_prefix
 			err	'disallowed combination of registers'
 			jump	store_rex_prefix
@@ -2015,6 +1985,7 @@ calminstruction x86.push_instruction size:0,src*
     main:
 	check	(x86.mode <> 16 & size = 2) | (x86.mode = 16 & size = 4)
 	jno	prefix_ready
+	call	x86.require.80386
 	compute @src.prefix, 66h
       prefix_ready:
 
@@ -2138,6 +2109,7 @@ calminstruction x86.pop_instruction size:0,dest*
     main:
 	check	(x86.mode <> 16 & size = 2) | (x86.mode = 16 & size = 4)
 	jno	prefix_ready
+	call	x86.require.80386
 	compute @dest.prefix, 66h
       prefix_ready:
 
@@ -2928,15 +2900,23 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 		err	'invalid address'
 	    optimize:
 
-		check	@dest.jump_type <> 'near' & ( @dest.unresolved | ( @dest.imm relativeto $ & @dest.imm-($+2) < 80h & @dest.imm-($+2) >= -80h ) )
-		jyes	short
-		check	@dest.jump_type <> 'near' & @dest.imm relativeto $ & ( (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h )
-		jyes	short
-		check	@dest.jump_type = 'short'
-		jyes	relative_jump_out_of_range
+		check	@dest.jump_type = 'near'
+		jyes	explicit_near
 
+		check	@dest.unresolved | ( @dest.imm relativeto $ & @dest.imm-($+2) < 80h & @dest.imm-($+2) >= -80h )
+		jyes	short
+		check	@dest.imm relativeto $ & ( (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h )
+		jyes	short
+		check	@dest.jump_type = 'short' | x86.cpu < x86.80386.cpu
+		jno	near
+		emit	2
+		err	'relative jump out of range'
+		exit
+
+	    explicit_near:
 		call	x86.require.80386
 
+	    near:
 		emit	1, 0Fh
 		emit	1, 10h+opcode
 
@@ -2960,10 +2940,6 @@ iterate <instr,opcode>, jo,70h, jno,71h, jc,72h, jb,72h, jnae,72h, jnc,73h, jnb,
 		emit	1, @dest.imm
 		exit
 
-	    relative_jump_out_of_range:
-		emit	2
-		err	'relative jump out of range'
-		exit
 
 	    invalid_operand:
 		err	'invalid operand'
@@ -4074,7 +4050,7 @@ macro rdseed? dest*
 end macro
 
 include 'iset/vmx.inc'
-;include 'iset/mpx.inc'
+include 'iset/mpx.inc'
 include 'iset/cet.inc'
 
 macro xacquire? instr&
@@ -4230,3 +4206,5 @@ include 'iset/gfni.inc'
 include 'iset/pclmulqdq.inc'
 
 include 'iset/3dnow.inc'
+
+include 'iset/amx.inc'

@@ -785,7 +785,7 @@ iterate context, @dest,@src,@src2,@aux
 			jno	rex_prefix_ok
 			check	x86.mode < 64
 			jyes	instruction_requires_long_mode
-			check	reg and x86.REX_FORBIDDEN
+			check	(reg or rm) and x86.REX_FORBIDDEN
 			jno	store_rex_prefix
 			err	'disallowed combination of registers'
 			jump	store_rex_prefix

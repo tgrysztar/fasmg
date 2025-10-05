@@ -60,6 +60,7 @@ EVEX_AS_VEX = 0
 EVEX_W1 = 1 shl 15
 EVEX_REQUIRED = 1 shl 10
 EVEX_FORBIDDEN = 1 shl 2
+EVEX_FORBIDDEN_VL = 1 shl 1
 EVEX_VL = 1 shl 22
 EVEX_VL_AVX2 = 1 shl 32
 EVEX_BW = 1 shl 23
@@ -498,6 +499,7 @@ iterate context, @dest,@src,@src2,@aux
 
 		calminstruction AVX.store_instruction#context vsize*,vex_mpw*,opcode*,reg*,vreg:0,imm_size:0,immediate
 			compute evex_b, 0
+			compute memsize, 0
 			xcall	AVX_512.store_instruction#context, vsize,vex_mpw,(EVEX_FORBIDDEN),opcode,(0),reg,vreg,imm_size,immediate
 		end calminstruction
 
@@ -555,7 +557,7 @@ iterate context, @dest,@src,@src2,@aux
 			jyes	evex_L'
 			check	evex_flags and EVEX_VL & x86.ext and x86.AVX512VL.ext = 0
 			jno	evex_L
-			compute evex_flags, evex_flags or EVEX_FORBIDDEN
+			compute evex_flags, evex_flags or EVEX_FORBIDDEN_VL
 		    evex_L:
 			check	vsize = 32
 			jno	evex_mask
@@ -637,12 +639,17 @@ iterate context, @dest,@src,@src2,@aux
 		    choose_prefix:
 			check	evex_flags and EVEX_REQUIRED | evex and 11011111_00000000_00010000b | rm and 10000b
 			jyes	evex_required
-			check	~ evex_flags and EVEX_FORBIDDEN & evex_displacement_size + 1 < displacement_size
+			check	~ evex_flags and (EVEX_FORBIDDEN or EVEX_FORBIDDEN_VL) & evex_displacement_size + 1 < displacement_size
 			jyes	evex
 			jump	vex
 		    evex_required:
-			check	evex_flags and EVEX_FORBIDDEN
+			check	evex_flags and (EVEX_FORBIDDEN or EVEX_FORBIDDEN_VL)
 			jno	evex
+			check	evex_flags and EVEX_FORBIDDEN
+			jyes	evex_forbidden
+			call	x86.require.AVX512VL
+			jump	evex
+		    evex_forbidden:
 			err	'invalid operand'
 
 		    vex:
@@ -2008,6 +2015,7 @@ end iterate
 
 iterate <instr,vex_mpw,evex_f,opcode_rm,opcode_mr>, vmovapd,VEX_66_0F_W0,EVEX_W1+EVEX_VL,28h,29h, vmovaps,VEX_0F_W0,EVEX_AS_VEX+EVEX_VL,28h,29h, \
 						    vmovupd,VEX_66_0F_W0,EVEX_W1+EVEX_VL,10h,11h, vmovups,VEX_0F_W0,EVEX_AS_VEX+EVEX_VL,10h,11h, \
+						    vmovdqa,VEX_66_0F_W0,EVEX_FORBIDDEN,6Fh,7Fh, vmovdqu,VEX_F3_0F_W0,EVEX_FORBIDDEN,6Fh,7Fh, \
 						    vmovdqa32,VEX_66_0F_W0,EVEX_REQUIRED+EVEX_VL,6Fh,7Fh, vmovdqa64,VEX_66_0F_W1,EVEX_REQUIRED+EVEX_VL,6Fh,7Fh, \
 						    vmovdqu32,VEX_F3_0F_W0,EVEX_REQUIRED+EVEX_VL,6Fh,7Fh, vmovdqu64,VEX_F3_0F_W1,EVEX_REQUIRED+EVEX_VL,6Fh,7Fh
 
@@ -3974,7 +3982,7 @@ end macro
 iterate <instr,postbyte>, vldmxcsr,2, vstmxcsr,3
 
 	macro instr? src*
-		x86.parse_operand@src src
+		AVX_512.parse_operand@src src
 		if @src.type = 'mem'
 			if @src.size and not 4
 				err 'invalid operand size'
