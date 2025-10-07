@@ -1957,6 +1957,11 @@ An additional argument may be optionally added (separated from the path
 by comma), and it is interpreted as a command to be executed after the file
 has been read and inserted into the source stream, just before processing
 the first line.
+  The assembler looks for the file in the directory where currently
+processed source resides. If no such file is found, the assembler tries
+the directory from which the assembly process was started, and consecutive
+paths defined as a semicolon-separated list in the "INCLUDE" environment
+variable.
   The "eval" instruction takes a sequence of bytes defined by its arguments,
 treats it as a source text and assembles it. The arguments are either strings
 or the numeric values of single bytes, separated with commas. In the next
