@@ -378,7 +378,7 @@ macro proc? statement&
 				match args, params
 					iterate arg, args
 						match argname:type, arg
-							label argname:type
+							label ?argname:type
 							rb type
 						else
 							?arg dq ?
