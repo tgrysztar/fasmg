@@ -2618,10 +2618,13 @@ match_number:
 	call	check_concatenation
 	jnc	match_number
     get_number_to_match:
+	cmp	al,30h
+	je	assess_number
 	cmp	al,1Ah
 	jne	no_number_matched
 	call	detect_numeric_symbol
 	jnc	no_number_matched
+    assess_number:
 	push	ebx edi
 	call	get_literal
 	pop	edi ebx
