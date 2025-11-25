@@ -43,6 +43,7 @@ EM_88K	  = 5
 EM_860	  = 7
 EM_MIPS   = 8
 EM_X86_64 = 62
+EM_AARCH64 = 183
 
 EV_NONE    = 0
 EV_CURRENT = 1

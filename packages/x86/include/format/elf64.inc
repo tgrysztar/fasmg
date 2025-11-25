@@ -98,6 +98,7 @@ ET_HIPROC = 0xffff
 EM_NONE   = 0
 EM_IA_64  = 50
 EM_X86_64 = 62
+EM_AARCH64 = 183
 
 EV_NONE    = 0
 EV_CURRENT = 1
