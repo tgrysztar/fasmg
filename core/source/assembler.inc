@@ -618,6 +618,7 @@ assembly_line:
 	add	[ebx+SourceEntry.line_number],eax
 	cmp	[ebx+SourceEntry.type],SOURCE_CALM
 	je	calm_virtual_machine
+	and	[calm_preprocessed_source],0
 	mov	eax,[ebx+SourceEntry.local_namespace]
 	mov	[parameter_namespace],eax
 	xor	edx,edx

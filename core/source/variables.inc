@@ -139,6 +139,7 @@ variables:
     calm_literals dd ?
     calm_source_pointer dd ?
     calm_rollback_offset dd ?
+    calm_preprocessed_source dd ?
 
     value_position dd ?
     kept_value dd ?

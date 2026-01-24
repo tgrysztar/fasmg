@@ -89,8 +89,7 @@ register_error:
 	jne	error_source_context_ready
 	mov	eax,[calm_instruction_number]
 	mov	[esi+ecx-sizeof.SourceEntry+SourceEntry.line_number],eax
-	and	[error_line_start],0
-	and	[error_line_end],0
+	call	error_calm_text
     error_source_context_ready:
 	add	ecx,sizeof.Error
 	add	ecx,[error_line_end]
@@ -117,6 +116,17 @@ register_error:
 	rep	movsb
 	pop	edi esi ecx ebx eax
 	retn
+    error_calm_text:
+	mov	eax,[calm_preprocessed_source]
+	mov	[error_line_start],eax
+	mov	[error_line_end],eax
+	test	eax,eax
+	jz	error_calm_text_ready
+	mov	eax,[preprocessing_workspace.memory_start]
+	mov	[error_line_start],eax
+	add	[error_line_end],eax
+    error_calm_text_ready:
+	retn
     error_ignored:
 	xor	edx,edx
 	retn
@@ -130,8 +140,7 @@ register_error:
 	jne	volatile_error_source_context_ready
 	mov	edx,[calm_instruction_number]
 	mov	[eax+ecx-sizeof.SourceEntry+SourceEntry.line_number],edx
-	and	[error_line_start],0
-	and	[error_line_end],0
+	call	error_calm_text
     volatile_error_source_context_ready:
 	add	ecx,sizeof.Error
 	add	ecx,[error_line_end]

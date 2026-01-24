@@ -1874,6 +1874,19 @@ launch_calm:
 	jmp	get_calm_argument
     calm_arguments_defined:
 	add	esi,4
+	xor	ecx,ecx
+	mov	eax,[line_start]
+	cmp	eax,[preprocessing_workspace.memory_start]
+	jne	calm_preprocessed_source_store
+	mov	ecx,[line_end]
+	cmp	[number_of_line_embeddings],0
+	je	calm_preprocessed_source_ok
+	mov	ecx,[line_embeddings]
+	mov	ecx,[ecx+LineEmbedding.previous_end]
+    calm_preprocessed_source_ok:
+	sub	ecx,eax
+    calm_preprocessed_source_store:
+	mov	[calm_preprocessed_source],ecx
 	and	[calm_instruction_number],0
 	call	create_source_entry
 	jc	calm_exceeded_stack_limit

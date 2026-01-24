@@ -578,7 +578,7 @@ remove them. When all the values of such symbol are removed with a command
 like "restore", the built-in value persists.
   The rules concerning namespace apply equally to the symbols of all classes,
 for example symbol of instruction class belonging to the child namespace of
-latest label can be executed by preceding its name with dot. It should be
+latest label can be executed by prepending a dot to its name. It should be
 noted, however, that when a namespace is specified through its parent symbol,
 it is always a symbol belonging to the expression class. It is not possible to
 refer to a child namespace of an instruction, only to the namespace belonging

@@ -209,9 +209,12 @@ show_errors:
 	mov	esi,_new_line
 	xor	ecx,ecx
 	call	display_error_string
+	cmp	[ebx+SourceEntry.type],SOURCE_CALM
 	mov	ebx,[esp]
+	je	show_preprocessed_source
 	test	[ebx+Error.flags],ERR_CUSTOM
 	jnz	display_error_message
+      show_preprocessed_source:
 	cmp	[ebx+Error.preprocessed_length],0
 	je	display_error_message
 	mov	esi,_preprocessed_text_prefix
