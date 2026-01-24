@@ -1876,15 +1876,18 @@ launch_calm:
 	add	esi,4
 	xor	ecx,ecx
 	mov	eax,[line_start]
-	cmp	eax,[preprocessing_workspace.memory_start]
-	jne	calm_preprocessed_source_store
+	cmp	eax,[preprocessing_workspace.memory_end]
+	jae	calm_preprocessed_source_store
+	sub	eax,[preprocessing_workspace.memory_start]
+	jb	calm_preprocessed_source_store
+	mov	[calm_preprocessed_source_offset],eax
 	mov	ecx,[line_end]
 	cmp	[number_of_line_embeddings],0
 	je	calm_preprocessed_source_ok
 	mov	ecx,[line_embeddings]
 	mov	ecx,[ecx+LineEmbedding.previous_end]
     calm_preprocessed_source_ok:
-	sub	ecx,eax
+	sub	ecx,[line_start]
     calm_preprocessed_source_store:
 	mov	[calm_preprocessed_source],ecx
 	and	[calm_instruction_number],0

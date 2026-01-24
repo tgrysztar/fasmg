@@ -1,1 +1,1 @@
-VERSION equ "l2ft"
+VERSION equ "l2fx"

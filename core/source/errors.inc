@@ -123,8 +123,9 @@ register_error:
 	test	eax,eax
 	jz	error_calm_text_ready
 	mov	eax,[preprocessing_workspace.memory_start]
-	mov	[error_line_start],eax
+	add	eax,[calm_preprocessed_source_offset]
 	add	[error_line_end],eax
+	mov	[error_line_start],eax
     error_calm_text_ready:
 	retn
     error_ignored:
