@@ -1898,11 +1898,17 @@ iterate reg, ax,cx,dx,bx,sp,bp,si,di,r8w,r9w,r10w,r11w,r12w,r13w,r14w,r15w, \
 	define x86.compact.reg? {reg}
 end iterate
 
-iterate <instr,handler,size>, push,push_instruction,0, pushw,push_instruction,2, pushd,push_instruction,4, pushq,push_instruction,8, \
-			      pop,pop_instruction,0, popw,pop_instruction,2, popd,pop_instruction,4, popq,pop_instruction,8
+iterate <instr,	size,	handler>,\
+	push,	0,	push_instruction,\
+	pushw,	2,	push_instruction,\
+	pushd,	4,	push_instruction,\
+	pushq,	8,	push_instruction,\
+	pop,	0,	pop_instruction,\
+	popw,	2,	pop_instruction,\
+	popd,	4,	pop_instruction,\
+	popq,	8,	pop_instruction
 
 	calminstruction instr? operand
-
 		local	head, tail
 
 		match	head tail, operand
@@ -1911,27 +1917,21 @@ iterate <instr,handler,size>, push,push_instruction,0, pushw,push_instruction,2,
 		jno	plain
 		match	{head}, head
 		jno	plain
-	    loop:
-		xcall	x86.handler, (size),head
-		match	head tail, tail
-		jno	final
+	loop:
+		xcall	x86.handler, (size), head
+		match	head tail?, tail
+		jno	done
 		transform head, x86.compact
 		jno	error
 		match	{head}, head
 		jyes	loop
-	    error:
+	error:
 		err	'only register operands allowed in compact syntax'
 		exit
-	    final:
-		transform tail, x86.compact
-		jno	error
-		match	{operand}, tail
-		jno	error
-	    plain:
-		xcall	x86.handler, (size),operand
-
+	plain:
+		xcall	x86.handler, (size), operand
+	done:
 	end calminstruction
-
 end iterate
 
 iterate <instr,opcode>, ret,0C2h, retn,0C2h, retf,0CAh
