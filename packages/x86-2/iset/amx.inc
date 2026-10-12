@@ -43,18 +43,24 @@ iterate context, @dest,@src,@src2,@aux
 			call	AVX_512.parse_operand#context, operand
 			take	x86.usesib, b
 
-			check	type <> 'mem' | rm <> 4
+			check	type <> 'mem' | rm <> 4 | mode = 16
 			jyes	invalid_operand
 			exit
 
 		    invalid_operand:
 			err	'invalid operand'
+			exit
 
 		    mpx_syntax:
 			local	m
 			initsym m, MPX.parse_sib_operand context,
 			arrange i, m operand
 			assemble i
+
+			check	0 scaleof context.index_part eq 0
+			jyes	ok
+			err	'invalid index'
+		    ok:
 
 		end calminstruction
 

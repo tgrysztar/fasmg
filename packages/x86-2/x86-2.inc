@@ -1,5 +1,5 @@
 
-; Advanced x86 Encoder.
+; Advanced x86 Encoder
 
 define x86 x86
 define x87 x87
@@ -133,51 +133,76 @@ end macro
 	AVX2: simd = 51
 	AVX512F: simd = 60
 
-	PCLMULQDQ: ext | 1
-	MONITOR: ext | 3
-	VMX: ext | 5
-	SMX: ext | 6
-	FMA: ext | 12
-	CMPXCHG16B: ext | 13
-	MOVBE: ext | 22
-	POPCNT: ext | 23
-	AESNI: ext | 25
-	XSAVE: ext | 26
-	F16C: ext | 29
-	RDRAND: ext | 30
-	FSGSBASE: ext | 32 + 0
-	BMI1: ext | 32 + 3
-	HLE: ext | 32 + 4
-	BMI2: ext | 32 + 8
-	RTM: ext | 32 + 11
-	MPX: ext | 32 + 14
-	AVX512DQ: ext | 32 + 17
-	RDSEED: ext | 32 + 18
-	ADX: ext | 32 + 19
-	AVX512_IFMA: ext | 32 + 21
-	AVX512PF: ext | 32 + 26
-	AVX512ER: ext | 32 + 27
-	AVX512CD: ext | 32 + 28
-	AVX512BW: ext | 32 + 30
-	AVX512VL: ext | 32 + 31
-	AVX512_VBMI: ext | 64 + 1
-	AVX512_VBMI2: ext | 64 + 6
-	CET_SS: ext | 64 + 7
-	GFNI: ext | 64 + 8
-	VAES: ext | 64 + 9
-	VPCLMULQDQ: ext | 64 + 10
-	AVX512_VNNI: ext | 64 + 11
-	AVX512_BITALG: ext | 64 + 12
-	AVX512_VPOPCNTDQ: ext | 64 + 14
-	MOVDIRI: ext | 64 + 27
-	MOVDIR64B: ext | 64 + 28
-	AVX512_4VNNIW: ext | 96 + 2
-	CET_IBT: ext | 96 + 20
-	AMX_BF16: ext | 96 + 22
-	AMX_TILE: ext | 96 + 24
-	AMX_INT8: ext | 96 + 25
-
-	3DNow: ext | 128 + 31
+	; CPUID.(EAX=1):ECX
+	PCLMULQDQ:		ext | 1
+	MONITOR:		ext | 3
+	VMX:			ext | 5
+	SMX:			ext | 6
+	FMA:			ext | 12
+	CMPXCHG16B:		ext | 13
+	MOVBE:			ext | 22
+	POPCNT: 		ext | 23
+	AESNI:			ext | 25
+	XSAVE:			ext | 26
+	F16C:			ext | 29
+	RDRAND: 		ext | 30
+	; CPUID.(EAX=7,ECX=0):EBX
+	FSGSBASE:		ext | 32 + 0
+	SGX:			ext | 32 + 2
+	BMI1:			ext | 32 + 3
+	HLE:			ext | 32 + 4
+	BMI2:			ext | 32 + 8
+	INVPCID:		ext | 32 + 10
+	RTM:			ext | 32 + 11
+	MPX:			ext | 32 + 14
+	AVX512DQ:		ext | 32 + 17
+	RDSEED: 		ext | 32 + 18
+	ADX:			ext | 32 + 19
+	SMAP:			ext | 32 + 20
+	AVX512_IFMA:		ext | 32 + 21
+	CLFLUSHOPT:		ext | 32 + 23
+	AVX512PF:		ext | 32 + 26
+	AVX512ER:		ext | 32 + 27
+	AVX512CD:		ext | 32 + 28
+	SHA:			ext | 32 + 29
+	AVX512BW:		ext | 32 + 30
+	AVX512VL:		ext | 32 + 31
+	; CPUID.(EAX=7,ECX=0):ECX
+	AVX512_VBMI:		ext | 64 + 1
+	OSPKE:			ext | 64 + 4
+	WAITPKG:		ext | 64 + 5
+	AVX512_VBMI2:		ext | 64 + 6
+	CET_SS: 		ext | 64 + 7
+	GFNI:			ext | 64 + 8
+	VAES:			ext | 64 + 9
+	VPCLMULQDQ:		ext | 64 + 10
+	AVX512_VNNI:		ext | 64 + 11
+	AVX512_BITALG:		ext | 64 + 12
+	AVX512_VPOPCNTDQ:	ext | 64 + 14
+	RDPID:			ext | 64 + 22
+	KL:			ext | 64 + 23
+	CLDEMOTE:		ext | 64 + 25
+	MOVDIRI:		ext | 64 + 27
+	MOVDIR64B:		ext | 64 + 28
+	ENQCMD: 		ext | 64 + 29
+	; CPUID.(EAX=7,ECX=0):EDX
+	AVX512_4VNNIW:		ext | 96 + 2
+	UINTR:			ext | 96 + 5
+	SERIALIZE:		ext | 96 + 14
+	TSXLDTRK:		ext | 96 + 16
+	CET_IBT:		ext | 96 + 20
+	AMX_BF16:		ext | 96 + 22
+	AMX_TILE:		ext | 96 + 24
+	AMX_INT8:		ext | 96 + 25
+	; CPUID.(EAX=7,ECX=1):EAX
+	HRESET: 		ext | 128 + 22
+	; CPUID.(EAX=0DH,ECX=1):EAX
+	XSAVEOPT:		ext | 128 + 0
+	XSAVEC: 		ext | 128 + 1
+	XSS:			ext | 128 + 3
+	; CPUID.(EAX=80000001H):EDX
+	RDTSCP: 		ext | 256 + 27
+	3DNow:			ext | 256 + 31
 
 	; Some CPU presets:
 
@@ -199,7 +224,7 @@ end macro
 
 	everything: cpu = 8, fpu = 5, simd = 60, ext = -1
 
-	; Following settings are just hints of a preference, instruction encoder may listen to them
+	; The following settings are just hints of a preference, instruction encoder may listen to them
 	; when it is possible without altering the meaning of the instruction.
 
 	immauto: immsize = 0
@@ -208,7 +233,7 @@ end macro
 	imm32: immsize = 4
 	imm64: immsize = 8
 
-	; Following settings select the position of r/m operand for few instructions that
+	; The following settings select the position of r/m operand for few instructions that
 	; can be encoded either way, and are ignored otherwise.
 
 	rmauto: rmposition = 0
@@ -217,17 +242,24 @@ end macro
 	rm2: rmposition = 2
 	rmsrc: rmposition = 2
 
-	; Enable or disable automatic RIP-relative addressing in long mode.
+	; Enable or disable automatic RIP-relative addressing in long mode:
 
 	ripauto: userip = 0
 	rip: userip = 1
 	norip: userip = -1
 	absolute: userip = -1
 
-	; Enable or disable SIB addressing enforcement
+	; Enable or disable SIB addressing enforcement:
 
 	sibauto: usesib = 0
 	sib: usesib = 1
+
+	; VEX size preference:
+
+	vexauto: vexsize = 0
+	vex2: vexsize = 2
+	vex3: vexsize = 3
+	evex: vexsize = 4
 
 purge ?, c1, c2, c3
 
@@ -268,34 +300,35 @@ calminstruction ?? &line&
 	asm x86.settings.restore
 end calminstruction
 
+
 x86.emit.byte = 1
 calminstruction (name) ?! flag&
-	publish flag, x86.emit.byte
+       publish flag, x86.emit.byte
 end calminstruction
 if 0
-	word	x86.emit.word
-	dword	x86.emit.dword
-	qword	x86.emit.qword
+       word    x86.emit.word
+       dword   x86.emit.dword
+       qword   x86.emit.qword
 end if
 restruc ?
 
 if defined x86.emit.word
-	purge word?
-	calminstruction word? value*
-		emit	2, value
-	end calminstruction
+       purge word?
+       calminstruction word? value*
+	       emit    2, value
+       end calminstruction
 end if
 if defined x86.emit.dword
-	purge dword?
-	calminstruction dword? value*
-		emit	4, value
-	end calminstruction
+       purge dword?
+       calminstruction dword? value*
+	       emit    4, value
+       end calminstruction
 end if
 if defined x86.emit.qword
-	purge qword?
-	calminstruction qword? value*
-		emit	8, value
-	end calminstruction
+       purge qword?
+       calminstruction qword? value*
+	       emit    8, value
+       end calminstruction
 end if
 
 
@@ -965,7 +998,7 @@ iterate context, @dest,@src,@src2,@aux
 			check	segment_prefix
 			jno	segment_prefix_ok
 
-			check	mode = 64
+			check	x86.mode = 64
 			jyes	segment_in_long_mode
 			check	mode = 16 & ( rm = 2 | rm = 3 | ( mod > 0 & rm = 6 ) )
 			jyes	ss_segment_default
@@ -1378,7 +1411,7 @@ calminstruction mov? dest*,src*
 
 	local	ext, rm, size
 
-	check	@dest.size = 0 & @src.size = 0 & @dest.type <> 'sreg'
+	check	@dest.size = 0 & @src.size = 0 & @dest.type <> 'sreg' & @src.type <> 'sreg'
 	jyes	operand_size_not_specified
 	check	@dest.size <> 0 & @src.size <> 0 & @dest.size <> @src.size
 	jyes	operand_sizes_do_not_match
@@ -1862,8 +1895,6 @@ calminstruction imul? dest*,src&
 	match	, src
 	jyes	imul_rm
 
-	call	x86.require.80186
-
 	local	src1, src2
 
 	match	src1 =, src2, src
@@ -1941,11 +1972,13 @@ calminstruction imul? dest*,src&
 	exit
 
     imul_reg_rm:
+	call	x86.require.80386
 	call	x86.select_operand_prefix@src, size
 	xcall	x86.store_instruction@src, <0Fh,0AFh>,@dest.rm
 	exit
 
     imul_reg_rm_imm:
+	call	x86.require.80186
 	call	x86.select_operand_prefix@src, size
 	check	@aux.imm eqtype 0.0
 	jno	imul_reg_rm_imm_optimize
@@ -2009,6 +2042,10 @@ calminstruction x86.push_instruction size:0,src*
 	exit
 
     push_mem:
+	check	size
+	jyes	mem_size_ok
+	err	'operand size not specified'
+      mem_size_ok:
 	xcall	x86.store_instruction@src, (0FFh),(110b)
 	exit
 
@@ -2131,6 +2168,10 @@ calminstruction x86.pop_instruction size:0,dest*
 	exit
 
     pop_mem:
+	check	size
+	jyes	mem_size_ok
+	err	'operand size not specified'
+      mem_size_ok:
 	xcall	x86.store_instruction@dest, (8Fh),(0)
 	exit
 
@@ -2203,23 +2244,23 @@ iterate <instr,handler,size>, push,push_instruction,0, pushw,push_instruction,2,
 
 end iterate
 
-iterate <instr,opcode>, ret,0C2h, retn,0C2h, retf,0CAh
+iterate instr, ret,retn
 
 	calminstruction instr? operand
 		match	, operand
 		jyes	ret_short
 		check	operand
 		jno	ret_short
-		emit	1, opcode
+		emit	1, 0C2h
 		call	word, operand
 		exit
 	    ret_short:
-		emit	1, opcode + 1
+		emit	1, 0C2h + 1
 	end calminstruction
 
 end iterate
 
-iterate <instr,size,opcode>, retw,2,0C2h, retnw,2,0C2h, retd,4,0C2h, retnd,4,0C2h, retfw,2,0CAh, retfd,4,0CAh
+iterate <instr,size>, retw,2, retnw,2, retd,4, retnd,4
 
 	calminstruction instr? operand
 		check	x86.mode = 64
@@ -2227,11 +2268,11 @@ iterate <instr,size,opcode>, retw,2,0C2h, retnw,2,0C2h, retd,4,0C2h, retnd,4,0C2
 		xcall	x86.store_operand_prefix, (size)
 		match	, operand
 		jyes	ret_short
-		emit	1, opcode
+		emit	1, 0C2h
 		call	word, operand
 		exit
 	    ret_short:
-		emit	1, opcode + 1
+		emit	1, 0C2h + 1
 		exit
 	    illegal_instruction:
 		err	'illegal instruction'
@@ -2239,21 +2280,53 @@ iterate <instr,size,opcode>, retw,2,0C2h, retnw,2,0C2h, retd,4,0C2h, retnd,4,0C2
 
 end iterate
 
-iterate <instr,opcode>, retq,0C2h, retnq,0C2h, retfq,0CAh
+iterate <instr,size>, retfw,2, retfd,4, retfq,8
+
+	calminstruction instr? operand
+		xcall	x86.store_operand_prefix, (size)
+		match	, operand
+		jyes	ret_short
+		emit	1, 0CAh
+		call	word, operand
+		exit
+	    ret_short:
+		emit	1, 0CAh + 1
+		exit
+	end calminstruction
+
+end iterate
+
+iterate instr, retq,retnq
 
 	calminstruction instr? operand
 		call	x86.require.bits64
 		match	, operand
 		jyes	ret_short
-		emit	1, opcode
+		emit	1, 0C2h
 		call	word, operand
 		exit
 	    ret_short:
-		emit	1, opcode + 1
+		emit	1, 0C2h + 1
 		exit
 	end calminstruction
 
 end iterate
+
+calminstruction retf? operand
+	check	x86.mode = 64
+	jno	prefix_ok
+	xcall	x86.store_operand_prefix, (8)
+    prefix_ok:
+	match	, operand
+	jyes	ret_short
+	check	operand
+	jno	ret_short
+	emit	1, 0CAh
+	call	word, operand
+	exit
+    ret_short:
+	emit	1, 0CAh + 1
+end calminstruction
 
 calminstruction lea? dest*,src*
 	call	x86.parse_operand@dest, dest
@@ -2626,7 +2699,7 @@ calminstruction call? dest*
 	check	@dest.jump_type = 'near'
 	jyes	call_rm_near
 	err	'operand size not specified'
-	exit
+	jump	call_rm_near
 
       call_rm_pword:
 	check	@dest.jump_type & @dest.jump_type <> 'far'
@@ -2764,7 +2837,7 @@ calminstruction jmp? dest*
 	check	@dest.jump_type = 'near'
 	jyes	jmp_rm_near
 	err	'operand size not specified'
-	exit
+	jump	jmp_rm_near
 
       jmp_rm_pword:
 	check	@dest.jump_type & @dest.jump_type <> 'far'
@@ -2999,7 +3072,7 @@ iterate <instr,opcode,len>, loopnz,0E0h,0, loopne,0E0h,0, loopz,0E1h,0, loope,0E
 	end calminstruction
 end iterate
 
-iterate <instr,opcode>, nop,90h, int3,0CCh, into,0CEh, int1,0F1h, salc,0D6h, \
+iterate <instr,opcode>, nop,90h, int3,0CCh, into,0CEh, int1,0F1h, icebp,0F1h, salc,0D6h, setalc,0D6h, \
 			hlt,0F4h, cmc,0F5h, clc,0F8h, stc,0F9h, cli,0FAh, sti,0FBh, cld,0FCh, std,0FDh, \
 			pushf,9Ch, popf,9Dh, sahf,9Eh, lahf,9Fh, \
 			movsb,0A4h, cmpsb,0A6h, stosb,0AAh, lodsb,0ACh, scasb,0AEh, xlatb,0D7h
@@ -3099,7 +3172,8 @@ iterate <instr,opcode>, swapgs,<0Fh,1,0F8h>, syscall,<0Fh,5>, sysret,<0Fh,7>
 
 end iterate
 
-iterate <prefix,opcode>, lock,0F0h, repnz,0F2h, repne,0F2h, rep,0F3h, repz,0F3h, repe,0F3h
+iterate <prefix,opcode>, lock,0F0h, repnz,0F2h, repne,0F2h, rep,0F3h, repz,0F3h, repe,0F3h, \
+			 es,26h, cs,2Eh, ds,3Eh, ss,36h, fs,64h, gs,65h
 
 	calminstruction prefix? instr&
 		emit	1, opcode
@@ -3912,15 +3986,37 @@ calminstruction nop? src
 	call	x86.require.P68
 	call	x86.parse_operand@src, src
 	check	@src.type = 'mem' | @src.type = 'reg'
-	jyes	nop_rm_reg
+	jyes	nop_rm
 	err	'invalid operand'
 	exit
-    nop_rm_reg:
+    nop_rm:
 	xcall	x86.select_operand_prefix@src, @src.size
 	xcall	x86.store_instruction@src, <0Fh,1Fh>,(0)
 end calminstruction
 
+iterate <instr,opcode>, ud0,0FFh, ud1,0B9h
+
+	calminstruction instr? dest*,src*
+		call	x86.require.80186
+		call	x86.parse_operand@dest, dest
+		call	x86.parse_operand@src, src
+		check	@dest.type = 'reg' & (@src.type = 'mem' | @src.type = 'reg')
+		jyes	ud_reg_rm
+		err	'invalid combination of operands'
+		exit
+	    wrong_size:
+		err	'invalid operand size'
+		exit
+	    ud_reg_rm:
+		check	@dest.size <> 4 | @src.size and not 4
+		jyes	wrong_size
+		xcall	x86.store_instruction@src, <0Fh,opcode>,@dest.rm
+	end calminstruction
+
+end iterate
+
 calminstruction ud2?
+	call	x86.require.80186
 	emit	2, 0B0Fh
 end calminstruction
 
@@ -3945,25 +4041,25 @@ iterate <instr,postbyte>, fxsave64,0, fxrstor64,1
 
 end iterate
 
-iterate <instr,postbyte>, xsave,4, xrstor,5
+iterate <instr,opcode,postbyte,feature>, xsave,0AEh,4,XSAVE, xrstor,0AEh,5,XSAVE, xsavec,0C7h,4,XSAVEC, xsaveopt,0AEh,6,XSAVEOPT, xsaves,0C7h,5,XSS, xrstors,0C7h,3,XSS
 
 	macro instr? src*
-		require XSAVE
+		require feature
 		x86.parse_operand@src src
 		if @src.type = 'mem'
-			x86.store_instruction@src <0Fh,0AEh>,postbyte
+			x86.store_instruction@src <0Fh,opcode>,postbyte
 		else
 			err 'invalid operand'
 		end if
 	end macro
 
 	macro instr#64? src*
-		require XSAVE
+		require feature
 		require bits64
 		x86.parse_operand@src src
 		if @src.type = 'mem'
 			x86.select_operand_prefix@src 8
-			x86.store_instruction@src <0Fh,0AEh>,postbyte
+			x86.store_instruction@src <0Fh,opcode>,postbyte
 		else
 			err 'invalid operand'
 		end if
@@ -4027,6 +4123,36 @@ iterate <instr,postbyte>, rdfsbase,0, rdgsbase,1, wrfsbase,2, wrgsbase,3
 
 end iterate
 
+macro rdtscp?
+	require RDTSCP
+	db 0Fh,1,0F9h
+end macro
+
+iterate <instr,opcode,feature>, rdpkru,0EEh,OSPKE, wrpkru,0EFh,OSPKE, clac,0CAh,SMAP, stac,0CBh,SMAP
+
+	macro instr?
+		require feature
+		db 0Fh,1,opcode
+	end macro
+
+end iterate
+
+macro rdpid? dest*
+	require RDPID
+	x86.parse_operand@dest dest
+	if @dest.type = 'reg'
+		if (@dest.size = 4 & x86.mode < 64) | (@dest.size = 8 & x86.mode = 64)
+			@dest.opcode_prefix = 0F3h
+			x86.store_instruction@dest <0Fh,0C7h>,7
+		else
+			err 'invalid operand size'
+		end if
+	else
+		err 'invalid operand'
+	end if
+
+end macro
+
 macro rdrand? dest*
 	require RDRAND
 	x86.parse_operand@dest dest
@@ -4052,6 +4178,7 @@ end macro
 include 'iset/vmx.inc'
 include 'iset/mpx.inc'
 include 'iset/cet.inc'
+include 'iset/uintr.inc'
 
 macro xacquire? instr&
 	require HLE
@@ -4137,6 +4264,48 @@ iterate <instr,pfx>, adcx,66h, adox,0F3h
 
 end iterate
 
+macro invpcid? dest*,src*
+	require INVPCID
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	if @dest.type = 'reg' & @src.type = 'mem'
+		if (x86.mode < 64 & @dest.size <> 4) | (x86.mode = 64 & @dest.size <> 8) | @src.size and not 16
+			err 'invalid operand size'
+		end if
+		@src.opcode_prefix = 66h
+		x86.store_instruction@src <0Fh,38h,82h>,@dest.rm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
+
+macro clflushopt? src*
+	require CLFLUSHOPT
+	x86.parse_operand@src src
+	if @src.type = 'mem'
+		if @src.size and not 1
+			err 'invalid operand size'
+		end if
+		@src.opcode_prefix = 66h
+		x86.store_instruction@src <0Fh,0AEh>,7
+	else
+		err 'invalid operand'
+	end if
+end macro
+
+macro cldemote? dest*
+	require CLDEMOTE
+	x86.parse_operand@dest dest
+	if @dest.type = 'mem'
+		if @dest.size and not 1
+			err 'invalid operand size'
+		end if
+		x86.store_instruction@dest <0Fh,01Ch>,0
+	else
+		err 'invalid operand'
+	end if
+end macro
+
 macro movbe? dest*,src*
 	require MOVBE
 	x86.parse_operand@dest dest
@@ -4182,7 +4351,7 @@ macro movdir64b? dest*,src*
 		if @src.size and not 64
 			err 'invalid operand size'
 		end if
-		if (@src.mode = 16 & @dest.size <> 2) | (@src.mode = 32 & @dest.size <> 4) | (@src.mode = 64 & @dest.size <> 8)
+		if @dest.size shl 3 <> @src.mode
 			err 'invalid operand size'
 		end if
 		@src.opcode_prefix = 66h
@@ -4191,6 +4360,98 @@ macro movdir64b? dest*,src*
 		err 'invalid combination of operands'
 	end if
 end macro
+
+iterate <instr,prefix>, tpause,66h, umwait,0F2h
+
+	macro instr? dest*,src:edx,src2:eax
+		require WAITPKG
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
+		x86.parse_operand@src2 src2
+		if @dest.type = 'reg' & @dest.size = 4 & @src.type = 'reg' & @src.size = 4 & @src.rm = 2 & @src2.type = 'reg' & @src2.size = 4 & @src2.rm = 0
+			@dest.opcode_prefix = prefix
+			x86.store_instruction@dest <0Fh,0AEh>,6
+		else
+			err 'invalid combination of operands'
+		end if
+	end macro
+
+end iterate
+
+macro umonitor? src*
+	require WAITPKG
+	x86.parse_operand@src src
+	if @src.type = 'reg'
+		if (@src.size = 2 & x86.mode = 32) | (@src.size = 4 & x86.mode <> 32)
+			db 67h
+		else if @src.size shl 3 <> x86.mode
+			err 'invalid operand size'
+		end if
+		@src.opcode_prefix = 0F3h
+		x86.store_instruction@src <0Fh,0AEh>,6
+	else
+		err 'invalid operand'
+	end if
+end macro
+
+iterate <instr,pfx>, enqcmd,0F2h, enqcmds,0F3h
+
+	macro instr? dest*,src*
+		require ENQCMD
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
+		if @dest.type = 'reg' & @src.type = 'mem'
+			if @src.size and not 64
+				err 'invalid operand size'
+			end if
+			if @dest.size shl 3 <> @src.mode
+				err 'invalid operand size'
+			end if
+			@src.opcode_prefix = pfx
+			x86.store_instruction@src <0Fh,38h,0F8h>,@dest.rm
+		else
+			err 'invalid combination of operands'
+		end if
+	end macro
+
+end iterate
+
+macro serialize?
+	require SERIALIZE
+	db 0Fh,1,0E8h
+end macro
+
+macro hreset? dest*,src:eax
+	require HRESET
+	x86.parse_operand@dest dest
+	x86.parse_operand@src src
+	if @dest.type = 'imm' & @src.type = 'reg' & @src.size = 4 & @src.rm = 0
+		if @dest.size and not 8
+			err 'invalid operand size'
+		end if
+		db 0F3h,0Fh,3Ah,0F0h,0C0h,@dest.imm
+	else
+		err 'invalid combination of operands'
+	end if
+end macro
+
+iterate <instr,opcode>, xsusldtrk,0E8h, xresldtrk,0E9h
+
+	macro instr?
+		require TSXLDTRK
+		db 0F2h,0Fh,1,opcode
+	end macro
+
+end iterate
+
+iterate <instr,opcode>, encls,0CFh, enclu,0D7h
+
+	macro instr?
+		require SGX
+		db 0Fh,1,opcode
+	end macro
+
+end iterate
 
 include 'iset/mmx.inc'
 include 'iset/sse.inc'
@@ -4201,7 +4462,9 @@ include 'iset/sse4.inc'
 include 'iset/avx.inc'
 include 'iset/bmi.inc'
 
+include 'iset/sha.inc'
 include 'iset/aes.inc'
+include 'iset/kl.inc'
 include 'iset/gfni.inc'
 include 'iset/pclmulqdq.inc'
 

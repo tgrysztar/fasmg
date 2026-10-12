@@ -2189,7 +2189,7 @@ iterate <instr,opcode>, cbw,98h, cwd,99h, iretw,0CFh, pushaw,60h, popaw,61h, pus
 
 end iterate
 
-iterate <instr,opcode>, cwde,98h, cdq,99h, iretd,0CFh, pushad,60h, popad,61h, pushfd,9Ch, popfd,9Ch, \
+iterate <instr,opcode>, cwde,98h, cdq,99h, iretd,0CFh, pushad,60h, popad,61h, pushfd,9Ch, popfd,9Dh, \
 			insd,6Dh, outsd,6Fh, movsd,0A5h, cmpsd,0A7h, stosd,0ABh, lodsd,0ADh, scasd,0AFh
 
 	calminstruction instr?

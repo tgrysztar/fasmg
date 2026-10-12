@@ -70,3 +70,22 @@ macro vmwrite? dest*,src*
 		err 'invalid combination of operands'
 	end if
 end macro
+
+iterate <instr,opcode>, invept,80h, invvpid,81h
+
+	macro instr? dest*,src*
+		require VMX
+		x86.parse_operand@dest dest
+		x86.parse_operand@src src
+		if @dest.type = 'reg' & @src.type = 'mem'
+			if (x86.mode < 64 & @dest.size <> 4) | (x86.mode = 64 & @dest.size <> 8) | @src.size and not 16
+				err 'invalid operand size'
+			end if
+			@src.opcode_prefix = 66h
+			x86.store_instruction@src <0Fh,38h,opcode>,@dest.rm
+		else
+			err 'invalid combination of operands'
+		end if
+	end macro
+
+end iterate

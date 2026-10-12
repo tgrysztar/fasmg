@@ -168,8 +168,8 @@ macro bndldx? dest*,src*&
 	MPX.parse_operand @dest,dest
 	MPX.parse_sib_operand @src,src
 	if @dest.type = 'bnd' & @src.type = 'mem'
-		if @src.scale > 1 | ( @src.split & ~ 0 scaleof @src.index_part eq 0 )
-			err 'invalid index'
+		if @src.mode <> x86.mode | @src.scale > 1 | ( @src.split & ~ 0 scaleof @src.index_part eq 0 )
+			err 'invalid address'
 		end if
 		x86.store_instruction@src <0Fh,1Ah>,@dest.rm
 	else
@@ -183,8 +183,8 @@ macro bndstx? operands*&
 		MPX.parse_sib_operand @dest,[dest]
 		MPX.parse_operand @src,src
 		if @dest.type = 'mem' & @src.type = 'bnd'
-			if @dest.scale > 1 | ( @dest.split & ~ 0 scaleof @dest.index_part eq 0 )
-				err 'invalid index'
+			if @dest.mode <> x86.mode | @dest.scale > 1 | ( @dest.split & ~ 0 scaleof @dest.index_part eq 0 )
+				err 'invalid address'
 			end if
 			x86.store_instruction@dest <0Fh,1Bh>,@src.rm
 		else
@@ -194,3 +194,8 @@ macro bndstx? operands*&
 		err 'invalid combination of operands'
 	end match
 end macro
+
+calminstruction bnd? instr&
+	emit	1, 0F2h
+	assemble instr
+end calminstruction

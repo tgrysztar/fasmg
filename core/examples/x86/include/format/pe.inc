@@ -413,11 +413,11 @@ namespace PE
 	store FILE_OFFSET at PE:SectionTable.PointerToRawData
 
 	virtual at 0
-	     relocated_addresses:: rd NUMBER_OF_RELOCATIONS
+	     collected_addresses:: rd NUMBER_OF_RELOCATIONS
 	end virtual
 
 	virtual at 0
-	     relocation_types:: rw NUMBER_OF_RELOCATIONS
+	     collected_types:: rw NUMBER_OF_RELOCATIONS
 	end virtual
 
 end namespace
@@ -936,8 +936,8 @@ if defined PE.Fixups
 		emit	4, value - PE.RELOCATION
 		check	$% > offset
 		jno	done
-		asm	store $-4-PE.IMAGE_BASE:4 at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-		asm	store IMAGE_REL_BASED_HIGHLOW:2 at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		asm	store $-4-PE.IMAGE_BASE:4 at PE.collected_addresses:PE.RELOCATION_INDEX shl 2
+		asm	store IMAGE_REL_BASED_HIGHLOW:2 at PE.collected_types:PE.RELOCATION_INDEX shl 1
 		compute PE.RELOCATION_INDEX, PE.RELOCATION_INDEX + 1
 	    done:
 		exit
@@ -954,8 +954,8 @@ if defined PE.Fixups
 		emit	8, value - PE.RELOCATION
 		check	$% > offset
 		jno	done
-		asm	store $-8-PE.IMAGE_BASE:4 at PE.relocated_addresses:PE.RELOCATION_INDEX shl 2
-		asm	store IMAGE_REL_BASED_DIR64:2 at PE.relocation_types:PE.RELOCATION_INDEX shl 1
+		asm	store $-8-PE.IMAGE_BASE:4 at PE.collected_addresses:PE.RELOCATION_INDEX shl 2
+		asm	store IMAGE_REL_BASED_DIR64:2 at PE.collected_types:PE.RELOCATION_INDEX shl 1
 		compute PE.RELOCATION_INDEX, PE.RELOCATION_INDEX + 1
 	    done:
 		exit
@@ -1018,6 +1018,16 @@ postpone
 		SIZE_OF_IMAGE := SECTION_BASE - IMAGE_BASE
 		NUMBER_OF_SECTIONS := SECTION_INDEX
 		NUMBER_OF_RELOCATIONS := RELOCATION_INDEX
+		if NUMBER_OF_RELOCATIONS
+			virtual at 0
+				load TABLE: NUMBER_OF_RELOCATIONS*4 from collected_addresses: 0
+				relocated_addresses:: db TABLE
+			end virtual
+			virtual at 0
+				load TABLE: NUMBER_OF_RELOCATIONS*2 from collected_types: 0
+				relocation_types:: db TABLE
+			end virtual
+		end if
 	end namespace
 end postpone
 
