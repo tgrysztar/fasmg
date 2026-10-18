@@ -208,6 +208,12 @@ namespace ELF
 		ABI := ELFOSABI_NONE
 	end if
 
+	if defined Settings.Endianness
+		ENDIANNESS := Settings.Endianness
+	else
+		ENDIANNESS := ELFDATA2LSB
+	end if
+
 	if MACHINE = EM_386
 		R_32 = R_386_32
 		R_PC32 = R_386_PC32
@@ -221,7 +227,7 @@ namespace ELF
 
 	Header:
 
-	e_ident 	db 0x7F,'ELF',ELFCLASS32,ELFDATA2LSB,EV_CURRENT,ABI,(16-$) dup 0
+	e_ident 	db 0x7F,'ELF',ELFCLASS32,ENDIANNESS,EV_CURRENT,ABI,(16-$) dup 0
 	e_type		dw ET_REL
 	e_machine	dw MACHINE
 	e_version	dd EV_CURRENT
