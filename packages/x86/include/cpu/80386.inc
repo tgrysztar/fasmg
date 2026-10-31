@@ -2142,7 +2142,7 @@ iterate <instr,opcode,len>, loopnz,0E0h,0, loopne,0E0h,0, loopz,0E1h,0, loope,0E
 
 		check	@dest.imm-($+1) < 80h & @dest.imm-($+1) >= -80h
 		jyes	relative_offset_ok
-		check	(@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+2)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h
+		check	(@dest.imm-($+1)) and (1 shl (@dest.size*8) - 1) < 80h | (@dest.imm-($+1)) and (1 shl (@dest.size*8) - 1) >= 1 shl (@dest.size*8) - 80h
 		jyes	relative_offset_ok
 		emit	1
 		err	'relative jump out of range'
